@@ -1,0 +1,157 @@
+# ============================================
+# Nuxt 4 - WebiDelivery
+# ============================================
+
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# ============================================
+# Kiro IDE
+# ============================================
+.kiro/
+
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ============================================
+# IDEs and Editors
+# ============================================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ============================================
+# Operating System Files
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+*.lcov
+.nyc_output
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ============================================
+# Build & Deployment
+# ============================================
+*.tsbuildinfo
+.vercel
+.netlify
+.firebase/
+
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~.nib
+.lock-wscript
+
+# ============================================
+# Package Manager
+# ============================================
+# pnpm
+pnpm-lock.yaml
+.pnpm-debug.log
+
+# yarn
+yarn.lock
+.yarn/
+.yarn-integrity
+
+# npm
+package-lock.json
+npm-debug.log*
+
+# ============================================
+# Database & Supabase
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+supabase/.branches/
+supabase/.temp/
+
+# ============================================
+# Misc
+# ============================================
+.turbo
+.contentlayer
+.next
+.docusaurus
