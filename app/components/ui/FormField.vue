@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 📌 FormField Component
+ * 📌 UiFormField Component
  *
  * Wrapper simples para elementos de formulário.
  * Fornece label, descrição, hint, help e exibição de erros.

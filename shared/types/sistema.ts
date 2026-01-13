@@ -203,7 +203,7 @@ export interface ExportacaoDadosUsuario {
 	readonly perfil: PerfilExportacao;
 	readonly consentimentos: LgpdConsentimento[];
 	readonly logs_atividade: LogAuditoriaResumo[];
-	readonly estabelecimento?: EstabelecimentoResumo;
+	readonly estabelecimento?: EstabelecimentoSistema;
 	readonly data_exportacao: TimestampTz;
 	readonly versao_exportacao: string;
 }
@@ -224,7 +224,7 @@ export interface LogAuditoriaResumo {
 	readonly ip_address: string | null;
 }
 
-export interface EstabelecimentoResumo {
+export interface EstabelecimentoSistema {
 	readonly id: UUID;
 	readonly nome: string;
 	readonly slug: string;

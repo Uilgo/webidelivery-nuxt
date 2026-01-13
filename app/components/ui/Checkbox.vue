@@ -29,6 +29,8 @@ interface Props {
 	required?: boolean;
 	/** Estado indeterminado */
 	indeterminate?: boolean;
+	/** Classes CSS customizadas */
+	class?: string;
 }
 
 // Props com valores padrão
@@ -42,6 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	required: false,
 	indeterminate: false,
+	class: undefined,
 });
 
 // Emits tipados
@@ -181,7 +184,7 @@ const handleIconClick = (): void => {
 </script>
 
 <template>
-	<div class="flex items-center gap-3">
+	<div :class="['flex items-center gap-2', props.class]">
 		<!-- Checkbox -->
 		<div class="flex-shrink-0">
 			<input
