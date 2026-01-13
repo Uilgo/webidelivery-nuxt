@@ -1,15 +1,15 @@
 <script setup lang="ts">
 /**
- * 📌 SuperAdminSignupForm
+ * 📌 TeamMemberSignupForm
  *
- * Formulário de cadastro para equipe da plataforma WebiDelivery.
- * Campos: Nome, Sobrenome, E-mail, Senha, Confirmar Senha, Código WEBI
- * Requer código válido gerado pelo Super Admin
+ * Formulário de cadastro para membros da equipe (Staff/Entregador).
+ * Campos: Nome, Sobrenome, E-mail, Senha, Confirmar Senha, Código EQUIPE
+ * Define cargo e estabelecimento automaticamente baseado no código
  */
 
 import { toTypedSchema } from "@vee-validate/zod";
 import { useForm, useField } from "vee-validate";
-import { superAdminRegisterSchema, type SuperAdminRegisterFormData } from "#shared/schemas/auth";
+import { teamMemberRegisterSchema, type TeamMemberRegisterFormData } from "#shared/schemas/auth";
 import { useValidators } from "~/composables/form/useValidators";
 import { useAuth } from "~/composables/core/useAuth";
 import { useToast } from "~/composables/ui/useToast";
@@ -23,14 +23,14 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 interface Emits {
-	submit: [data: SuperAdminRegisterFormData];
+	submit: [data: TeamMemberRegisterFormData];
 }
 
 const emit = defineEmits<Emits>();
 
 // Usar o composable de validadores e auth
-const { validateEmailAvailable, validateCodigoWebi } = useValidators();
-const { signupSuperAdmin } = useAuth();
+const { validateEmailAvailable, validateCodigoEquipe } = useValidators();
+const { signupTeamMember } = useAuth();
 
 // Composable de toast para notificações
 const { success: showSuccess, error: showError } = useToast();
@@ -41,14 +41,14 @@ const submitError = ref<string | null>(null);
 
 // Configuração do VeeValidate com Zod
 const { handleSubmit } = useForm({
-	validationSchema: toTypedSchema(superAdminRegisterSchema),
+	validationSchema: toTypedSchema(teamMemberRegisterSchema),
 	initialValues: {
 		nome: "",
 		sobrenome: "",
 		email: "",
 		password: "",
 		confirm_password: "",
-		codigo_webi: "",
+		codigo_equipe: "",
 		terms: false,
 		privacy: false,
 	},
@@ -65,7 +65,7 @@ const privacy = useField<boolean>("privacy");
 // Campo email com validação assíncrona
 const email = useField<string>("email", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = superAdminRegisterSchema.shape.email.safeParse(value);
+	const schemaResult = teamMemberRegisterSchema.shape.email.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "E-mail inválido";
 	}
@@ -75,24 +75,24 @@ const email = useField<string>("email", async (value: string) => {
 	return isAvailable ? true : "Já existe uma conta com este e-mail. Faça login.";
 });
 
-// Campo código WEBI com validação assíncrona
-const codigoWebi = useField<string>("codigo_webi", async (value: string) => {
+// Campo código EQUIPE com validação assíncrona
+const codigoEquipe = useField<string>("codigo_equipe", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = superAdminRegisterSchema.shape.codigo_webi.safeParse(value);
+	const schemaResult = teamMemberRegisterSchema.shape.codigo_equipe.safeParse(value);
 	if (!schemaResult.success) {
-		return schemaResult.error.issues[0]?.message || "Código WEBI inválido";
+		return schemaResult.error.issues[0]?.message || "Código da equipe inválido";
 	}
 
 	// Depois aplica validação assíncrona (código válido)
-	const isValid = await validateCodigoWebi(value);
-	return isValid ? true : "Código WEBI inválido ou expirado";
+	const isValid = await validateCodigoEquipe(value);
+	return isValid ? true : "Código da equipe inválido ou expirado";
 });
 
 // IDs únicos para os campos
 const nomeId = useId();
 const sobrenomeId = useId();
 const emailId = useId();
-const codigoWebiId = useId();
+const codigoEquipeId = useId();
 const passwordId = useId();
 const confirmPasswordId = useId();
 
@@ -102,16 +102,19 @@ const onSubmit = handleSubmit(async (values) => {
 	submitError.value = null;
 
 	try {
-		const result = await signupSuperAdmin(values);
+		const result = await signupTeamMember(values);
 
 		if (result.success) {
 			// Cadastro bem-sucedido - mostrar toast de sucesso
-			showSuccess({ title: "Conta criada!", description: "Bem-vindo à equipe da plataforma!" });
+			showSuccess({
+				title: "Bem-vindo à equipe!",
+				description: "Sua conta foi criada com sucesso.",
+			});
 			emit("submit", values);
-			await navigateTo("/super-admin/dashboard");
+			await navigateTo("/admin/dashboard");
 		} else {
 			// Erro no cadastro - mostrar toast de erro
-			const errorMessage = result.error?.message || "Erro ao criar conta na plataforma";
+			const errorMessage = result.error?.message || "Erro ao entrar na equipe";
 			showError({ title: "Erro no cadastro", description: errorMessage });
 			submitError.value = errorMessage;
 		}
@@ -137,7 +140,6 @@ const onSubmit = handleSubmit(async (values) => {
 			>
 				<p class="text-sm text-red-600 dark:text-red-400">{{ submitError }}</p>
 			</div>
-
 			<!-- Nome e Sobrenome -->
 			<div class="grid grid-cols-2 gap-4">
 				<UiFormField label="Nome" required :error="nome.errorMessage.value">
@@ -165,30 +167,30 @@ const onSubmit = handleSubmit(async (values) => {
 			</div>
 
 			<!-- Campo E-mail -->
-			<UiFormField label="E-mail Corporativo" required :error="email.errorMessage.value">
+			<UiFormField label="E-mail" required :error="email.errorMessage.value">
 				<UiInput
 					:id="emailId"
 					v-model="email.value.value"
 					type="email"
-					placeholder="seu@webidelivery.com.br"
+					placeholder="seu@email.com"
 					:disabled="isSubmitting || props.loading"
 					autocomplete="email"
 					required
 				/>
 			</UiFormField>
 
-			<!-- Campo Código WEBI -->
+			<!-- Campo Código EQUIPE -->
 			<UiFormField
-				label="Código WEBI"
+				label="Código da Equipe"
 				required
-				:error="codigoWebi.errorMessage.value"
-				help="Código fornecido pelo Super Admin"
+				:error="codigoEquipe.errorMessage.value"
+				help="Código fornecido pelo seu gerente"
 			>
 				<UiInput
-					:id="codigoWebiId"
-					v-model="codigoWebi.value.value"
+					:id="codigoEquipeId"
+					v-model="codigoEquipe.value.value"
 					type="text"
-					placeholder="WEBI0000"
+					placeholder="ABC1234567"
 					:disabled="isSubmitting || props.loading"
 					required
 				/>
@@ -223,7 +225,7 @@ const onSubmit = handleSubmit(async (values) => {
 			<div class="space-y-3">
 				<UiCheckbox
 					v-model="terms.value.value"
-					label="Aceito os termos de uso da plataforma"
+					label="Aceito os termos de uso"
 					size="sm"
 					:disabled="isSubmitting || props.loading"
 					class="text-sm"
@@ -264,9 +266,9 @@ const onSubmit = handleSubmit(async (values) => {
 					full-width
 				>
 					<template #iconLeft>
-						<Icon name="lucide:user-check" class="w-5 h-5" />
+						<Icon name="lucide:users" class="w-5 h-5" />
 					</template>
-					{{ isSubmitting || props.loading ? "Criando conta..." : "Criar conta na plataforma" }}
+					{{ isSubmitting || props.loading ? "Criando conta..." : "Entrar na equipe" }}
 				</UiButton>
 			</div>
 		</form>
@@ -274,9 +276,9 @@ const onSubmit = handleSubmit(async (values) => {
 		<!-- Links -->
 		<div class="space-y-3 text-center">
 			<div class="text-[var(--text-secondary)] text-sm">
-				Já tem acesso à plataforma?
+				Já faz parte da equipe?
 				<NuxtLink
-					to="/super-admin/login"
+					to="/login"
 					class="text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium ml-1 transition-colors duration-200"
 				>
 					Entrar

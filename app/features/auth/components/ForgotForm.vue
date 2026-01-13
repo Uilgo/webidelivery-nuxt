@@ -7,18 +7,44 @@
  * Envia instruções para redefinir senha
  */
 
+import { toTypedSchema } from "@vee-validate/zod";
+import { useForm } from "vee-validate";
+import { forgotPasswordSchema, type ForgotPasswordFormData } from "#shared/schemas/auth";
+
 interface Props {
 	loading?: boolean;
 	success?: boolean;
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
 	loading: false,
 	success: false,
 });
 
-// Estado básico do formulário
-const email = ref("");
+interface Emits {
+	submit: [data: ForgotPasswordFormData];
+}
+
+const emit = defineEmits<Emits>();
+
+// Configuração do VeeValidate com Zod
+const { handleSubmit, defineField, errors } = useForm({
+	validationSchema: toTypedSchema(forgotPasswordSchema),
+	initialValues: {
+		email: "",
+	},
+});
+
+// Definição dos campos com VeeValidate
+const [email, emailAttrs] = defineField("email");
+
+// ID único para o campo
+const emailId = useId();
+
+// Handler do submit com validação
+const onSubmit = handleSubmit((values) => {
+	emit("submit", values);
+});
 </script>
 
 <template>
@@ -40,14 +66,17 @@ const email = ref("");
 		</div>
 
 		<!-- Formulário -->
-		<form v-if="!success" class="space-y-4">
+		<form v-if="!props.success" class="space-y-4" @submit="onSubmit">
 			<!-- Campo E-mail -->
-			<UiFormField label="E-mail" required>
+			<UiFormField label="E-mail" required :error="errors.email">
 				<UiInput
+					:id="emailId"
 					v-model="email"
+					v-bind="emailAttrs"
 					type="email"
 					placeholder="seu@email.com"
-					:disabled="loading"
+					:disabled="props.loading"
+					autocomplete="email"
 					required
 				/>
 			</UiFormField>
@@ -59,13 +88,14 @@ const email = ref("");
 					variant="solid"
 					color="primary"
 					size="lg"
-					:loading="loading"
+					:loading="props.loading"
+					:disabled="props.loading"
 					full-width
 				>
 					<template #iconLeft>
 						<Icon name="lucide:mail" class="w-5 h-5" />
 					</template>
-					Enviar instruções
+					{{ props.loading ? "Enviando..." : "Enviar instruções" }}
 				</UiButton>
 			</div>
 		</form>

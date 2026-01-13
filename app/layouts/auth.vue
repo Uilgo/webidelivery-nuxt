@@ -23,11 +23,15 @@ const pageTitles = computed(() => {
 			return { title: "Entrar", subtitle: "Acesse sua conta" };
 		case "/signup":
 			return { title: "Criar conta", subtitle: "Cadastre seu estabelecimento" };
+		case "/signup-equipe":
+			return { title: "Entrar na Equipe", subtitle: "Cadastre-se com seu código de acesso" };
 		case "/forgot-password":
 			return {
 				title: "Esqueci minha senha",
 				subtitle: "Digite seu e-mail para receber instruções de recuperação",
 			};
+		case "/confirm":
+			return { title: "Confirmando acesso", subtitle: "Processando sua autenticação" };
 		case "/super-admin/login":
 			return { title: "Login Plataforma", subtitle: "Acesse a plataforma WebiDelivery" };
 		case "/super-admin/signup":

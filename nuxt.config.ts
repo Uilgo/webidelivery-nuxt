@@ -13,6 +13,7 @@ export default defineNuxtConfig({
 		"@nuxt/image",
 		"@nuxt/icon",
 		"@vee-validate/nuxt",
+		"@nuxtjs/supabase",
 	],
 
 	css: ["./app/assets/css/main.css"],
@@ -47,6 +48,33 @@ export default defineNuxtConfig({
 				{ rel: "canonical", href: "https://webidelivery.com.br" },
 			],
 		},
+	},
+
+	// Configuração do Supabase
+	supabase: {
+		// Permite acesso à sessão no servidor via cookies
+		useSsrCookies: true,
+		// Redirecionamento automático para login
+		redirect: true,
+		// Configuração de rotas de redirecionamento
+		redirectOptions: {
+			login: "/login", // Página de login
+			callback: "/confirm", // Página de confirmação após autenticação
+			exclude: [
+				"/login",
+				"/signup",
+				"/signup-equipe",
+				"/forgot-password",
+				"/confirm",
+				"/super-admin/login",
+				"/super-admin/signup",
+				"/super-admin/forgot-password",
+			], // Páginas sem autenticação obrigatória
+			include: undefined, // Apenas páginas específicas (undefined = todas exceto exclude)
+			saveRedirectToCookie: true, // Salva página original no cookie para redirecionamento após login
+		},
+		// Path para tipos TypeScript gerados do schema do Supabase
+		types: "#shared/types/database.ts",
 	},
 
 	// Configuração do Color Mode (system/dark/light)
