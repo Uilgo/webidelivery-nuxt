@@ -81,7 +81,23 @@ export const useEstabelecimentos = () => {
 	 */
 	const getCurrentEstablishment = async (): Promise<Estabelecimento | null> => {
 		try {
-			const { data, error } = await supabase.from("estabelecimentos").select("*").single();
+			// Buscar estabelecimento através do perfil do usuário
+			const { data: userProfile, error: profileError } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.single();
+
+			if (profileError || !userProfile?.estabelecimento_id) {
+				console.error("Erro ao buscar perfil do usuário:", profileError);
+				return null;
+			}
+
+			// Buscar dados do estabelecimento
+			const { data, error } = await supabase
+				.from("estabelecimentos")
+				.select("*")
+				.eq("id", userProfile.estabelecimento_id)
+				.single();
 
 			if (error) {
 				console.error("Erro ao buscar estabelecimento atual:", error);

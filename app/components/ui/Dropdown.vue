@@ -72,7 +72,7 @@ const toggle = (): void => {
 // Classes computadas para o dropdown
 const dropdownClasses = computed(() => {
 	const baseClasses = [
-		"absolute z-[200]",
+		"absolute z-[99999]",
 		"bg-[var(--bg-surface)]",
 		"border border-[var(--border-default)]",
 		"rounded-lg",

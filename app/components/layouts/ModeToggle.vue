@@ -81,33 +81,35 @@ function handleThemeSelect(item: { label: string; value: string | number; icon?:
 
 		<!-- Conteúdo customizado do dropdown -->
 		<template #default="{ close }">
-			<UiButton
-				v-for="option in themeOptions"
-				:key="option.value"
-				variant="ghost"
-				size="sm"
-				class="flex w-full items-center justify-start gap-1 p-1 text-sm text-left rounded-md cursor-pointer whitespace-nowrap"
-				:class="[
-					option.selected
-						? 'bg-[var(--primary-light)] text-[var(--primary)]'
-						: 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
-				]"
-				@click="
-					handleThemeSelect(option);
-					close();
-				"
-			>
-				<div class="flex items-center gap-2">
-					<Icon :name="option.icon" class="w-4 h-4 flex-shrink-0" />
-					<span>{{ option.label }}</span>
-					<!-- Check se está selecionado -->
-					<Icon
-						v-if="option.selected"
-						name="lucide:check"
-						class="w-4 h-4 flex-shrink-0 text-[var(--primary)] ml-0.5"
-					/>
-				</div>
-			</UiButton>
+			<div class="max-w-[140px]">
+				<UiButton
+					v-for="option in themeOptions"
+					:key="option.value"
+					variant="ghost"
+					size="sm"
+					class="flex w-full items-center justify-start gap-1 p-1 text-sm text-left rounded-md cursor-pointer whitespace-nowrap"
+					:class="[
+						option.selected
+							? 'bg-[var(--primary-light)] text-[var(--primary)]'
+							: 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
+					]"
+					@click="
+						handleThemeSelect(option);
+						close();
+					"
+				>
+					<div class="flex items-center gap-2">
+						<Icon :name="option.icon" class="w-4 h-4 flex-shrink-0" />
+						<span>{{ option.label }}</span>
+						<!-- Check se está selecionado -->
+						<Icon
+							v-if="option.selected"
+							name="lucide:check"
+							class="w-4 h-4 flex-shrink-0 text-[var(--primary)] ml-0.5"
+						/>
+					</div>
+				</UiButton>
+			</div>
 		</template>
 	</UiDropdown>
 </template>

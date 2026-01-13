@@ -67,6 +67,10 @@ const onSubmit = handleSubmit(async (values) => {
 		if (result.success) {
 			// Login bem-sucedido - mostrar toast de sucesso
 			showSuccess({ title: "Login realizado!", description: "Bem-vindo de volta!" });
+
+			// Redirecionar para dashboard
+			await navigateTo("/admin/dashboard");
+
 			emit("submit", values);
 		} else {
 			// Erro no login - mostrar toast de erro

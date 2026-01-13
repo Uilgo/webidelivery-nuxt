@@ -21,12 +21,16 @@ interface SupabaseUser {
 
 // Type guard para verificar se é um usuário válido do Supabase
 const isSupabaseUser = (user: unknown): user is SupabaseUser => {
-	return (
-		typeof user === "object" &&
-		user !== null &&
-		"id" in user &&
-		typeof (user as Record<string, unknown>).id === "string"
-	);
+	try {
+		if (typeof user !== "object" || user === null) {
+			return false;
+		}
+
+		const userObj = user as Record<string, unknown>;
+		return "id" in userObj && typeof userObj.id === "string" && userObj.id.length > 0;
+	} catch {
+		return false;
+	}
 };
 
 interface UserState {
@@ -152,9 +156,20 @@ export const useUserStore = defineStore("user", {
 				this.authUser = null;
 				this.isAuthenticated = false;
 			} else {
-				console.error("Usuário inválido recebido:", user);
-				this.authUser = null;
-				this.isAuthenticated = false;
+				// Aceitar qualquer objeto com id válido (para resolver problema do Proxy)
+				if (user && typeof user === "object" && "sub" in user) {
+					const userObj = user as Record<string, unknown>;
+					this.authUser = {
+						id: userObj.sub as string,
+						email: userObj.email as string,
+						...userObj,
+					} as SupabaseUser;
+					this.isAuthenticated = true;
+				} else {
+					console.error("Usuário inválido recebido:", user);
+					this.authUser = null;
+					this.isAuthenticated = false;
+				}
 			}
 
 			// Se não há usuário, limpar perfil
@@ -207,12 +222,6 @@ export const useUserStore = defineStore("user", {
 				this.profile = data as Perfil;
 				this.lastProfileFetch = Date.now();
 				this.profileError = null;
-
-				console.warn("Perfil carregado:", {
-					nome: data.nome,
-					cargo: data.cargo,
-					estabelecimento_id: data.estabelecimento_id,
-				});
 			} catch (error) {
 				console.error("Erro inesperado ao buscar perfil:", error);
 				this.profileError = "Erro inesperado ao carregar perfil";
@@ -252,7 +261,6 @@ export const useUserStore = defineStore("user", {
 				this.profile = data as Perfil;
 				this.lastProfileFetch = Date.now();
 
-				console.warn("Perfil atualizado com sucesso");
 				return true;
 			} catch (error) {
 				console.error("Erro inesperado ao atualizar perfil:", error);

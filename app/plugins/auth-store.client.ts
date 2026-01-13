@@ -30,18 +30,15 @@ export default defineNuxtPlugin(async () => {
 		async (newUser, oldUser) => {
 			// Usuário fez login
 			if (newUser && !oldUser) {
-				console.warn("Usuário logou - inicializando perfil");
 				userStore.setAuthUser(newUser);
 				await userStore.initializeProfile();
 			}
 			// Usuário fez logout
 			else if (!newUser && oldUser) {
-				console.warn("Usuário deslogou - limpando store");
 				userStore.clearUser();
 			}
 			// Usuário mudou (troca de conta)
 			else if (newUser && oldUser && newUser.id !== oldUser.id) {
-				console.warn("Usuário trocou - recarregando perfil");
 				userStore.setAuthUser(newUser);
 				await userStore.refreshProfile();
 			}
@@ -55,8 +52,6 @@ export default defineNuxtPlugin(async () => {
 
 	// Escutar eventos de autenticação do Supabase
 	supabase.auth.onAuthStateChange(async (event, session) => {
-		console.warn("Auth state change:", event);
-
 		switch (event) {
 			case "SIGNED_IN":
 				if (session?.user) {
@@ -89,6 +84,4 @@ export default defineNuxtPlugin(async () => {
 				break;
 		}
 	});
-
-	console.warn("Plugin auth-store inicializado");
 });
