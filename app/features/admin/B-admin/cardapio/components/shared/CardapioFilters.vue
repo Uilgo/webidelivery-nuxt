@@ -21,6 +21,8 @@ interface Props {
 	loading?: boolean;
 	/** Modo de visualização atual */
 	viewMode?: "card" | "list";
+	/** Categorias disponíveis (para filtro de produtos) */
+	categorias?: Array<{ id: string; nome: string }>;
 }
 
 interface Emits {
@@ -44,6 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 	filters: () => ({}),
 	loading: false,
 	viewMode: "card",
+	categorias: () => [],
 });
 
 const emit = defineEmits<Emits>();
@@ -78,14 +81,26 @@ const tabConfig = computed(() => {
 				{ label: "Nome (A-Z)", value: "nome_asc" },
 				{ label: "Nome (Z-A)", value: "nome_desc" },
 				{ label: "Mais vendidos", value: "total_vendas_desc" },
+				{ label: "Menor preço", value: "preco_minimo_asc" },
+				{ label: "Maior preço", value: "preco_minimo_desc" },
 				{ label: "Mais recentes", value: "created_at_desc" },
 			],
 			filterOptions: [
+				// Status
 				{ label: "Todos", value: "all" },
 				{ label: "Ativos", value: "ativo_true" },
 				{ label: "Inativos", value: "ativo_false" },
+				{ label: "---", value: "separator_1" },
+				// Destaque
 				{ label: "Em destaque", value: "destaque_true" },
+				{ label: "Sem destaque", value: "destaque_false" },
+				{ label: "---", value: "separator_2" },
+				// Promoção
 				{ label: "Em promoção", value: "em_promocao_true" },
+				{ label: "Sem promoção", value: "em_promocao_false" },
+				{ label: "---", value: "separator_3" },
+				// Categorias (submenu)
+				{ label: "Categorias", value: "categorias_group" },
 			],
 		},
 		adicionais: {
@@ -174,11 +189,25 @@ const handleClearSort = (): void => {
  * Handler para mudança de filtros
  */
 const handleFilterChange = (filterOption: { label: string; value: string }): void => {
-	if (filterOption.value === "all") {
+	// Valores "all" especiais que limpam filtros específicos
+	if (
+		filterOption.value === "all" ||
+		filterOption.value === "all_destaque" ||
+		filterOption.value === "all_promocao" ||
+		filterOption.value === "all_categoria"
+	) {
 		emit("filter", {});
 		return;
 	}
 
+	// Para filtros de categoria_id (formato: categoria_id_uuid)
+	if (filterOption.value.startsWith("categoria_id_")) {
+		const categoriaId = filterOption.value.replace("categoria_id_", "");
+		emit("filter", { categoria_id: categoriaId });
+		return;
+	}
+
+	// Para outros filtros (formato: campo_valor)
 	const parts = filterOption.value.split("_");
 	const key = parts[0];
 	const value = parts[1];
@@ -278,19 +307,26 @@ const selectedFilterLabel = computed(() => {
 			<UiDropdown placement="bottom-start">
 				<template #trigger="{ toggle }">
 					<UiButton
+						v-if="!sortValue"
 						variant="ghost"
 						size="md"
-						class="!min-h-[40px]"
-						:class="sortValue ? '!px-3' : '!p-2 !w-[40px]'"
+						icon="lucide:arrow-up-down"
+						class="!min-h-[40px] !w-[40px]"
+						:aria-label="'Ordenar ' + activeTab"
+						@click="toggle"
+					/>
+					<UiButton
+						v-else
+						variant="ghost"
+						size="md"
+						class="!min-h-[40px] !px-3"
 						:aria-label="'Ordenar ' + activeTab"
 						@click="toggle"
 					>
 						<template #iconLeft>
 							<Icon name="lucide:arrow-up-down" class="w-4 h-4" />
 						</template>
-						<template v-if="selectedSortLabel">
-							{{ selectedSortLabel }}
-						</template>
+						{{ selectedSortLabel }}
 					</UiButton>
 				</template>
 
@@ -340,45 +376,102 @@ const selectedFilterLabel = computed(() => {
 			<UiDropdown placement="bottom-start">
 				<template #trigger="{ toggle }">
 					<UiButton
+						v-if="!selectedFilterLabel"
 						variant="ghost"
 						size="md"
-						class="!min-h-[40px]"
-						:class="selectedFilterLabel ? '!px-3' : '!p-2 !w-[40px]'"
+						icon="lucide:filter"
+						class="!min-h-[40px] !w-[40px]"
+						:aria-label="'Filtrar ' + activeTab"
+						@click="toggle"
+					/>
+					<UiButton
+						v-else
+						variant="ghost"
+						size="md"
+						class="!min-h-[40px] !px-3"
 						:aria-label="'Filtrar ' + activeTab"
 						@click="toggle"
 					>
 						<template #iconLeft>
 							<Icon name="lucide:filter" class="w-4 h-4" />
 						</template>
-						<template v-if="selectedFilterLabel">
-							{{ selectedFilterLabel }}
-						</template>
+						{{ selectedFilterLabel }}
 					</UiButton>
 				</template>
 
 				<template #default="{ close }">
-					<div class="py-1 w-max min-w-[140px]">
-						<button
-							v-for="option in tabConfig.filterOptions"
-							:key="option.value"
-							type="button"
-							class="w-full flex items-center px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap rounded-lg"
-							:class="{
-								'bg-[var(--primary-light)] text-[var(--primary)]':
-									selectedFilterLabel === option.label,
-							}"
-							@click="
-								handleFilterChange(option);
-								close();
-							"
-						>
-							<span>{{ option.label }}</span>
-							<Icon
-								v-if="selectedFilterLabel === option.label"
-								name="lucide:check"
-								class="w-4 h-4 ml-auto text-[var(--primary)]"
-							/>
-						</button>
+					<div class="py-1 w-max min-w-[180px]">
+						<template v-for="option in tabConfig.filterOptions" :key="option.value">
+							<!-- Separador visual -->
+							<div
+								v-if="option.value.startsWith('separator_')"
+								class="h-px bg-[var(--border-default)] my-1"
+							></div>
+
+							<!-- Grupo com submenu (para categorias) -->
+							<div v-else-if="option.value === 'categorias_group'" class="relative">
+								<UiDropdown placement="right" :offset="4">
+									<template #trigger="{ toggle: toggleSub }">
+										<button
+											type="button"
+											class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap rounded-lg"
+											@click="toggleSub"
+										>
+											<span>{{ option.label }}</span>
+											<Icon name="lucide:chevron-right" class="w-4 h-4 ml-2" />
+										</button>
+									</template>
+									<template #default="{ close: closeSub }">
+										<div class="py-1 w-max min-w-[160px] max-h-[300px] overflow-y-auto">
+											<button
+												v-for="cat in props.categorias"
+												:key="cat.id"
+												type="button"
+												class="w-full flex items-center px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap rounded-lg"
+												:class="{
+													'bg-[var(--primary-light)] text-[var(--primary)]':
+														filters?.categoria_id === cat.id,
+												}"
+												@click="
+													handleFilterChange({ label: cat.nome, value: `categoria_id_${cat.id}` });
+													closeSub();
+													close();
+												"
+											>
+												<span>{{ cat.nome }}</span>
+												<Icon
+													v-if="filters?.categoria_id === cat.id"
+													name="lucide:check"
+													class="w-4 h-4 ml-auto text-[var(--primary)]"
+												/>
+											</button>
+										</div>
+									</template>
+								</UiDropdown>
+							</div>
+
+							<!-- Opção de filtro normal -->
+							<button
+								v-else
+								type="button"
+								class="w-full flex items-center px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap rounded-lg"
+								:class="{
+									'bg-[var(--primary-light)] text-[var(--primary)]':
+										selectedFilterLabel === option.label,
+								}"
+								@click="
+									handleFilterChange(option);
+									close();
+								"
+							>
+								<span>{{ option.label }}</span>
+								<Icon
+									v-if="selectedFilterLabel === option.label"
+									name="lucide:check"
+									class="w-4 h-4 ml-auto text-[var(--primary)]"
+								/>
+							</button>
+						</template>
 					</div>
 				</template>
 			</UiDropdown>

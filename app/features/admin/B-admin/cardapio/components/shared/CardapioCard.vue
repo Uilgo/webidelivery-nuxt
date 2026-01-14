@@ -159,7 +159,7 @@ const handleViewMore = (event: Event): void => {
 						<!-- Categoria Badge (Overlay) -->
 						<div
 							v-if="config.categoryField && getStringFieldValue(config.categoryField)"
-							class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-[2px] border border-white/10 shadow-sm"
+							class="absolute bottom-1.5 left-1.5 px-3 py-2 rounded-md bg-black/60 backdrop-blur-[2px] border border-white/10 shadow-sm flex items-center justify-center"
 						>
 							<span class="text-[10px] font-bold text-white uppercase tracking-wider leading-none">
 								{{ getStringFieldValue(config.categoryField) }}

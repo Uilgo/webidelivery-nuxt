@@ -89,3 +89,15 @@ export interface ProdutoStats {
 	em_promocao: number;
 	vendas_total: number;
 }
+
+/**
+ * Produto com campos computados para exibição
+ */
+export interface ProdutoComputado extends Produto {
+	categoria_nome: string;
+	variacoes_count: number;
+	preco_minimo?: number;
+	preco_maximo?: number;
+	status_display: string;
+	pode_excluir: boolean;
+}

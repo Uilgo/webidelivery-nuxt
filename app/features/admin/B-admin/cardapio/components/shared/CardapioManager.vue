@@ -13,12 +13,15 @@
 
 import { useCardapio } from "../../composables/useCardapio";
 import { useCategorias } from "../../A-categorias/composables/useCategorias";
+import { useProdutos } from "../../B-produtos/composables/useProdutos";
 import { useToast } from "~/composables/ui/useToast";
 import type { CategoriaComputada } from "../../../types/categoria";
+import type { ProdutoComputado } from "../../../types/produto";
 import CardapioMenuTabs from "./CardapioMenuTabs.vue";
 import CardapioFilters from "./CardapioFilters.vue";
 import CardapioTabSection from "./CardapioTabSection.vue";
 import CategoriasView from "../../A-categorias/components/CategoriasView.vue";
+import ProdutosView from "../../B-produtos/components/ProdutosView.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -26,6 +29,9 @@ const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, 
 
 // Composable de categorias
 const categoriasComposable = useCategorias();
+
+// Composable de produtos
+const produtosComposable = useProdutos();
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -48,6 +54,23 @@ watch(
 	{ immediate: true },
 );
 
+// Atualiza contadores e estados no useCardapio quando produtos mudam
+watch(
+	() => produtosComposable.produtosRaw.value,
+	(produtos) => {
+		setTabData("produtos", produtos);
+	},
+	{ immediate: true },
+);
+
+watch(
+	() => produtosComposable.loading.value,
+	(loading) => {
+		setTabLoading("produtos", loading);
+	},
+	{ immediate: true },
+);
+
 // ========================================
 // COMPUTADAS PARA TEMPLATE
 // ========================================
@@ -55,7 +78,7 @@ watch(
 // Contadores das tabs
 const tabCounts = computed(() => ({
 	categoriasCount: categoriasComposable.totalCategorias.value,
-	produtosCount: 0, // TODO: integrar useProdutos
+	produtosCount: produtosComposable.totalProdutos.value,
 	adicionaisCount: 0, // TODO: integrar useAdicionais
 	combosCount: 0, // TODO: integrar useCombos
 }));
@@ -63,24 +86,33 @@ const tabCounts = computed(() => ({
 // Estados de loading/dados baseados na aba ativa
 const currentLoading = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.loading.value;
+	if (activeTab.value === "produtos") return produtosComposable.loading.value;
 	// TODO: outros tabs
 	return false;
 });
 
 const currentHasData = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.categorias.value.length > 0;
+	if (activeTab.value === "produtos") return produtosComposable.produtos.value.length > 0;
 	// TODO: outros tabs
 	return false;
 });
 
 const currentSearchValue = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.filters.value.busca ?? "";
+	if (activeTab.value === "produtos") return produtosComposable.filters.value.busca ?? "";
 	return "";
 });
 
 const currentSortValue = computed(() => {
 	if (activeTab.value === "categorias") {
 		const { ordenacao, direcao } = categoriasComposable.filters.value;
+		// Retorna vazio se for a ordenação padrão (ordem_asc)
+		if (ordenacao === "ordem" && direcao === "asc") return "";
+		return ordenacao ? `${ordenacao}_${direcao}` : "";
+	}
+	if (activeTab.value === "produtos") {
+		const { ordenacao, direcao } = produtosComposable.filters.value;
 		// Retorna vazio se for a ordenação padrão (ordem_asc)
 		if (ordenacao === "ordem" && direcao === "asc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
@@ -95,6 +127,14 @@ const currentFilters = computed(() => {
 			return { ativo };
 		}
 	}
+	if (activeTab.value === "produtos") {
+		const { ativo, destaque, em_promocao } = produtosComposable.filters.value;
+		const filters: Record<string, unknown> = {};
+		if (ativo !== undefined) filters.ativo = ativo;
+		if (destaque !== undefined) filters.destaque = destaque;
+		if (em_promocao !== undefined) filters.em_promocao = em_promocao;
+		if (Object.keys(filters).length > 0) return filters;
+	}
 	return {};
 });
 
@@ -108,6 +148,8 @@ const currentFilters = computed(() => {
 const handleSearch = (value: string): void => {
 	if (activeTab.value === "categorias") {
 		categoriasComposable.setSearch(value);
+	} else if (activeTab.value === "produtos") {
+		produtosComposable.setSearch(value);
 	}
 	// TODO: outros tabs
 };
@@ -128,6 +170,20 @@ const handleSort = (value: string): void => {
 		const field = value.substring(0, lastUnderscoreIndex) as "nome" | "ordem" | "created_at";
 		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
 		categoriasComposable.setOrdenacao(field, direcao);
+	} else if (activeTab.value === "produtos") {
+		// Se vazio, volta para ordenação padrão (ordem_asc)
+		if (!value) {
+			produtosComposable.setOrdenacao("ordem", "asc");
+			return;
+		}
+		const lastUnderscoreIndex = value.lastIndexOf("_");
+		const field = value.substring(0, lastUnderscoreIndex) as
+			| "nome"
+			| "ordem"
+			| "total_vendas"
+			| "created_at";
+		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
+		produtosComposable.setOrdenacao(field, direcao);
 	}
 	// TODO: outros tabs
 };
@@ -142,6 +198,24 @@ const handleFilter = (filters: Record<string, unknown>): void => {
 		} else {
 			categoriasComposable.setAtivo(undefined);
 		}
+	} else if (activeTab.value === "produtos") {
+		// Limpa todos os filtros primeiro
+		if (Object.keys(filters).length === 0) {
+			produtosComposable.setAtivo(undefined);
+			produtosComposable.setDestaque(undefined);
+			produtosComposable.setEmPromocao(undefined);
+			return;
+		}
+		// Aplica filtros específicos
+		if ("ativo" in filters) {
+			produtosComposable.setAtivo(filters.ativo as boolean | undefined);
+		}
+		if ("destaque" in filters) {
+			produtosComposable.setDestaque(filters.destaque as boolean | undefined);
+		}
+		if ("em_promocao" in filters) {
+			produtosComposable.setEmPromocao(filters.em_promocao as boolean | undefined);
+		}
 	}
 	// TODO: outros tabs
 };
@@ -152,6 +226,8 @@ const handleFilter = (filters: Record<string, unknown>): void => {
 const handleRefresh = async (): Promise<void> => {
 	if (activeTab.value === "categorias") {
 		await categoriasComposable.refresh();
+	} else if (activeTab.value === "produtos") {
+		await produtosComposable.refresh();
 	}
 	// TODO: outros tabs
 };
@@ -162,6 +238,8 @@ const handleRefresh = async (): Promise<void> => {
 const handleCreate = (): void => {
 	if (activeTab.value === "categorias") {
 		categoriasComposable.openCreate();
+	} else if (activeTab.value === "produtos") {
+		produtosComposable.openCreate();
 	}
 	// TODO: outros tabs
 };
@@ -215,6 +293,54 @@ const handleCategoriaToggleStatus = async (categoria: unknown): Promise<void> =>
 	}
 };
 
+/**
+ * Handler para seleção de produto
+ */
+const handleProdutoSelect = (produto: unknown): void => {
+	produtosComposable.openEdit(produto as Parameters<typeof produtosComposable.openEdit>[0]);
+};
+
+/**
+ * Handler para ver mais detalhes de produto
+ */
+const handleProdutoViewMore = (produto: unknown): void => {
+	produtosComposable.openView(produto as Parameters<typeof produtosComposable.openView>[0]);
+};
+
+/**
+ * Handler para editar produto
+ */
+const handleProdutoEdit = (produto: unknown): void => {
+	produtosComposable.openEdit(produto as Parameters<typeof produtosComposable.openEdit>[0]);
+};
+
+/**
+ * Handler para excluir produto
+ */
+const handleProdutoDelete = (_produto: unknown): void => {
+	// TODO: implementar quando tiver modal de confirmação
+	console.warn("[CardapioManager] Delete de produto não implementado ainda");
+};
+
+/**
+ * Handler para toggle status de produto
+ */
+const handleProdutoToggleStatus = async (produto: unknown): Promise<void> => {
+	const prod = produto as ProdutoComputado;
+	const novoStatus = !prod.ativo;
+	const success = await produtosComposable.handleToggleAtivo(prod.id, novoStatus);
+
+	if (success) {
+		const toast = useToast();
+		toast.add({
+			title: novoStatus ? "Produto ativado" : "Produto desativado",
+			description: `${prod.nome} foi ${novoStatus ? "ativado" : "desativado"} com sucesso`,
+			color: "success",
+			duration: 3000,
+		});
+	}
+};
+
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
@@ -222,6 +348,8 @@ const handleCategoriaToggleStatus = async (categoria: unknown): Promise<void> =>
 onMounted(async () => {
 	// Carrega categorias ao montar
 	await categoriasComposable.init();
+	// Carrega produtos ao montar
+	await produtosComposable.init();
 });
 </script>
 
@@ -245,6 +373,7 @@ onMounted(async () => {
 			:filters="currentFilters"
 			:loading="currentLoading"
 			:view-mode="viewMode"
+			:categorias="categoriasComposable.categoriasRaw.value"
 			@search="handleSearch"
 			@sort="handleSort"
 			@filter="handleFilter"
@@ -274,13 +403,17 @@ onMounted(async () => {
 						@toggle-status="handleCategoriaToggleStatus"
 					/>
 
-					<!-- TODO: Produtos -->
-					<div
+					<!-- Produtos -->
+					<ProdutosView
 						v-else-if="sectionTab === 'produtos'"
-						class="p-6 text-center text-[var(--text-muted)]"
-					>
-						<p>TODO: ProdutosView</p>
-					</div>
+						:produtos="produtosComposable.produtos.value"
+						:view-mode="viewMode"
+						@select="handleProdutoSelect"
+						@view-more="handleProdutoViewMore"
+						@edit="handleProdutoEdit"
+						@delete="handleProdutoDelete"
+						@toggle-status="handleProdutoToggleStatus"
+					/>
 
 					<!-- TODO: Adicionais -->
 					<div
