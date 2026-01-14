@@ -1,84 +1,163 @@
 /**
- * 📌 Plugin de Inicialização do Store de Usuário
+ * 📌 Plugin de Inicialização (Client-side)
  *
- * Plugin client-side que sincroniza o Supabase Auth com o store de usuário.
- * Monitora mudanças de autenticação e carrega/limpa o perfil automaticamente.
+ * Plugin client-side que sincroniza o Supabase Auth com os stores.
+ * NÃO recarrega dados se já vieram do SSR - apenas monitora mudanças.
  */
 
-export default defineNuxtPlugin(async () => {
+import { useUserStore } from "~/stores/user";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
+
+/**
+ * Extrai o ID do usuário (suporta 'id' e 'sub')
+ */
+const getUserId = (user: unknown): string | null => {
+	if (!user || typeof user !== "object") return null;
+	const u = user as Record<string, unknown>;
+	return (u.id as string) ?? (u.sub as string) ?? null;
+};
+
+export default defineNuxtPlugin(() => {
+	// Só executar no client-side
+	if (!import.meta.client) return;
+
 	const supabase = useSupabaseClient();
 	const user = useSupabaseUser();
 	const userStore = useUserStore();
+	const estabelecimentoStore = useEstabelecimentoStore();
+
+	/**
+	 * Carrega todos os dados em uma única query
+	 */
+	const loadAllData = async (): Promise<void> => {
+		const userId = getUserId(user.value);
+		if (!userId) return;
+
+		try {
+			const { data: perfil, error } = await supabase
+				.from("perfis")
+				.select(
+					`
+					*,
+					estabelecimentos:estabelecimento_id (
+						id,
+						nome,
+						slug,
+						logo_url,
+						status
+					)
+				`,
+				)
+				.eq("id", userId)
+				.single();
+
+			if (error) {
+				console.error("[AuthClient] Erro na query:", error.message);
+				return;
+			}
+
+			if (perfil) {
+				const { estabelecimentos, ...perfilData } = perfil;
+
+				userStore.$patch({
+					profile: perfilData,
+					isLoadingProfile: false,
+					lastProfileFetch: Date.now(),
+				});
+
+				if (estabelecimentos) {
+					estabelecimentoStore.$patch({
+						estabelecimento: estabelecimentos,
+						isLoading: false,
+						lastFetch: Date.now(),
+					});
+				}
+			}
+		} catch (error) {
+			console.error("[AuthClient] Erro ao carregar dados:", error);
+		}
+	};
+
+	/**
+	 * Limpa todos os dados
+	 */
+	const clearAllData = (): void => {
+		userStore.clearUser();
+		estabelecimentoStore.clear();
+	};
 
 	// ========================================
 	// INICIALIZAÇÃO
 	// ========================================
 
-	// Configurar usuário inicial se já estiver logado
-	if (user.value) {
+	const userId = getUserId(user.value);
+
+	// Se tem usuário mas NÃO tem dados no store (SSR falhou ou não executou)
+	if (userId && !userStore.profile) {
 		userStore.setAuthUser(user.value);
-		await userStore.initializeProfile();
+		// Carregar dados em background (não bloqueia)
+		loadAllData();
 	}
 
 	// ========================================
-	// MONITORAMENTO DE MUDANÇAS
+	// MONITORAMENTO DE MUDANÇAS DE AUTH
 	// ========================================
 
-	// Observar mudanças no usuário do Supabase
 	watch(
 		user,
-		async (newUser, oldUser) => {
-			// Usuário fez login
-			if (newUser && !oldUser) {
+		(newUser, oldUser) => {
+			const newUserId = getUserId(newUser);
+			const oldUserId = getUserId(oldUser);
+
+			if (newUserId && !oldUserId) {
+				// Login - carregar dados
 				userStore.setAuthUser(newUser);
-				await userStore.initializeProfile();
-			}
-			// Usuário fez logout
-			else if (!newUser && oldUser) {
-				userStore.clearUser();
-			}
-			// Usuário mudou (troca de conta)
-			else if (newUser && oldUser && newUser.id !== oldUser.id) {
+				loadAllData();
+			} else if (!newUserId && oldUserId) {
+				// Logout - limpar dados
+				clearAllData();
+			} else if (newUserId && oldUserId && newUserId !== oldUserId) {
+				// Troca de conta
 				userStore.setAuthUser(newUser);
-				await userStore.refreshProfile();
+				estabelecimentoStore.clear();
+				loadAllData();
 			}
 		},
 		{ immediate: false },
 	);
 
 	// ========================================
-	// LISTENER DE EVENTOS DE AUTH
+	// LISTENER DE EVENTOS DE AUTH DO SUPABASE
 	// ========================================
 
-	// Escutar eventos de autenticação do Supabase
-	supabase.auth.onAuthStateChange(async (event, session) => {
+	supabase.auth.onAuthStateChange((event, session) => {
 		switch (event) {
 			case "SIGNED_IN":
-				if (session?.user) {
+				if (session?.user && !userStore.profile) {
 					userStore.setAuthUser(session.user);
-					await userStore.initializeProfile();
+					loadAllData();
 				}
 				break;
 
 			case "SIGNED_OUT":
-				userStore.clearUser();
+				clearAllData();
 				break;
 
 			case "TOKEN_REFRESHED":
-				// Token foi renovado, mas usuário continua o mesmo
-				if (session?.user && userStore.authUser?.id === session.user.id) {
-					userStore.setAuthUser(session.user);
-					// Não precisa recarregar perfil, só atualizar auth user
+				if (session?.user) {
+					const currentId = getUserId(userStore.authUser);
+					if (currentId === session.user.id) {
+						userStore.setAuthUser(session.user);
+					}
 				}
 				break;
 
 			case "USER_UPDATED":
-				// Dados do auth.users foram atualizados
 				if (session?.user) {
 					userStore.setAuthUser(session.user);
-					// Pode ser necessário recarregar perfil se email mudou
+					// Recarregar perfil se email mudou
 					if (userStore.profile?.email !== session.user.email) {
-						await userStore.refreshProfile();
+						loadAllData();
 					}
 				}
 				break;

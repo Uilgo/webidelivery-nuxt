@@ -3,86 +3,80 @@
  * 📌 Layout Admin
  *
  * Layout principal do painel administrativo do estabelecimento.
- * Integra AdminHeader e AdminSidebar com controle de estado centralizado.
+ * Dados são carregados pelos plugins de autenticação no servidor.
  */
 
-// Imports dos componentes
 import AdminHeader from "~/features/admin/components/AdminHeader.vue";
 import AdminSidebar from "~/features/admin/components/AdminSidebar.vue";
-import { useEstabelecimentos } from "~/composables/data/useEstabelecimentos";
 import { useUserStore } from "~/stores/user";
-import type { Estabelecimento } from "#shared/types/estabelecimentos";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 // Estados do layout
-const isSidebarOpen = ref(false); // Mobile: sidebar aberto/fechado
-const isSidebarCollapsed = ref(false); // Desktop: sidebar expandido/colapsado
+const isSidebarOpen = ref(false);
 
-// Dados centralizados (evita duplicação entre Header e Sidebar)
-const userStore = useUserStore();
-const { getCurrentEstablishment } = useEstabelecimentos();
-
-// Estado do estabelecimento centralizado
-const estabelecimentoAtual = ref<Estabelecimento | null>(null);
-const isLoadingEstabelecimento = ref(true);
-
-// Dados do perfil do usuário (da tabela perfis)
-const userProfile = computed(() => userStore.profile);
-
-// Buscar dados do estabelecimento uma única vez
-onMounted(async () => {
-	try {
-		estabelecimentoAtual.value = await getCurrentEstablishment();
-		if (!estabelecimentoAtual.value) {
-			console.warn("Nenhum estabelecimento encontrado para o usuário atual");
-		}
-	} catch (error) {
-		console.error("Erro ao carregar estabelecimento:", error);
-	} finally {
-		isLoadingEstabelecimento.value = false;
-	}
+// Cookie para persistir estado do sidebar
+const sidebarCollapsedCookie = useCookie("admin-sidebar-collapsed", {
+	default: () => false,
+	maxAge: 60 * 60 * 24 * 365,
 });
 
-// Provide dos dados para os componentes filhos
-provide("estabelecimentoAtual", readonly(estabelecimentoAtual));
-provide("isLoadingEstabelecimento", readonly(isLoadingEstabelecimento));
-provide("userProfile", readonly(userProfile));
+const isSidebarCollapsed = ref(sidebarCollapsedCookie.value);
 
-/**
- * Toggle do sidebar no mobile
- */
+// Stores (dados carregados pelo plugin server)
+const userStore = useUserStore();
+const estabelecimentoStore = useEstabelecimentoStore();
+
+// Dados do perfil (reativo ao store)
+const userProfile = computed(
+	() =>
+		userStore.profile ?? {
+			nome: "Usuário",
+			sobrenome: "",
+			email: "",
+			avatar_url: null,
+		},
+);
+
+// Dados do estabelecimento (reativo ao store)
+const estabelecimentoAtual = computed(
+	() =>
+		estabelecimentoStore.estabelecimento ?? {
+			id: "",
+			nome: "Estabelecimento",
+			slug: "",
+			logo_url: null,
+		},
+);
+
+// Provide para componentes filhos
+provide("estabelecimentoAtual", estabelecimentoAtual);
+provide("userProfile", userProfile);
+
+// Handlers
 const handleToggleSidebar = (): void => {
 	isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-/**
- * Fechar sidebar no mobile
- */
 const handleCloseSidebar = (): void => {
 	isSidebarOpen.value = false;
 };
 
-/**
- * Toggle do collapse no desktop
- */
 const handleToggleSidebarCollapse = (): void => {
 	isSidebarCollapsed.value = !isSidebarCollapsed.value;
+	sidebarCollapsedCookie.value = isSidebarCollapsed.value;
 };
 
-// Meta tags para SEO
+// SEO
 useHead({
 	title: "Painel Administrativo - WebiDelivery",
 	meta: [
-		{
-			name: "description",
-			content: "Painel administrativo para gerenciar seu estabelecimento no WebiDelivery",
-		},
+		{ name: "description", content: "Painel administrativo para gerenciar seu estabelecimento" },
 	],
 });
 </script>
 
 <template>
 	<div class="flex h-screen bg-[var(--background)] overflow-hidden">
-		<!-- Sidebar -->
 		<AdminSidebar
 			:is-open="isSidebarOpen"
 			:is-collapsed="isSidebarCollapsed"
@@ -90,9 +84,7 @@ useHead({
 			@toggle-collapse="handleToggleSidebarCollapse"
 		/>
 
-		<!-- Conteúdo Principal -->
 		<div class="flex-1 flex flex-col min-h-0">
-			<!-- Header -->
 			<AdminHeader
 				title="Dashboard"
 				:sidebar-open="isSidebarOpen"
@@ -101,7 +93,6 @@ useHead({
 				@toggle-sidebar-collapse="handleToggleSidebarCollapse"
 			/>
 
-			<!-- Área de Conteúdo -->
 			<main class="flex-1 overflow-y-auto p-6">
 				<slot></slot>
 			</main>

@@ -7,7 +7,6 @@
  */
 
 import { useAuth } from "~/composables/core/useAuth";
-import type { Estabelecimento } from "#shared/types/estabelecimentos";
 
 interface Props {
 	/** Controla se o sidebar está aberto/expandido */
@@ -34,22 +33,35 @@ const emit = defineEmits<Emits>();
 const { logout } = useAuth();
 
 // Dados centralizados do layout (evita duplicação)
-const estabelecimentoAtual = inject<Ref<Estabelecimento | null>>("estabelecimentoAtual", ref(null));
+const estabelecimentoAtual = inject<
+	ComputedRef<{ id: string; nome: string; slug?: string; logo_url?: string | null }>
+>(
+	"estabelecimentoAtual",
+	computed(() => ({ id: "", nome: "Estabelecimento", slug: "", logo_url: null })),
+);
 const userProfile = inject<
-	Ref<{ nome?: string; sobrenome?: string; email?: string; avatar_url?: string } | null>
->("userProfile", ref(null));
+	ComputedRef<{ nome?: string; sobrenome?: string; email?: string; avatar_url?: string | null }>
+>(
+	"userProfile",
+	computed(() => ({ nome: "Usuário", sobrenome: "", email: "", avatar_url: null })),
+);
 
-// Dados computados do usuário
+// Dados computados do usuário com fallbacks para evitar hydration mismatch
 const userName = computed(() => {
-	if (!userProfile.value) return "Usuário";
-	return `${userProfile.value.nome} ${userProfile.value.sobrenome}`.trim();
+	if (!userProfile.value?.nome || userProfile.value.nome === "Usuário") return "Usuário";
+	const nome = userProfile.value.nome || "";
+	const sobrenome = userProfile.value.sobrenome || "";
+	return `${nome} ${sobrenome}`.trim() || "Usuário";
 });
+
 const userEmail = computed(() => userProfile.value?.email || "");
+
 const userInitials = computed(() => {
-	if (!userProfile.value) return "U";
+	if (!userProfile.value?.nome || userProfile.value.nome === "Usuário") return "U";
 	const nome = userProfile.value.nome?.charAt(0) || "";
 	const sobrenome = userProfile.value.sobrenome?.charAt(0) || "";
-	return `${nome}${sobrenome}`.toUpperCase();
+	const initials = `${nome}${sobrenome}`.toUpperCase();
+	return initials || "U";
 });
 
 // Dados do estabelecimento
@@ -240,7 +252,7 @@ const handleCloseSidebar = (): void => {
 							<UiAvatar
 								:name="userName"
 								:initials="userInitials"
-								:src="userProfile?.avatar_url"
+								:src="userProfile?.avatar_url ?? undefined"
 								size="md"
 								class="flex-shrink-0"
 							/>

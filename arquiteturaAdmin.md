@@ -216,3 +216,45 @@ Acessibilidade: Navegação por teclado e ARIA labels
 Onboarding: Integrado no dashboard (não rota separada)
 Multi-tenant: RLS garante isolamento de dados
 Esta estrutura segue exatamente o PRD e as regras do projeto, mantendo a arquitetura por features e separação de responsabilidades!
+
+app/features/admin/B-admin/cardapio/
+├── pages/
+│ └── CardapioPage.vue # Página principal com tabs
+├── components/
+│ ├── categorias/
+│ │ ├── CategoriasList.vue # Lista de categorias
+│ │ ├── CategoriaCard.vue # Card individual da categoria
+│ │ ├── CategoriaForm.vue # Formulário criar/editar categoria
+│ │ └── CategoriaModal.vue # Modal para categoria
+│ ├── produtos/
+│ │ ├── ProdutosList.vue # Lista de produtos
+│ │ ├── ProdutoCard.vue # Card individual do produto
+│ │ ├── ProdutoForm.vue # Formulário criar/editar produto
+│ │ ├── ProdutoModal.vue # Modal para produto
+│ │ ├── VariacoesList.vue # Lista de variações do produto
+│ │ └── VariacaoForm.vue # Formulário de variação
+│ ├── adicionais/
+│ │ ├── AdicionaisList.vue # Lista de grupos de adicionais
+│ │ ├── GrupoAdicionalCard.vue # Card do grupo
+│ │ ├── GrupoAdicionalForm.vue # Formulário do grupo
+│ │ ├── AdicionalItem.vue # Item adicional individual
+│ │ └── AdicionalForm.vue # Formulário do adicional
+│ └── shared/
+│ ├── CardapioTabs.vue # Componente de tabs
+│ ├── ImageUpload.vue # Upload de imagens
+│ ├── StatusToggle.vue # Toggle ativo/inativo
+│ └── EmptyState.vue # Estado vazio
+├── composables/
+│ ├── useCategorias.ts # Lógica de categorias
+│ ├── useProdutos.ts # Lógica de produtos
+│ ├── useAdicionais.ts # Lógica de adicionais
+│ ├── useImageUpload.ts # Upload de imagens
+│ └── useCardapioFilters.ts # Filtros e busca
+├── types/
+│ ├── categoria.ts # Tipos de categoria
+│ ├── produto.ts # Tipos de produto
+│ ├── adicional.ts # Tipos de adicional
+│ └── index.ts # Re-exportações
+└── utils/
+├── cardapioHelpers.ts # Helpers do cardápio
+└── imageHelpers.ts # Helpers de imagem

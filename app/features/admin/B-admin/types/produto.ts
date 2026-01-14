@@ -1,0 +1,91 @@
+/**
+ * 📌 Tipos para Produtos do Cardápio
+ *
+ * Baseado na estrutura real do banco de dados Supabase.
+ * Inclui produtos e variações.
+ */
+
+import type { UUID, TimestampTz } from "#shared/types/database";
+
+export interface Produto {
+	readonly id: UUID;
+	readonly created_at: TimestampTz;
+	readonly updated_at: TimestampTz;
+	readonly estabelecimento_id: UUID;
+	readonly categoria_id: UUID;
+	readonly nome: string;
+	readonly descricao: string | null;
+	readonly imagem_url: string | null;
+	readonly ordem: number;
+	readonly ativo: boolean;
+	readonly destaque: boolean;
+	readonly em_promocao: boolean;
+	readonly total_vendas: number;
+}
+
+export interface ProdutoVariacao {
+	readonly id: UUID;
+	readonly created_at: TimestampTz;
+	readonly updated_at: TimestampTz;
+	readonly produto_id: UUID;
+	readonly nome: string;
+	readonly preco: number;
+	readonly preco_promocional: number | null;
+	readonly ordem: number;
+	readonly ativo: boolean;
+}
+
+export interface ProdutoCreateData {
+	categoria_id: UUID;
+	nome: string;
+	descricao?: string;
+	imagem_url?: string;
+	ordem?: number;
+	destaque?: boolean;
+	em_promocao?: boolean;
+}
+
+export interface ProdutoUpdateData {
+	categoria_id?: UUID;
+	nome?: string;
+	descricao?: string;
+	imagem_url?: string;
+	ordem?: number;
+	ativo?: boolean;
+	destaque?: boolean;
+	em_promocao?: boolean;
+}
+
+export interface ProdutoVariacaoCreateData {
+	nome: string;
+	preco: number;
+	preco_promocional?: number;
+	ordem?: number;
+}
+
+export interface ProdutoVariacaoUpdateData {
+	nome?: string;
+	preco?: number;
+	preco_promocional?: number;
+	ordem?: number;
+	ativo?: boolean;
+}
+
+export interface ProdutoFilters {
+	busca?: string;
+	categoria_id?: UUID;
+	ativo?: boolean;
+	destaque?: boolean;
+	em_promocao?: boolean;
+	ordenacao?: "nome" | "ordem" | "total_vendas" | "created_at";
+	direcao?: "asc" | "desc";
+}
+
+export interface ProdutoStats {
+	total: number;
+	ativos: number;
+	inativos: number;
+	em_destaque: number;
+	em_promocao: number;
+	vendas_total: number;
+}
