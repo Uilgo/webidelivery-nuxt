@@ -78,13 +78,7 @@ const handleTabChange = (tab: string): void => {
 	<UiTabs
 		:tabs="cardapioTabs"
 		:model-value="modelValue"
-		fill-height
 		@update:model-value="handleTabChange"
 		@tab-change="handleTabChange"
-	>
-		<template #default="{ activeTab }">
-			<!-- Slot para o conteúdo das abas -->
-			<slot :active-tab="activeTab"></slot>
-		</template>
-	</UiTabs>
+	/>
 </template>

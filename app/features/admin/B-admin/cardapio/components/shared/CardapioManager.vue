@@ -3,241 +3,313 @@
  * 📌 CardapioManager
  *
  * Componente orquestrador do gerenciamento de cardápio.
- * Gerencia estado global, composables e coordena todos os componentes filhos.
+ * Responsável apenas pela UI - toda lógica está nos composables.
+ *
+ * Estrutura:
+ * - CardapioMenuTabs (abas de navegação)
+ * - CardapioFilters (filtros - FIXO, fora das abas)
+ * - CardapioTabSection (conteúdo da aba ativa)
  */
 
-// Importações dos componentes
+import { useCardapio } from "../../composables/useCardapio";
+import { useCategorias } from "../../A-categorias/composables/useCategorias";
+import { useToast } from "~/composables/ui/useToast";
+import type { CategoriaComputada } from "../../../types/categoria";
 import CardapioMenuTabs from "./CardapioMenuTabs.vue";
+import CardapioFilters from "./CardapioFilters.vue";
 import CardapioTabSection from "./CardapioTabSection.vue";
+import CategoriasView from "../../A-categorias/components/CategoriasView.vue";
 
-// Estados globais do cardápio
-const route = useRoute();
-const router = useRouter();
+// Composable global do cardápio
+const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
+	useCardapio();
 
-// Cookie para persistir última aba visitada
-const lastTabCookie = useCookie<"categorias" | "produtos" | "adicionais" | "combos">(
-	"cardapio-last-tab",
-	{
-		default: () => "categorias",
-		maxAge: 60 * 60 * 24 * 30, // 30 dias
+// Composable de categorias
+const categoriasComposable = useCategorias();
+
+// ========================================
+// SINCRONIZAÇÃO COM useCardapio
+// ========================================
+
+// Atualiza contadores e estados no useCardapio quando categorias mudam
+watch(
+	() => categoriasComposable.categoriasRaw.value,
+	(categorias) => {
+		setTabData("categorias", categorias);
 	},
+	{ immediate: true },
 );
 
-// Aba ativa sincronizada com URL query parameter e cookie
-const activeTab = ref<"categorias" | "produtos" | "adicionais" | "combos">(
-	(route.query.tab as string) === "produtos"
-		? "produtos"
-		: (route.query.tab as string) === "adicionais"
-			? "adicionais"
-			: (route.query.tab as string) === "combos"
-				? "combos"
-				: (route.query.tab as string) === "categorias"
-					? "categorias"
-					: lastTabCookie.value, // usar última aba do cookie como fallback
+watch(
+	() => categoriasComposable.loading.value,
+	(loading) => {
+		setTabLoading("categorias", loading);
+	},
+	{ immediate: true },
 );
 
-// Forçar parâmetro tab na URL imediatamente se não existir
-if (!route.query.tab) {
-	router.replace({
-		query: {
-			...route.query,
-			tab: activeTab.value,
-		},
-	});
-}
+// ========================================
+// COMPUTADAS PARA TEMPLATE
+// ========================================
 
-// Estados de loading por aba
-const loadingStates = ref({
-	categorias: false,
-	produtos: false,
-	adicionais: false,
-	combos: false,
-});
-
-// Dados por aba (mock inicial)
-const tabData = ref({
-	categorias: [],
-	produtos: [],
-	adicionais: [],
-	combos: [],
-});
-
-// Contadores para badges das abas
+// Contadores das tabs
 const tabCounts = computed(() => ({
-	categoriasCount: tabData.value.categorias.length,
-	produtosCount: tabData.value.produtos.length,
-	adicionaisCount: tabData.value.adicionais.length,
-	combosCount: tabData.value.combos.length,
+	categoriasCount: categoriasComposable.totalCategorias.value,
+	produtosCount: 0, // TODO: integrar useProdutos
+	adicionaisCount: 0, // TODO: integrar useAdicionais
+	combosCount: 0, // TODO: integrar useCombos
 }));
 
-// Estados de filtros por aba
-const searchValues = ref({
-	categorias: "",
-	produtos: "",
-	adicionais: "",
-	combos: "",
+// Estados de loading/dados baseados na aba ativa
+const currentLoading = computed(() => {
+	if (activeTab.value === "categorias") return categoriasComposable.loading.value;
+	// TODO: outros tabs
+	return false;
 });
 
-const sortValues = ref({
-	categorias: "",
-	produtos: "",
-	adicionais: "",
-	combos: "",
+const currentHasData = computed(() => {
+	if (activeTab.value === "categorias") return categoriasComposable.categorias.value.length > 0;
+	// TODO: outros tabs
+	return false;
 });
 
-const filterValues = ref({
-	categorias: {},
-	produtos: {},
-	adicionais: {},
-	combos: {},
+const currentSearchValue = computed(() => {
+	if (activeTab.value === "categorias") return categoriasComposable.filters.value.busca ?? "";
+	return "";
 });
 
-// Computadas para aba ativa
-const currentLoading = computed(() => loadingStates.value[activeTab.value]);
-const currentHasData = computed(() => tabData.value[activeTab.value].length > 0);
-const currentSearchValue = computed(() => searchValues.value[activeTab.value]);
-const currentSortValue = computed(() => sortValues.value[activeTab.value]);
-const currentFilters = computed(() => filterValues.value[activeTab.value]);
+const currentSortValue = computed(() => {
+	if (activeTab.value === "categorias") {
+		const { ordenacao, direcao } = categoriasComposable.filters.value;
+		// Retorna vazio se for a ordenação padrão (ordem_asc)
+		if (ordenacao === "ordem" && direcao === "asc") return "";
+		return ordenacao ? `${ordenacao}_${direcao}` : "";
+	}
+	return "";
+});
+
+const currentFilters = computed(() => {
+	if (activeTab.value === "categorias") {
+		const { ativo } = categoriasComposable.filters.value;
+		if (ativo !== undefined) {
+			return { ativo };
+		}
+	}
+	return {};
+});
+
+// ========================================
+// HANDLERS
+// ========================================
 
 /**
- * Handler para mudança de aba
- */
-const handleTabChange = (tab: string): void => {
-	const newTab = tab as typeof activeTab.value;
-	activeTab.value = newTab;
-
-	// Salvar no cookie para persistir entre sessões
-	lastTabCookie.value = newTab;
-
-	// Atualizar URL query parameter
-	router.push({
-		query: {
-			...route.query,
-			tab: newTab,
-		},
-	});
-};
-
-/**
- * Handler para busca
+ * Handler para busca - delega para o composable correto
  */
 const handleSearch = (value: string): void => {
-	searchValues.value[activeTab.value] = value;
-	// TODO: Implementar lógica de busca
-	console.warn(`TODO: Buscar ${activeTab.value}:`, value);
+	if (activeTab.value === "categorias") {
+		categoriasComposable.setSearch(value);
+	}
+	// TODO: outros tabs
 };
 
 /**
- * Handler para ordenação
+ * Handler para ordenação - delega para o composable correto
  */
 const handleSort = (value: string): void => {
-	sortValues.value[activeTab.value] = value;
-	// TODO: Implementar lógica de ordenação
-	console.warn(`TODO: Ordenar ${activeTab.value}:`, value);
+	if (activeTab.value === "categorias") {
+		// Se vazio, volta para ordenação padrão (ordem_asc)
+		if (!value) {
+			categoriasComposable.setOrdenacao("ordem", "asc");
+			return;
+		}
+		// Parse do valor (ex: "nome_asc", "created_at_desc")
+		// Encontra a última ocorrência de "_" para separar field e direcao
+		const lastUnderscoreIndex = value.lastIndexOf("_");
+		const field = value.substring(0, lastUnderscoreIndex) as "nome" | "ordem" | "created_at";
+		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
+		categoriasComposable.setOrdenacao(field, direcao);
+	}
+	// TODO: outros tabs
 };
 
 /**
- * Handler para filtros
+ * Handler para filtros - delega para o composable correto
  */
 const handleFilter = (filters: Record<string, unknown>): void => {
-	filterValues.value[activeTab.value] = filters;
-	// TODO: Implementar lógica de filtros
-	console.warn(`TODO: Filtrar ${activeTab.value}:`, filters);
+	if (activeTab.value === "categorias") {
+		if ("ativo" in filters) {
+			categoriasComposable.setAtivo(filters.ativo as boolean | undefined);
+		} else {
+			categoriasComposable.setAtivo(undefined);
+		}
+	}
+	// TODO: outros tabs
 };
 
 /**
- * Handler para refresh
+ * Handler para refresh - delega para o composable correto
  */
-const handleRefresh = (): void => {
-	// TODO: Implementar lógica de refresh
-	console.warn(`TODO: Refresh ${activeTab.value}`);
+const handleRefresh = async (): Promise<void> => {
+	if (activeTab.value === "categorias") {
+		await categoriasComposable.refresh();
+	}
+	// TODO: outros tabs
 };
 
 /**
- * Handler para criar novo item
+ * Handler para criar - abre modal do composable correto
  */
 const handleCreate = (): void => {
-	// TODO: Implementar lógica de criação
-	console.warn(`TODO: Criar ${activeTab.value}`);
+	if (activeTab.value === "categorias") {
+		categoriasComposable.openCreate();
+	}
+	// TODO: outros tabs
 };
 
-// Watch para sincronizar aba ativa com mudanças na URL
-watch(
-	() => route.query.tab,
-	(newTab) => {
-		const validTab =
-			(newTab as string) === "produtos"
-				? "produtos"
-				: (newTab as string) === "adicionais"
-					? "adicionais"
-					: (newTab as string) === "combos"
-						? "combos"
-						: "categorias";
+/**
+ * Handler para seleção de categoria
+ */
+const handleCategoriaSelect = (categoria: unknown): void => {
+	// Por enquanto, abre para edição
+	categoriasComposable.openEdit(categoria as Parameters<typeof categoriasComposable.openEdit>[0]);
+};
 
-		if (activeTab.value !== validTab) {
-			activeTab.value = validTab;
-		}
-	},
-);
+/**
+ * Handler para ver mais detalhes de categoria
+ */
+const handleCategoriaViewMore = (categoria: unknown): void => {
+	categoriasComposable.openView(categoria as Parameters<typeof categoriasComposable.openView>[0]);
+};
 
-// TODO: Implementar composables
-// const { categorias, loading: loadingCategorias } = useCategorias()
-// const { produtos, loading: loadingProdutos } = useProdutos()
-// const { adicionais, loading: loadingAdicionais } = useAdicionais()
-// const { combos, loading: loadingCombos } = useCombos()
+/**
+ * Handler para editar categoria
+ */
+const handleCategoriaEdit = (categoria: unknown): void => {
+	categoriasComposable.openEdit(categoria as Parameters<typeof categoriasComposable.openEdit>[0]);
+};
+
+/**
+ * Handler para excluir categoria
+ */
+const handleCategoriaDelete = (_categoria: unknown): void => {
+	// TODO: implementar quando tiver modal de confirmação
+	console.warn("[CardapioManager] Delete não implementado ainda");
+};
+
+/**
+ * Handler para toggle status de categoria
+ */
+const handleCategoriaToggleStatus = async (categoria: unknown): Promise<void> => {
+	const cat = categoria as CategoriaComputada;
+	const novoStatus = !cat.ativo;
+	const success = await categoriasComposable.handleToggleAtivo(cat.id, novoStatus);
+
+	if (success) {
+		const toast = useToast();
+		toast.add({
+			title: novoStatus ? "Categoria ativada" : "Categoria desativada",
+			description: `${cat.nome} foi ${novoStatus ? "ativada" : "desativada"} com sucesso`,
+			color: "success",
+			duration: 3000,
+		});
+	}
+};
+
+// ========================================
+// INICIALIZAÇÃO
+// ========================================
+
+onMounted(async () => {
+	// Carrega categorias ao montar
+	await categoriasComposable.init();
+});
 </script>
 
 <template>
 	<div class="flex flex-col h-full">
 		<!-- Tabs do Menu -->
-		<div class="mb-6">
-			<CardapioMenuTabs
-				v-model="activeTab"
-				:categorias-count="tabCounts.categoriasCount"
-				:produtos-count="tabCounts.produtosCount"
-				:adicionais-count="tabCounts.adicionaisCount"
-				:combos-count="tabCounts.combosCount"
-				@tab-change="handleTabChange"
+		<CardapioMenuTabs
+			v-model="activeTab"
+			:categorias-count="tabCounts.categoriasCount"
+			:produtos-count="tabCounts.produtosCount"
+			:adicionais-count="tabCounts.adicionaisCount"
+			:combos-count="tabCounts.combosCount"
+			@tab-change="handleTabChange"
+		/>
+
+		<!-- Filtros -->
+		<CardapioFilters
+			:active-tab="activeTab"
+			:search-value="currentSearchValue"
+			:sort-value="currentSortValue"
+			:filters="currentFilters"
+			:loading="currentLoading"
+			:view-mode="viewMode"
+			@search="handleSearch"
+			@sort="handleSort"
+			@filter="handleFilter"
+			@refresh="handleRefresh"
+			@create="handleCreate"
+			@update:view-mode="handleViewModeChange"
+		/>
+
+		<!-- Conteúdo da Aba Ativa -->
+		<div class="flex-1 min-h-0 overflow-hidden">
+			<CardapioTabSection
+				:active-tab="activeTab"
+				:loading="currentLoading"
+				:has-data="currentHasData"
+				@create="handleCreate"
 			>
-				<template #default>
-					<!-- Seção da Aba Ativa -->
-					<CardapioTabSection
-						:active-tab="activeTab"
-						:loading="currentLoading"
-						:has-data="currentHasData"
-						:search-value="currentSearchValue"
-						:sort-value="currentSortValue"
-						:filters="currentFilters"
-						@search="handleSearch"
-						@sort="handleSort"
-						@filter="handleFilter"
-						@refresh="handleRefresh"
-						@create="handleCreate"
+				<template #default="{ activeTab: sectionTab }">
+					<!-- Categorias -->
+					<CategoriasView
+						v-if="sectionTab === 'categorias'"
+						:categorias="categoriasComposable.categorias.value"
+						:view-mode="viewMode"
+						@select="handleCategoriaSelect"
+						@view-more="handleCategoriaViewMore"
+						@edit="handleCategoriaEdit"
+						@delete="handleCategoriaDelete"
+						@toggle-status="handleCategoriaToggleStatus"
+					/>
+
+					<!-- TODO: Produtos -->
+					<div
+						v-else-if="sectionTab === 'produtos'"
+						class="p-6 text-center text-[var(--text-muted)]"
 					>
-						<template #default="{ activeTab: sectionTab }">
-							<!-- Conteúdo específico de cada aba -->
-							<div class="p-6">
-								<!-- Placeholder para listas específicas -->
-								<div class="text-center text-[var(--text-muted)]">
-									<p>Conteúdo da aba: {{ sectionTab }}</p>
-									<p class="text-xs mt-2">
-										TODO: Implementar
-										{{
-											sectionTab === "categorias"
-												? "CategoriasList"
-												: sectionTab === "produtos"
-													? "ProdutosList"
-													: sectionTab === "adicionais"
-														? "AdicionaisList"
-														: "CombosList"
-										}}
-									</p>
-								</div>
-							</div>
-						</template>
-					</CardapioTabSection>
+						<p>TODO: ProdutosView</p>
+					</div>
+
+					<!-- TODO: Adicionais -->
+					<div
+						v-else-if="sectionTab === 'adicionais'"
+						class="p-6 text-center text-[var(--text-muted)]"
+					>
+						<p>TODO: AdicionaisView</p>
+					</div>
+
+					<!-- TODO: Combos -->
+					<div v-else-if="sectionTab === 'combos'" class="p-6 text-center text-[var(--text-muted)]">
+						<p>TODO: CombosView</p>
+					</div>
 				</template>
-			</CardapioMenuTabs>
+			</CardapioTabSection>
 		</div>
-	</div>
+
+		<!-- TODO: Modal de Categoria -->
+		<!-- 
+		<CategoriaModal
+			v-model="categoriasComposable.isModalOpen.value"
+			:mode="categoriasComposable.modalMode.value"
+			:categoria="categoriasComposable.selectedCategoria.value"
+			:creating="categoriasComposable.creating.value"
+			:updating="categoriasComposable.updating.value"
+			@create="categoriasComposable.handleCreate"
+			@update="categoriasComposable.handleUpdate"
+			@delete="categoriasComposable.handleDelete"
+			@close="categoriasComposable.closeModal"
+		/>
+		--></div>
 </template>

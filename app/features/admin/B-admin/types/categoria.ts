@@ -46,3 +46,12 @@ export interface CategoriaStats {
 	inativas: number;
 	produtos_total: number;
 }
+
+/**
+ * Categoria com campos computados para exibição
+ */
+export interface CategoriaComputada extends Categoria {
+	produtos_count: number;
+	status_display: string;
+	pode_excluir: boolean;
+}
