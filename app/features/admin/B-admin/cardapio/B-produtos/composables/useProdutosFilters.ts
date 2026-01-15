@@ -30,8 +30,8 @@ export const useProdutosFilters = (): UseProdutosFiltersReturn => {
 		categoria_id: undefined,
 		destaque: undefined,
 		em_promocao: undefined,
-		ordenacao: "ordem",
-		direcao: "asc",
+		ordenacao: "created_at",
+		direcao: "desc",
 	});
 
 	/**
@@ -90,8 +90,8 @@ export const useProdutosFilters = (): UseProdutosFiltersReturn => {
 			categoria_id: undefined,
 			destaque: undefined,
 			em_promocao: undefined,
-			ordenacao: "ordem",
-			direcao: "asc",
+			ordenacao: "created_at",
+			direcao: "desc",
 		};
 	};
 

@@ -144,7 +144,7 @@ const footerClasses = computed(() => {
 		"px-6 py-4",
 		"border-t border-[var(--border-muted)]",
 		"flex-shrink-0",
-		"bg-[var(--bg-muted)]",
+		"bg-[var(--bg-surface)]",
 		"rounded-b-lg",
 	];
 	return baseClasses.join(" ");
@@ -173,11 +173,21 @@ onUnmounted(() => {
 	// Garantir que o scroll seja restaurado
 	document.body.style.overflow = "";
 });
+
+// Estado para controlar hidratação SSR-friendly
+const isMounted = ref(false);
+
+onMounted(() => {
+	// Pequeno delay para garantir que a hidratação esteja completa
+	nextTick(() => {
+		isMounted.value = true;
+	});
+});
 </script>
 
 <template>
-	<!-- Overlay -->
-	<Teleport to="body">
+	<!-- Overlay e Modal - só renderiza quando necessário E após hidratação -->
+	<Teleport v-if="isMounted && modelValue" to="body">
 		<Transition
 			name="modal-overlay"
 			enter-active-class="transition-opacity duration-200 ease-out"
@@ -229,7 +239,7 @@ onUnmounted(() => {
 						<button
 							v-if="showCloseButton"
 							type="button"
-							class="ml-4 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-200 focus-ring"
+							class="ml-4 p-2 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-200 focus-ring flex items-center justify-center"
 							@click="close"
 						>
 							<Icon name="lucide:x" class="w-5 h-5" />

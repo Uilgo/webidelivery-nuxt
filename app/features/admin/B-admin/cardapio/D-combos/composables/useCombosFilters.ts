@@ -11,8 +11,8 @@ export const useCombosFilters = () => {
 	// Estado de filtros
 	const filters = ref({
 		busca: "",
-		ordenacao: "ordem" as "ordem" | "nome" | "preco_combo" | "created_at",
-		direcao: "asc" as "asc" | "desc",
+		ordenacao: "created_at" as "ordem" | "nome" | "preco_combo" | "created_at",
+		direcao: "desc" as "asc" | "desc",
 		ativo: undefined as boolean | undefined,
 		destaque: undefined as boolean | undefined,
 	});

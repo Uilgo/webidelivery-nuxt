@@ -29,8 +29,8 @@ export const useGruposAdicionaisFilters = (): UseGruposAdicionaisFiltersReturn =
 		busca: "",
 		ativo: undefined,
 		obrigatorio: undefined,
-		ordenacao: "ordem",
-		direcao: "asc",
+		ordenacao: "created_at",
+		direcao: "desc",
 	});
 
 	/**
@@ -73,8 +73,8 @@ export const useGruposAdicionaisFilters = (): UseGruposAdicionaisFiltersReturn =
 			busca: "",
 			ativo: undefined,
 			obrigatorio: undefined,
-			ordenacao: "ordem",
-			direcao: "asc",
+			ordenacao: "created_at",
+			direcao: "desc",
 		};
 	};
 

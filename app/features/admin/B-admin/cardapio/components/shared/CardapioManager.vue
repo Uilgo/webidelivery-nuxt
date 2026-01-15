@@ -29,6 +29,8 @@ import CategoriasView from "../../A-categorias/components/CategoriasView.vue";
 import ProdutosView from "../../B-produtos/components/ProdutosView.vue";
 import GruposAdicionaisView from "../../C-adicionais/components/GruposAdicionaisView.vue";
 import CombosView from "../../D-combos/components/CombosView.vue";
+import CategoriaDrawer from "../../A-categorias/components/CategoriaDrawer.vue";
+import CategoriaDeleteModal from "../../A-categorias/components/CategoriaDeleteModal.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -51,6 +53,10 @@ const combosComposable = useCombos();
 
 // Estado de expansão dos grupos de adicionais
 const expandedGrupoId = ref<string | null>(null);
+
+// Estado do modal de exclusão de categoria
+const isDeleteModalOpen = ref(false);
+const categoriaToDelete = ref<CategoriaComputada | null>(null);
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -165,26 +171,26 @@ const currentSearchValue = computed(() => {
 const currentSortValue = computed(() => {
 	if (activeTab.value === "categorias") {
 		const { ordenacao, direcao } = categoriasComposable.filters.value;
-		// Retorna vazio se for a ordenação padrão (ordem_asc)
-		if (ordenacao === "ordem" && direcao === "asc") return "";
+		// Retorna vazio se for a ordenação padrão (created_at_desc)
+		if (ordenacao === "created_at" && direcao === "desc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
 	}
 	if (activeTab.value === "produtos") {
 		const { ordenacao, direcao } = produtosComposable.filters.value;
-		// Retorna vazio se for a ordenação padrão (ordem_asc)
-		if (ordenacao === "ordem" && direcao === "asc") return "";
+		// Retorna vazio se for a ordenação padrão (created_at_desc)
+		if (ordenacao === "created_at" && direcao === "desc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
 	}
 	if (activeTab.value === "adicionais") {
 		const { ordenacao, direcao } = gruposAdicionaisComposable.filters.value;
-		// Retorna vazio se for a ordenação padrão (ordem_asc)
-		if (ordenacao === "ordem" && direcao === "asc") return "";
+		// Retorna vazio se for a ordenação padrão (created_at_desc)
+		if (ordenacao === "created_at" && direcao === "desc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
 	}
 	if (activeTab.value === "combos") {
 		const { ordenacao, direcao } = combosComposable.filters.value;
-		// Retorna vazio se for a ordenação padrão (ordem_asc)
-		if (ordenacao === "ordem" && direcao === "asc") return "";
+		// Retorna vazio se for a ordenação padrão (created_at_desc)
+		if (ordenacao === "created_at" && direcao === "desc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
 	}
 	return "";
@@ -246,9 +252,9 @@ const handleSearch = (value: string): void => {
  */
 const handleSort = (value: string): void => {
 	if (activeTab.value === "categorias") {
-		// Se vazio, volta para ordenação padrão (ordem_asc)
+		// Se vazio, volta para ordenação padrão (created_at_desc)
 		if (!value) {
-			categoriasComposable.setOrdenacao("ordem", "asc");
+			categoriasComposable.setOrdenacao("created_at", "desc");
 			return;
 		}
 		// Parse do valor (ex: "nome_asc", "created_at_desc")
@@ -258,9 +264,9 @@ const handleSort = (value: string): void => {
 		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
 		categoriasComposable.setOrdenacao(field, direcao);
 	} else if (activeTab.value === "produtos") {
-		// Se vazio, volta para ordenação padrão (ordem_asc)
+		// Se vazio, volta para ordenação padrão (created_at_desc)
 		if (!value) {
-			produtosComposable.setOrdenacao("ordem", "asc");
+			produtosComposable.setOrdenacao("created_at", "desc");
 			return;
 		}
 		const lastUnderscoreIndex = value.lastIndexOf("_");
@@ -272,9 +278,9 @@ const handleSort = (value: string): void => {
 		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
 		produtosComposable.setOrdenacao(field, direcao);
 	} else if (activeTab.value === "adicionais") {
-		// Se vazio, volta para ordenação padrão (ordem_asc)
+		// Se vazio, volta para ordenação padrão (created_at_desc)
 		if (!value) {
-			gruposAdicionaisComposable.setOrdenacao("ordem", "asc");
+			gruposAdicionaisComposable.setOrdenacao("created_at", "desc");
 			return;
 		}
 		const lastUnderscoreIndex = value.lastIndexOf("_");
@@ -282,9 +288,9 @@ const handleSort = (value: string): void => {
 		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
 		gruposAdicionaisComposable.setOrdenacao(field, direcao);
 	} else if (activeTab.value === "combos") {
-		// Se vazio, volta para ordenação padrão (ordem_asc)
+		// Se vazio, volta para ordenação padrão (created_at_desc)
 		if (!value) {
-			combosComposable.setOrdenacao("ordem", "asc");
+			combosComposable.setOrdenacao("created_at", "desc");
 			return;
 		}
 		const lastUnderscoreIndex = value.lastIndexOf("_");
@@ -416,9 +422,10 @@ const handleCategoriaEdit = (categoria: unknown): void => {
 /**
  * Handler para excluir categoria
  */
-const handleCategoriaDelete = (_categoria: unknown): void => {
-	// TODO: implementar quando tiver modal de confirmação
-	console.warn("[CardapioManager] Delete não implementado ainda");
+const handleCategoriaDelete = (categoria: unknown): void => {
+	const cat = categoria as CategoriaComputada;
+	categoriaToDelete.value = cat;
+	isDeleteModalOpen.value = true;
 };
 
 /**
@@ -438,6 +445,26 @@ const handleCategoriaToggleStatus = async (categoria: unknown): Promise<void> =>
 			duration: 3000,
 		});
 	}
+};
+
+// ========================================
+// HANDLERS DOS MODAIS DE CATEGORIA
+// ========================================
+
+/**
+ * Handler para sucesso no modal de categoria
+ */
+const handleCategoriaModalSuccess = (): void => {
+	// Modal já fecha automaticamente e dados são atualizados
+	// Este handler pode ser usado para ações adicionais se necessário
+};
+
+/**
+ * Handler para sucesso na exclusão de categoria
+ */
+const handleCategoriaDeleteSuccess = (): void => {
+	isDeleteModalOpen.value = false;
+	categoriaToDelete.value = null;
 };
 
 /**
@@ -793,18 +820,18 @@ onMounted(async () => {
 			</CardapioTabSection>
 		</div>
 
-		<!-- TODO: Modal de Categoria -->
-		<!-- 
-		<CategoriaModal
+		<!-- Drawer e Modal de Categoria -->
+		<CategoriaDrawer
 			v-model="categoriasComposable.isModalOpen.value"
-			:mode="categoriasComposable.modalMode.value"
-			:categoria="categoriasComposable.selectedCategoria.value"
-			:creating="categoriasComposable.creating.value"
-			:updating="categoriasComposable.updating.value"
-			@create="categoriasComposable.handleCreate"
-			@update="categoriasComposable.handleUpdate"
-			@delete="categoriasComposable.handleDelete"
-			@close="categoriasComposable.closeModal"
+			:is-edicao="categoriasComposable.modalMode.value === 'edit'"
+			:categoria="categoriasComposable.selectedCategoria.value as CategoriaComputada"
+			@success="handleCategoriaModalSuccess"
 		/>
-		--></div>
+
+		<CategoriaDeleteModal
+			v-model="isDeleteModalOpen"
+			:categoria="categoriaToDelete"
+			@success="handleCategoriaDeleteSuccess"
+		/>
+	</div>
 </template>

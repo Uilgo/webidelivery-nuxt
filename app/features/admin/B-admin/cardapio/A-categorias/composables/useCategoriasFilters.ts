@@ -26,8 +26,8 @@ export const useCategoriasFilters = (): UseCategoriasFiltersReturn => {
 	const filters = ref<CategoriaFilters>({
 		busca: "",
 		ativo: undefined,
-		ordenacao: "ordem",
-		direcao: "asc",
+		ordenacao: "created_at",
+		direcao: "desc",
 	});
 
 	/**
@@ -62,8 +62,8 @@ export const useCategoriasFilters = (): UseCategoriasFiltersReturn => {
 		filters.value = {
 			busca: "",
 			ativo: undefined,
-			ordenacao: "ordem",
-			direcao: "asc",
+			ordenacao: "created_at",
+			direcao: "desc",
 		};
 	};
 

@@ -75,7 +75,6 @@ const tabConfig = computed(() => {
 			sortOptions: [
 				{ label: "Nome (A-Z)", value: "nome_asc" },
 				{ label: "Nome (Z-A)", value: "nome_desc" },
-				{ label: "Mais recentes", value: "created_at_desc" },
 				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
@@ -93,7 +92,7 @@ const tabConfig = computed(() => {
 				{ label: "Mais vendidos", value: "total_vendas_desc" },
 				{ label: "Menor preço", value: "preco_minimo_asc" },
 				{ label: "Maior preço", value: "preco_minimo_desc" },
-				{ label: "Mais recentes", value: "created_at_desc" },
+				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
 				// Status
@@ -112,7 +111,6 @@ const tabConfig = computed(() => {
 			sortOptions: [
 				{ label: "Nome (A-Z)", value: "nome_asc" },
 				{ label: "Nome (Z-A)", value: "nome_desc" },
-				{ label: "Mais recentes", value: "created_at_desc" },
 				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
@@ -133,7 +131,7 @@ const tabConfig = computed(() => {
 				{ label: "Nome (Z-A)", value: "nome_desc" },
 				{ label: "Menor preço", value: "preco_combo_asc" },
 				{ label: "Maior preço", value: "preco_combo_desc" },
-				{ label: "Mais recentes", value: "created_at_desc" },
+				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
 				{ label: "Ativos", value: "ativo_true" },
