@@ -73,14 +73,27 @@ export const useCategoriasFilters = (): UseCategoriasFiltersReturn => {
 	const applyFilters = (categorias: CategoriaComputada[]): CategoriaComputada[] => {
 		let result = [...categorias];
 
-		// Filtro por busca (nome ou descrição)
+		// Filtro por busca (nome ou descrição) - normaliza acentos
 		if (filters.value.busca) {
-			const searchLower = filters.value.busca.toLowerCase();
-			result = result.filter(
-				(cat) =>
-					cat.nome.toLowerCase().includes(searchLower) ||
-					cat.descricao?.toLowerCase().includes(searchLower),
-			);
+			const searchLower = filters.value.busca
+				.toLowerCase()
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "");
+
+			result = result.filter((cat) => {
+				const nome = cat.nome
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+				const descricao = cat.descricao
+					? cat.descricao
+							.toLowerCase()
+							.normalize("NFD")
+							.replace(/[\u0300-\u036f]/g, "")
+					: "";
+
+				return nome.includes(searchLower) || descricao.includes(searchLower);
+			});
 		}
 
 		// Filtro por ativo

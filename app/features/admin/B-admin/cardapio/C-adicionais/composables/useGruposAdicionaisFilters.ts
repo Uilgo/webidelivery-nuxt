@@ -84,14 +84,27 @@ export const useGruposAdicionaisFilters = (): UseGruposAdicionaisFiltersReturn =
 	const applyFilters = (grupos: GrupoAdicionalComputado[]): GrupoAdicionalComputado[] => {
 		let result = [...grupos];
 
-		// Filtro por busca (nome ou descrição)
+		// Filtro por busca (nome ou descrição) - normaliza acentos
 		if (filters.value.busca) {
-			const searchLower = filters.value.busca.toLowerCase();
-			result = result.filter(
-				(grupo) =>
-					grupo.nome.toLowerCase().includes(searchLower) ||
-					grupo.descricao?.toLowerCase().includes(searchLower),
-			);
+			const searchLower = filters.value.busca
+				.toLowerCase()
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "");
+
+			result = result.filter((grupo) => {
+				const nome = grupo.nome
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+				const descricao = grupo.descricao
+					? grupo.descricao
+							.toLowerCase()
+							.normalize("NFD")
+							.replace(/[\u0300-\u036f]/g, "")
+					: "";
+
+				return nome.includes(searchLower) || descricao.includes(searchLower);
+			});
 		}
 
 		// Filtro por ativo

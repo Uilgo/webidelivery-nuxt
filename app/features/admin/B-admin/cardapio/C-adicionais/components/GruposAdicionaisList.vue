@@ -92,7 +92,10 @@ const handleToggleStatus = (event: Event): void => {
 </script>
 
 <template>
-	<div ref="cardRef" class="grupo-adicional-list-wrapper">
+	<div
+		ref="cardRef"
+		class="grupo-adicional-list-wrapper px-1 hover:scale-[1.005] transition-transform duration-200"
+	>
 		<!-- Card do Grupo -->
 		<div
 			class="group relative flex flex-col gap-3 p-3.5 rounded-xl bg-[var(--bg-surface)] hover:opacity-95 cursor-pointer transition-all duration-200"

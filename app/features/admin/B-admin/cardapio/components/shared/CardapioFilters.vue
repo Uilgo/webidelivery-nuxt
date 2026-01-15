@@ -136,7 +136,6 @@ const tabConfig = computed(() => {
 				{ label: "Mais recentes", value: "created_at_desc" },
 			],
 			filterOptions: [
-				{ label: "Todos", value: "all" },
 				{ label: "Ativos", value: "ativo_true" },
 				{ label: "Inativos", value: "ativo_false" },
 				{ label: "Em destaque", value: "destaque_true" },

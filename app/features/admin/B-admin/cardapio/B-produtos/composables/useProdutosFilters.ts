@@ -101,15 +101,35 @@ export const useProdutosFilters = (): UseProdutosFiltersReturn => {
 	const applyFilters = (produtos: ProdutoComputado[]): ProdutoComputado[] => {
 		let result = [...produtos];
 
-		// Filtro por busca (nome ou descrição)
+		// Filtro por busca (nome, descrição ou categoria) - normaliza acentos
 		if (filters.value.busca) {
-			const searchLower = filters.value.busca.toLowerCase();
-			result = result.filter(
-				(prod) =>
-					prod.nome.toLowerCase().includes(searchLower) ||
-					prod.descricao?.toLowerCase().includes(searchLower) ||
-					prod.categoria_nome.toLowerCase().includes(searchLower),
-			);
+			const searchLower = filters.value.busca
+				.toLowerCase()
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "");
+
+			result = result.filter((prod) => {
+				const nome = prod.nome
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+				const descricao = prod.descricao
+					? prod.descricao
+							.toLowerCase()
+							.normalize("NFD")
+							.replace(/[\u0300-\u036f]/g, "")
+					: "";
+				const categoriaNome = prod.categoria_nome
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+
+				return (
+					nome.includes(searchLower) ||
+					descricao.includes(searchLower) ||
+					categoriaNome.includes(searchLower)
+				);
+			});
 		}
 
 		// Filtro por ativo

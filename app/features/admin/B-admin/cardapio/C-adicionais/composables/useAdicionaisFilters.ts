@@ -81,14 +81,27 @@ export const useAdicionaisFilters = (): UseAdicionaisFiltersReturn => {
 	const applyFilters = (adicionais: AdicionalComputado[]): AdicionalComputado[] => {
 		let result = [...adicionais];
 
-		// Filtro por busca (nome ou descrição)
+		// Filtro por busca (nome ou descrição) - normaliza acentos
 		if (filters.value.busca) {
-			const searchLower = filters.value.busca.toLowerCase();
-			result = result.filter(
-				(adicional) =>
-					adicional.nome.toLowerCase().includes(searchLower) ||
-					adicional.descricao?.toLowerCase().includes(searchLower),
-			);
+			const searchLower = filters.value.busca
+				.toLowerCase()
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "");
+
+			result = result.filter((adicional) => {
+				const nome = adicional.nome
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+				const descricao = adicional.descricao
+					? adicional.descricao
+							.toLowerCase()
+							.normalize("NFD")
+							.replace(/[\u0300-\u036f]/g, "")
+					: "";
+
+				return nome.includes(searchLower) || descricao.includes(searchLower);
+			});
 		}
 
 		// Filtro por ativo
