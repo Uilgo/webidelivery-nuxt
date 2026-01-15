@@ -54,6 +54,17 @@ const emit = defineEmits<Emits>();
 // Estado interno da busca
 const searchQuery = ref(props.searchValue);
 
+// Estado da categoria selecionada (apenas para produtos)
+const selectedCategoria = ref<string | null>(null);
+
+// Opções do SelectMenu de categorias
+const categoriasOptions = computed(() => {
+	return props.categorias.map((cat) => ({
+		label: cat.nome,
+		value: cat.id,
+	}));
+});
+
 // Configurações específicas para cada aba
 const tabConfig = computed(() => {
 	const configs = {
@@ -68,7 +79,6 @@ const tabConfig = computed(() => {
 				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
-				{ label: "Todas", value: "all" },
 				{ label: "Ativas", value: "ativo_true" },
 				{ label: "Inativas", value: "ativo_false" },
 			],
@@ -87,20 +97,12 @@ const tabConfig = computed(() => {
 			],
 			filterOptions: [
 				// Status
-				{ label: "Todos", value: "all" },
 				{ label: "Ativos", value: "ativo_true" },
 				{ label: "Inativos", value: "ativo_false" },
-				{ label: "---", value: "separator_1" },
 				// Destaque
 				{ label: "Em destaque", value: "destaque_true" },
-				{ label: "Sem destaque", value: "destaque_false" },
-				{ label: "---", value: "separator_2" },
 				// Promoção
 				{ label: "Em promoção", value: "em_promocao_true" },
-				{ label: "Sem promoção", value: "em_promocao_false" },
-				{ label: "---", value: "separator_3" },
-				// Categorias (submenu)
-				{ label: "Categorias", value: "categorias_group" },
 			],
 		},
 		adicionais: {
@@ -186,6 +188,13 @@ const handleClearSort = (): void => {
 };
 
 /**
+ * Handler para limpar filtros
+ */
+const handleClearFilter = (): void => {
+	emit("filter", {});
+};
+
+/**
  * Handler para mudança de filtros
  */
 const handleFilterChange = (filterOption: { label: string; value: string }): void => {
@@ -208,9 +217,10 @@ const handleFilterChange = (filterOption: { label: string; value: string }): voi
 	}
 
 	// Para outros filtros (formato: campo_valor)
-	const parts = filterOption.value.split("_");
-	const key = parts[0];
-	const value = parts[1];
+	// Usa lastIndexOf para pegar o último underscore (ex: "em_promocao_true" -> "em_promocao" + "true")
+	const lastUnderscoreIndex = filterOption.value.lastIndexOf("_");
+	const key = filterOption.value.substring(0, lastUnderscoreIndex);
+	const value = filterOption.value.substring(lastUnderscoreIndex + 1);
 
 	if (!key || !value) {
 		console.error("[CardapioFilters] Formato de filtro inválido:", filterOption.value);
@@ -220,7 +230,25 @@ const handleFilterChange = (filterOption: { label: string; value: string }): voi
 	const filterValue = value === "true" ? true : value === "false" ? false : value;
 	const filters: Record<string, unknown> = {};
 	filters[key] = filterValue;
+
 	emit("filter", filters);
+};
+
+/**
+ * Handler para mudança de categoria no SelectMenu
+ */
+const handleCategoriaChange = (value: string | number | (string | number)[] | null): void => {
+	if (!value) {
+		// Limpar filtro de categoria
+		emit("filter", {});
+		selectedCategoria.value = null;
+		return;
+	}
+
+	// Aplicar filtro de categoria
+	const categoriaId = String(value);
+	selectedCategoria.value = categoriaId;
+	emit("filter", { categoria_id: categoriaId });
 };
 
 /**
@@ -402,14 +430,8 @@ const selectedFilterLabel = computed(() => {
 				<template #default="{ close }">
 					<div class="py-1 w-max min-w-[180px]">
 						<template v-for="option in tabConfig.filterOptions" :key="option.value">
-							<!-- Separador visual -->
-							<div
-								v-if="option.value.startsWith('separator_')"
-								class="h-px bg-[var(--border-default)] my-1"
-							></div>
-
 							<!-- Grupo com submenu (para categorias) -->
-							<div v-else-if="option.value === 'categorias_group'" class="relative">
+							<div v-if="option.value === 'categorias_group'" class="relative">
 								<UiDropdown placement="right" :offset="4">
 									<template #trigger="{ toggle: toggleSub }">
 										<button
@@ -472,9 +494,38 @@ const selectedFilterLabel = computed(() => {
 								/>
 							</button>
 						</template>
+
+						<!-- Botão Limpar -->
+						<template v-if="selectedFilterLabel">
+							<div class="h-px bg-[var(--border-default)] my-1"></div>
+							<button
+								type="button"
+								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors rounded-lg"
+								@click="
+									handleClearFilter();
+									close();
+								"
+							>
+								<span>Limpar</span>
+								<Icon name="lucide:x" class="w-3.5 h-3.5" />
+							</button>
+						</template>
 					</div>
 				</template>
 			</UiDropdown>
+
+			<!-- SelectMenu de Categorias (apenas para produtos) -->
+			<UiSelectMenu
+				v-if="activeTab === 'produtos' && categoriasOptions.length > 0"
+				v-model="selectedCategoria"
+				:options="categoriasOptions"
+				placeholder="Todas categorias"
+				size="md"
+				searchable
+				clearable
+				class="min-w-[180px] max-w-[250px]"
+				@update:model-value="handleCategoriaChange"
+			/>
 		</div>
 
 		<!-- Lado Direito: ViewMode + Refresh + Criar -->

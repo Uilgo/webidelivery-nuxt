@@ -31,6 +31,7 @@ const emit = defineEmits<Emits>();
 
 // Composables
 const { logout } = useAuth();
+const route = useRoute();
 
 // Dados centralizados do layout (evita duplicação)
 const estabelecimentoAtual = inject<
@@ -68,50 +69,50 @@ const userInitials = computed(() => {
 const estabelecimentoNome = computed(() => estabelecimentoAtual.value?.nome || "Estabelecimento");
 
 // Menu de navegação baseado no PRD
-const menuItems = [
+const menuItems = computed(() => [
 	{
 		label: "Dashboard",
 		icon: "lucide:layout-dashboard",
 		route: "/admin/dashboard",
-		active: true, // TODO: implementar lógica de rota ativa
+		active: route.path === "/admin/dashboard",
 	},
 	{
 		label: "Pedidos",
 		icon: "lucide:shopping-bag",
 		route: "/admin/pedidos",
-		active: false,
+		active: route.path === "/admin/pedidos",
 	},
 	{
 		label: "Cardápio",
 		icon: "lucide:book-open",
 		route: "/admin/cardapio",
-		active: false,
+		active: route.path === "/admin/cardapio",
 	},
 	{
 		label: "Marketing",
 		icon: "lucide:megaphone",
 		route: "/admin/marketing",
-		active: false,
+		active: route.path === "/admin/marketing",
 	},
 	{
 		label: "Equipe",
 		icon: "lucide:users",
 		route: "/admin/equipe",
-		active: false,
+		active: route.path === "/admin/equipe",
 	},
 	{
 		label: "Relatórios",
 		icon: "lucide:bar-chart-3",
 		route: "/admin/relatorios",
-		active: false,
+		active: route.path === "/admin/relatorios",
 	},
 	{
 		label: "Configurações",
 		icon: "lucide:settings",
 		route: "/admin/configuracoes",
-		active: false,
+		active: route.path === "/admin/configuracoes",
 	},
-];
+]);
 
 // Opções do dropdown do usuário
 const userDropdownItems = [

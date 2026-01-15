@@ -117,11 +117,6 @@ const handleClick = (): void => {
 	emit("click", props.item);
 };
 
-const handleViewMore = (event: Event): void => {
-	event.stopPropagation();
-	emit("viewMore", props.item);
-};
-
 const handleEdit = (event: Event): void => {
 	event.stopPropagation();
 	emit("edit", props.item);
@@ -249,10 +244,10 @@ const handleToggleStatus = (event: Event): void => {
 					<!-- Badge de Status -->
 					<span
 						:class="[
-							'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium whitespace-nowrap',
+							'inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-sm font-medium whitespace-nowrap min-w-[70px]',
 							getFieldValue(config.statusField) === config.statusConfig.activeValue
 								? 'bg-[var(--success-light)] text-[var(--success)]'
-								: 'bg-[var(--bg-surface)] text-[var(--text-muted)]',
+								: 'bg-[var(--error-light)] text-[var(--error)]',
 						]"
 					>
 						{{
@@ -286,16 +281,6 @@ const handleToggleStatus = (event: Event): void => {
 						@click.stop="handleDelete"
 					>
 						<Icon name="lucide:trash-2" class="h-4 w-4" />
-					</button>
-
-					<!-- Ver Mais -->
-					<button
-						type="button"
-						class="p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-all duration-150 flex items-center justify-center"
-						title="Ver detalhes"
-						@click.stop="handleViewMore"
-					>
-						<Icon name="lucide:chevron-right" class="h-4 w-4" />
 					</button>
 				</div>
 			</div>

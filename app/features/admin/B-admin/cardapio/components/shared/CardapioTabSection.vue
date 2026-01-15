@@ -54,7 +54,7 @@ const handleEmptyAction = (): void => {
 		</div>
 
 		<!-- Conteúdo com Dados -->
-		<div v-else class="h-full overflow-auto">
+		<div v-else class="h-full overflow-y-auto overflow-x-hidden">
 			<slot :active-tab="activeTab"></slot>
 		</div>
 	</div>

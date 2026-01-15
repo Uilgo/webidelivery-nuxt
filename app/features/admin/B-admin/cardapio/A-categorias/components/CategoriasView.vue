@@ -67,11 +67,11 @@ const handleToggleStatus = (categoria: CategoriaComputada): void => {
 </script>
 
 <template>
-	<div class="categorias-view h-full flex flex-col">
+	<div class="categorias-view h-full flex flex-col overflow-x-hidden">
 		<!-- Modo Card (Grid) -->
 		<div
 			v-if="viewMode === 'card'"
-			class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 py-4 overflow-y-auto flex-1 min-h-0 content-start"
+			class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 content-start"
 		>
 			<CategoriasCard
 				v-for="categoria in categorias"
@@ -83,7 +83,7 @@ const handleToggleStatus = (categoria: CategoriaComputada): void => {
 		</div>
 
 		<!-- Modo Lista (Horizontal) -->
-		<div v-else class="space-y-3 py-4 overflow-y-auto flex-1 min-h-0">
+		<div v-else class="space-y-3 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 			<CategoriasList
 				v-for="categoria in categorias"
 				:key="categoria.id"

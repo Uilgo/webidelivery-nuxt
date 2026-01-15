@@ -70,14 +70,12 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 		try {
 			const { data: result, error } = await supabase.rpc("fn_produtos_atualizar", {
 				p_produto_id: id,
-				p_categoria_id: data.categoria_id ?? null,
-				p_nome: data.nome ?? null,
+				p_nome: data.nome,
 				p_descricao: data.descricao ?? null,
 				p_imagem_url: data.imagem_url ?? null,
-				p_ativo: data.ativo ?? null,
-				p_destaque: data.destaque ?? null,
-				p_em_promocao: data.em_promocao ?? null,
-				p_ordem: data.ordem ?? null,
+				p_ativo: data.ativo ?? true,
+				p_destaque: data.destaque ?? false,
+				p_categoria_id: data.categoria_id ?? null,
 			});
 
 			if (error) {
@@ -133,7 +131,7 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 			// Busca o produto atual para manter os outros dados
 			const { data: produto, error: fetchError } = await supabase
 				.from("produtos")
-				.select("categoria_id, nome, descricao, imagem_url, destaque, em_promocao, ordem")
+				.select("categoria_id, nome, descricao, imagem_url, destaque")
 				.eq("id", id)
 				.single();
 
@@ -141,17 +139,15 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				throw new Error("Produto não encontrado");
 			}
 
-			// Atualiza mantendo todos os dados existentes
+			// Atualiza usando a assinatura correta da função
 			const { data: result, error } = await supabase.rpc("fn_produtos_atualizar", {
 				p_produto_id: id,
-				p_categoria_id: produto.categoria_id,
 				p_nome: produto.nome,
 				p_descricao: produto.descricao,
 				p_imagem_url: produto.imagem_url,
 				p_ativo: ativo,
 				p_destaque: produto.destaque,
-				p_em_promocao: produto.em_promocao,
-				p_ordem: produto.ordem,
+				p_categoria_id: produto.categoria_id,
 			});
 
 			if (error) {

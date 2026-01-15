@@ -218,9 +218,7 @@ const dropdownClasses = computed(() => {
 		"z-[9999]",
 	];
 
-	const sizeClasses = props.multiple ? "max-h-80" : "max-h-60";
-
-	return [...baseClasses, sizeClasses].join(" ");
+	return baseClasses.join(" ");
 });
 
 // Funções de controle
@@ -522,7 +520,7 @@ defineExpose({
 				</div>
 
 				<!-- Lista de opções -->
-				<div class="max-h-60 overflow-y-auto">
+				<div class="max-h-60 overflow-y-auto py-2">
 					<!-- Loading state -->
 					<div
 						v-if="loading"
@@ -537,7 +535,7 @@ defineExpose({
 						<div
 							v-for="option in filteredOptions"
 							:key="option.value"
-							class="flex items-center p-1 m-1 cursor-pointer transition-colors duration-150 rounded-md"
+							class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1"
 							:class="{
 								'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
 									!option.disabled && !normalizedValue.includes(option.value),

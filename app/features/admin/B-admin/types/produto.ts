@@ -46,14 +46,12 @@ export interface ProdutoCreateData {
 }
 
 export interface ProdutoUpdateData {
-	categoria_id?: UUID;
-	nome?: string;
-	descricao?: string;
-	imagem_url?: string;
-	ordem?: number;
+	nome: string;
+	descricao?: string | null;
+	imagem_url?: string | null;
 	ativo?: boolean;
 	destaque?: boolean;
-	em_promocao?: boolean;
+	categoria_id?: UUID | null;
 }
 
 export interface ProdutoVariacaoCreateData {

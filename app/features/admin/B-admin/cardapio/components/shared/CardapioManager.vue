@@ -204,6 +204,7 @@ const handleFilter = (filters: Record<string, unknown>): void => {
 			produtosComposable.setAtivo(undefined);
 			produtosComposable.setDestaque(undefined);
 			produtosComposable.setEmPromocao(undefined);
+			produtosComposable.setCategoria(undefined);
 			return;
 		}
 		// Aplica filtros específicos
@@ -215,6 +216,9 @@ const handleFilter = (filters: Record<string, unknown>): void => {
 		}
 		if ("em_promocao" in filters) {
 			produtosComposable.setEmPromocao(filters.em_promocao as boolean | undefined);
+		}
+		if ("categoria_id" in filters) {
+			produtosComposable.setCategoria(filters.categoria_id as string | undefined);
 		}
 	}
 	// TODO: outros tabs
