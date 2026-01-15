@@ -27,7 +27,7 @@ export interface UseProdutosReturn {
 
 	// Estados
 	loading: Ref<boolean>;
-	error: Ref<string | null>;
+	error: Ref<unknown>;
 	creating: Ref<boolean>;
 	updating: Ref<boolean>;
 	deleting: Ref<boolean>;
@@ -161,7 +161,7 @@ export const useProdutos = (): UseProdutosReturn => {
 	 * Inicializa o composable buscando dados
 	 */
 	const init = async (): Promise<void> => {
-		await fetchComposable.fetch();
+		await fetchComposable.init();
 	};
 
 	// ========================================

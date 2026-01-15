@@ -3,11 +3,17 @@
  * 📌 CardapioTabSection
  *
  * Componente que renderiza o conteúdo de cada aba do cardápio.
- * Responsável apenas por: loading, empty state e conteúdo.
+ * Responsável apenas por: loading (skeleton), empty state e conteúdo.
  * Os filtros ficam no CardapioManager (fora das abas).
+ *
+ * NOTA: Os dados são carregados pelo plugin de servidor, então na maioria dos casos
+ * os dados já estarão disponíveis na hidratação (sem skeleton).
+ * O skeleton só aparece como fallback (primeira visita, erro no SSR, etc).
  */
 
 import CardapioEmptyState from "./CardapioEmptyState.vue";
+import CardapioCardSkeleton from "./CardapioCardSkeleton.vue";
+import CardapioListSkeleton from "./CardapioListSkeleton.vue";
 
 interface Props {
 	/** Aba ativa atual */
@@ -16,6 +22,8 @@ interface Props {
 	loading?: boolean;
 	/** Se há dados para exibir */
 	hasData?: boolean;
+	/** Modo de visualização */
+	viewMode?: "card" | "list";
 }
 
 interface Emits {
@@ -26,6 +34,7 @@ interface Emits {
 withDefaults(defineProps<Props>(), {
 	loading: false,
 	hasData: false,
+	viewMode: "card",
 });
 
 const emit = defineEmits<Emits>();
@@ -40,11 +49,19 @@ const handleEmptyAction = (): void => {
 
 <template>
 	<div class="flex flex-col h-full">
-		<!-- Estado de Loading -->
-		<div v-if="loading" class="flex items-center justify-center h-full">
-			<div class="flex flex-col items-center gap-3">
-				<Icon name="lucide:loader-2" class="w-8 h-8 text-[var(--primary)] animate-spin" />
-				<p class="text-sm text-[var(--text-muted)]">Carregando {{ activeTab }}...</p>
+		<!-- Estado de Loading com Skeleton (fallback) -->
+		<div v-if="loading" class="h-full overflow-hidden">
+			<!-- Skeleton Grid (Card Mode) -->
+			<div
+				v-if="viewMode === 'card'"
+				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 py-4"
+			>
+				<CardapioCardSkeleton v-for="i in 10" :key="i" />
+			</div>
+
+			<!-- Skeleton List (List Mode) -->
+			<div v-else class="space-y-3 py-4">
+				<CardapioListSkeleton v-for="i in 8" :key="i" />
 			</div>
 		</div>
 

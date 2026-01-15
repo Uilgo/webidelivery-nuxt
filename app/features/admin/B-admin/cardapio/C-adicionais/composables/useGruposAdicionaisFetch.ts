@@ -4,47 +4,72 @@
  * Responsável por:
  * - Buscar grupos de adicionais do Supabase
  * - Computar campos adicionais (contadores, preços)
- * - Gerenciar estado de loading e erro
+ * - Usa useState que é populado pelo plugin de servidor para carregamento instantâneo
+ *
+ * ESTRATÉGIA:
+ * - Plugin server carrega dados no SSR → useState já tem dados na hidratação
+ * - Cliente: se não tem dados do SSR, tenta localStorage
+ * - Fetch só acontece se não tiver dados de nenhuma fonte
  */
 
 import type { GrupoAdicionalComputado } from "../../../types/adicional";
 
+const CACHE_KEY = "cardapio_grupos_adicionais";
+
+/**
+ * Lê dados do localStorage (client-side only)
+ */
+const getFromStorage = (): GrupoAdicionalComputado[] => {
+	if (import.meta.server) return [];
+	try {
+		const cached = localStorage.getItem(CACHE_KEY);
+		return cached ? JSON.parse(cached) : [];
+	} catch {
+		return [];
+	}
+};
+
+/**
+ * Salva dados no localStorage
+ */
+const saveToStorage = (data: GrupoAdicionalComputado[]): void => {
+	if (import.meta.server) return;
+	try {
+		localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+	} catch {
+		// Ignora erros de storage
+	}
+};
+
 export interface UseGruposAdicionaisFetchReturn {
 	gruposAdicionais: Ref<GrupoAdicionalComputado[]>;
 	loading: Ref<boolean>;
-	error: Ref<string | null>;
+	error: Ref<unknown>;
 	fetch: () => Promise<void>;
 	refresh: () => Promise<void>;
+	init: () => Promise<void>;
 }
 
 export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 	const supabase = useSupabaseClient();
 
-	// Estados
-	const gruposAdicionais = ref<GrupoAdicionalComputado[]>([]);
-	const loading = ref(false);
-	const error = ref<string | null>(null);
+	// Estado global - pode já ter dados do plugin de servidor
+	const gruposAdicionais = useState<GrupoAdicionalComputado[]>("grupos-adicionais", () => []);
+	const loading = useState<boolean>("grupos-adicionais-loading", () => false);
+	const cacheLoaded = useState<boolean>("grupos-adicionais-cache-loaded", () => false);
+	const error = ref<unknown>(null);
 
-	/**
-	 * Busca grupos de adicionais com dados computados
-	 */
 	const fetch = async (): Promise<void> => {
 		loading.value = true;
 		error.value = null;
 
 		try {
-			// Busca grupos de adicionais
 			const { data: grupos, error: gruposError } = await supabase
 				.from("grupos_adicionais")
 				.select(
 					`
 					*,
-					adicionais (
-						id,
-						nome,
-						preco,
-						ativo
-					)
+					adicionais (id, nome, preco, ativo)
 				`,
 				)
 				.order("ordem", { ascending: true });
@@ -55,11 +80,12 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 
 			if (!grupos) {
 				gruposAdicionais.value = [];
+				saveToStorage([]);
+				cacheLoaded.value = true;
 				return;
 			}
 
-			// Computa campos adicionais
-			gruposAdicionais.value = grupos.map((grupo) => {
+			const newData = grupos.map((grupo) => {
 				const adicionais = grupo.adicionais || [];
 				const adicionaisAtivos = adicionais.filter((a: { ativo: boolean }) => a.ativo);
 				const precos = adicionais
@@ -68,7 +94,7 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 
 				return {
 					...grupo,
-					adicionais, // Mantém os adicionais para exibição na expansão
+					adicionais,
 					adicionais_count: adicionais.length,
 					adicionais_ativos_count: adicionaisAtivos.length,
 					preco_minimo: precos.length > 0 ? Math.min(...precos) : undefined,
@@ -79,6 +105,10 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 					pode_excluir: adicionais.length === 0,
 				} as GrupoAdicionalComputado;
 			});
+
+			gruposAdicionais.value = newData;
+			saveToStorage(newData);
+			cacheLoaded.value = true;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao buscar grupos de adicionais";
 			error.value = message;
@@ -89,10 +119,34 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 		}
 	};
 
-	/**
-	 * Refresh (alias para fetch)
-	 */
 	const refresh = async (): Promise<void> => {
+		await fetch();
+	};
+
+	const init = async (): Promise<void> => {
+		// Se já tem dados (do plugin de servidor), não faz nada
+		if (gruposAdicionais.value.length > 0) {
+			loading.value = false;
+			cacheLoaded.value = true;
+			// Salva no localStorage para backup
+			if (import.meta.client) {
+				saveToStorage(gruposAdicionais.value);
+			}
+			return;
+		}
+
+		// No cliente, tenta carregar do localStorage
+		if (import.meta.client && !cacheLoaded.value) {
+			const cachedData = getFromStorage();
+			if (cachedData.length > 0) {
+				gruposAdicionais.value = cachedData;
+				loading.value = false;
+				cacheLoaded.value = true;
+				return;
+			}
+		}
+
+		// Sem dados de nenhuma fonte - faz fetch
 		await fetch();
 	};
 
@@ -102,5 +156,6 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 		error,
 		fetch,
 		refresh,
+		init,
 	};
 };

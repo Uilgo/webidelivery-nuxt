@@ -673,18 +673,28 @@ const handleComboDelete = (_id: string): void => {
 };
 
 // ========================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO - EAGER LOADING COM CACHE
 // ========================================
 
 onMounted(async () => {
-	// Carrega categorias ao montar
-	await categoriasComposable.init();
-	// Carrega produtos ao montar
-	await produtosComposable.init();
-	// Carrega grupos de adicionais ao montar
-	await gruposAdicionaisComposable.init();
-	// Carrega combos ao montar
-	await combosComposable.init();
+	/**
+	 * Estratégia: Cache em Cookie + Fetch em Background
+	 *
+	 * 1. Dados do cookie são carregados INSTANTANEAMENTE no useState
+	 * 2. Fetch acontece em background para atualizar dados
+	 * 3. Skeleton só aparece se não tiver cache (primeira vez ou expirado)
+	 *
+	 * Resultado:
+	 * - Reload da página = dados aparecem IMEDIATAMENTE (do cookie)
+	 * - Primeira visita = skeleton enquanto carrega
+	 * - Navegação entre tabs = instantâneo (useState global)
+	 */
+	await Promise.all([
+		categoriasComposable.init(),
+		produtosComposable.init(),
+		gruposAdicionaisComposable.init(),
+		combosComposable.init(),
+	]);
 });
 </script>
 
@@ -723,6 +733,7 @@ onMounted(async () => {
 				:active-tab="activeTab"
 				:loading="currentLoading"
 				:has-data="currentHasData"
+				:view-mode="viewMode"
 				@create="handleCreate"
 			>
 				<template #default="{ activeTab: sectionTab }">

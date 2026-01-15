@@ -542,11 +542,11 @@ const selectedFilterLabel = computed(() => {
 				variant="ghost"
 				size="md"
 				class="!p-2 !min-h-[40px] !w-[40px]"
-				:loading="loading"
 				:aria-label="'Atualizar ' + activeTab"
+				:disabled="loading"
 				@click="handleRefresh"
 			>
-				<Icon name="lucide:refresh-cw" class="w-4 h-4" />
+				<Icon name="lucide:refresh-cw" class="w-4 h-4" :class="{ 'animate-spin': loading }" />
 			</UiButton>
 
 			<!-- Botão Criar -->
