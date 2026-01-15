@@ -113,11 +113,13 @@ const tabConfig = computed(() => {
 				{ label: "Nome (A-Z)", value: "nome_asc" },
 				{ label: "Nome (Z-A)", value: "nome_desc" },
 				{ label: "Mais recentes", value: "created_at_desc" },
+				{ label: "Mais antigas", value: "created_at_asc" },
 			],
 			filterOptions: [
-				{ label: "Todos", value: "all" },
+				// Status
 				{ label: "Ativos", value: "ativo_true" },
 				{ label: "Inativos", value: "ativo_false" },
+				// Obrigatoriedade
 				{ label: "Obrigatórios", value: "obrigatorio_true" },
 				{ label: "Opcionais", value: "obrigatorio_false" },
 			],

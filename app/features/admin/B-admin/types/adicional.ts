@@ -1,8 +1,8 @@
 /**
- * 📌 Tipos para Adicionais do Cardápio
+ * 📌 Tipos para Grupos de Adicionais e Adicionais
  *
  * Baseado na estrutura real do banco de dados Supabase.
- * Inclui grupos de adicionais e itens adicionais.
+ * Grupos de adicionais são reutilizáveis entre produtos.
  */
 
 import type { UUID, TimestampTz } from "#shared/types/database";
@@ -33,62 +33,42 @@ export interface Adicional {
 	readonly ativo: boolean;
 }
 
-export interface ProdutoGrupoAdicional {
-	readonly id: UUID;
-	readonly created_at: TimestampTz;
-	readonly produto_id: UUID;
-	readonly grupo_adicional_id: UUID;
-	readonly ordem: number;
-}
-
 export interface GrupoAdicionalCreateData {
 	nome: string;
-	descricao?: string;
+	descricao?: string | null;
 	min_selecao?: number;
 	max_selecao?: number;
 	obrigatorio?: boolean;
-	ordem?: number;
 }
 
 export interface GrupoAdicionalUpdateData {
-	nome?: string;
-	descricao?: string;
+	nome: string;
+	descricao?: string | null;
 	min_selecao?: number;
 	max_selecao?: number;
 	obrigatorio?: boolean;
-	ordem?: number;
 	ativo?: boolean;
 }
 
 export interface AdicionalCreateData {
+	grupo_id: UUID;
 	nome: string;
-	descricao?: string;
-	preco: number;
-	ordem?: number;
+	descricao?: string | null;
+	preco?: number;
 }
 
 export interface AdicionalUpdateData {
-	nome?: string;
-	descricao?: string;
+	nome: string;
+	descricao?: string | null;
 	preco?: number;
-	ordem?: number;
 	ativo?: boolean;
 }
 
 export interface GrupoAdicionalFilters {
 	busca?: string;
 	ativo?: boolean;
+	obrigatorio?: boolean;
 	ordenacao?: "nome" | "ordem" | "created_at";
-	direcao?: "asc" | "desc";
-}
-
-export interface AdicionalFilters {
-	busca?: string;
-	grupo_id?: UUID;
-	ativo?: boolean;
-	preco_min?: number;
-	preco_max?: number;
-	ordenacao?: "nome" | "preco" | "ordem" | "created_at";
 	direcao?: "asc" | "desc";
 }
 
@@ -96,6 +76,37 @@ export interface GrupoAdicionalStats {
 	total: number;
 	ativos: number;
 	inativos: number;
-	adicionais_total: number;
-	produtos_vinculados: number;
+	obrigatorios: number;
+	opcionais: number;
+}
+
+/**
+ * Grupo de Adicional com campos computados para exibição
+ */
+export interface GrupoAdicionalComputado extends GrupoAdicional {
+	adicionais?: Array<{
+		id: string;
+		nome: string;
+		preco: number;
+		ativo: boolean;
+		descricao?: string | null;
+	}>;
+	adicionais_count: number;
+	adicionais_ativos_count: number;
+	preco_minimo?: number;
+	preco_maximo?: number;
+	status_display: string;
+	obrigatorio_display: string;
+	selecao_display: string;
+	pode_excluir: boolean;
+}
+
+/**
+ * Adicional com campos computados para exibição
+ */
+export interface AdicionalComputado extends Adicional {
+	grupo_nome: string;
+	status_display: string;
+	preco_display: string;
+	pode_excluir: boolean;
 }

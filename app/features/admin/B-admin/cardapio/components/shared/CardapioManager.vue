@@ -14,14 +14,18 @@
 import { useCardapio } from "../../composables/useCardapio";
 import { useCategorias } from "../../A-categorias/composables/useCategorias";
 import { useProdutos } from "../../B-produtos/composables/useProdutos";
+import { useGruposAdicionais } from "../../C-adicionais/composables/useGruposAdicionais";
+import { useAdicionais } from "../../C-adicionais/composables/useAdicionais";
 import { useToast } from "~/composables/ui/useToast";
 import type { CategoriaComputada } from "../../../types/categoria";
 import type { ProdutoComputado } from "../../../types/produto";
+import type { GrupoAdicionalComputado } from "../../../types/adicional";
 import CardapioMenuTabs from "./CardapioMenuTabs.vue";
 import CardapioFilters from "./CardapioFilters.vue";
 import CardapioTabSection from "./CardapioTabSection.vue";
 import CategoriasView from "../../A-categorias/components/CategoriasView.vue";
 import ProdutosView from "../../B-produtos/components/ProdutosView.vue";
+import GruposAdicionaisView from "../../C-adicionais/components/GruposAdicionaisView.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -32,6 +36,15 @@ const categoriasComposable = useCategorias();
 
 // Composable de produtos
 const produtosComposable = useProdutos();
+
+// Composable de grupos de adicionais
+const gruposAdicionaisComposable = useGruposAdicionais();
+
+// Composable de adicionais individuais
+const adicionaisComposable = useAdicionais();
+
+// Estado de expansão dos grupos de adicionais
+const expandedGrupoId = ref<string | null>(null);
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -71,6 +84,23 @@ watch(
 	{ immediate: true },
 );
 
+// Atualiza contadores e estados no useCardapio quando grupos de adicionais mudam
+watch(
+	() => gruposAdicionaisComposable.gruposAdicionaisRaw.value,
+	(gruposAdicionais) => {
+		setTabData("adicionais", gruposAdicionais);
+	},
+	{ immediate: true },
+);
+
+watch(
+	() => gruposAdicionaisComposable.loading.value,
+	(loading) => {
+		setTabLoading("adicionais", loading);
+	},
+	{ immediate: true },
+);
+
 // ========================================
 // COMPUTADAS PARA TEMPLATE
 // ========================================
@@ -79,7 +109,7 @@ watch(
 const tabCounts = computed(() => ({
 	categoriasCount: categoriasComposable.totalCategorias.value,
 	produtosCount: produtosComposable.totalProdutos.value,
-	adicionaisCount: 0, // TODO: integrar useAdicionais
+	adicionaisCount: gruposAdicionaisComposable.totalGruposAdicionais.value,
 	combosCount: 0, // TODO: integrar useCombos
 }));
 
@@ -87,6 +117,7 @@ const tabCounts = computed(() => ({
 const currentLoading = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.loading.value;
 	if (activeTab.value === "produtos") return produtosComposable.loading.value;
+	if (activeTab.value === "adicionais") return gruposAdicionaisComposable.loading.value;
 	// TODO: outros tabs
 	return false;
 });
@@ -94,6 +125,8 @@ const currentLoading = computed(() => {
 const currentHasData = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.categorias.value.length > 0;
 	if (activeTab.value === "produtos") return produtosComposable.produtos.value.length > 0;
+	if (activeTab.value === "adicionais")
+		return gruposAdicionaisComposable.gruposAdicionais.value.length > 0;
 	// TODO: outros tabs
 	return false;
 });
@@ -101,6 +134,7 @@ const currentHasData = computed(() => {
 const currentSearchValue = computed(() => {
 	if (activeTab.value === "categorias") return categoriasComposable.filters.value.busca ?? "";
 	if (activeTab.value === "produtos") return produtosComposable.filters.value.busca ?? "";
+	if (activeTab.value === "adicionais") return gruposAdicionaisComposable.filters.value.busca ?? "";
 	return "";
 });
 
@@ -113,6 +147,12 @@ const currentSortValue = computed(() => {
 	}
 	if (activeTab.value === "produtos") {
 		const { ordenacao, direcao } = produtosComposable.filters.value;
+		// Retorna vazio se for a ordenação padrão (ordem_asc)
+		if (ordenacao === "ordem" && direcao === "asc") return "";
+		return ordenacao ? `${ordenacao}_${direcao}` : "";
+	}
+	if (activeTab.value === "adicionais") {
+		const { ordenacao, direcao } = gruposAdicionaisComposable.filters.value;
 		// Retorna vazio se for a ordenação padrão (ordem_asc)
 		if (ordenacao === "ordem" && direcao === "asc") return "";
 		return ordenacao ? `${ordenacao}_${direcao}` : "";
@@ -135,6 +175,13 @@ const currentFilters = computed(() => {
 		if (em_promocao !== undefined) filters.em_promocao = em_promocao;
 		if (Object.keys(filters).length > 0) return filters;
 	}
+	if (activeTab.value === "adicionais") {
+		const { ativo, obrigatorio } = gruposAdicionaisComposable.filters.value;
+		const filters: Record<string, unknown> = {};
+		if (ativo !== undefined) filters.ativo = ativo;
+		if (obrigatorio !== undefined) filters.obrigatorio = obrigatorio;
+		if (Object.keys(filters).length > 0) return filters;
+	}
 	return {};
 });
 
@@ -150,6 +197,8 @@ const handleSearch = (value: string): void => {
 		categoriasComposable.setSearch(value);
 	} else if (activeTab.value === "produtos") {
 		produtosComposable.setSearch(value);
+	} else if (activeTab.value === "adicionais") {
+		gruposAdicionaisComposable.setSearch(value);
 	}
 	// TODO: outros tabs
 };
@@ -184,6 +233,16 @@ const handleSort = (value: string): void => {
 			| "created_at";
 		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
 		produtosComposable.setOrdenacao(field, direcao);
+	} else if (activeTab.value === "adicionais") {
+		// Se vazio, volta para ordenação padrão (ordem_asc)
+		if (!value) {
+			gruposAdicionaisComposable.setOrdenacao("ordem", "asc");
+			return;
+		}
+		const lastUnderscoreIndex = value.lastIndexOf("_");
+		const field = value.substring(0, lastUnderscoreIndex) as "nome" | "ordem" | "created_at";
+		const direcao = value.substring(lastUnderscoreIndex + 1) as "asc" | "desc";
+		gruposAdicionaisComposable.setOrdenacao(field, direcao);
 	}
 	// TODO: outros tabs
 };
@@ -220,6 +279,20 @@ const handleFilter = (filters: Record<string, unknown>): void => {
 		if ("categoria_id" in filters) {
 			produtosComposable.setCategoria(filters.categoria_id as string | undefined);
 		}
+	} else if (activeTab.value === "adicionais") {
+		// Limpa todos os filtros primeiro
+		if (Object.keys(filters).length === 0) {
+			gruposAdicionaisComposable.setAtivo(undefined);
+			gruposAdicionaisComposable.setObrigatorio(undefined);
+			return;
+		}
+		// Aplica filtros específicos
+		if ("ativo" in filters) {
+			gruposAdicionaisComposable.setAtivo(filters.ativo as boolean | undefined);
+		}
+		if ("obrigatorio" in filters) {
+			gruposAdicionaisComposable.setObrigatorio(filters.obrigatorio as boolean | undefined);
+		}
 	}
 	// TODO: outros tabs
 };
@@ -232,6 +305,8 @@ const handleRefresh = async (): Promise<void> => {
 		await categoriasComposable.refresh();
 	} else if (activeTab.value === "produtos") {
 		await produtosComposable.refresh();
+	} else if (activeTab.value === "adicionais") {
+		await gruposAdicionaisComposable.refresh();
 	}
 	// TODO: outros tabs
 };
@@ -244,6 +319,8 @@ const handleCreate = (): void => {
 		categoriasComposable.openCreate();
 	} else if (activeTab.value === "produtos") {
 		produtosComposable.openCreate();
+	} else if (activeTab.value === "adicionais") {
+		gruposAdicionaisComposable.openCreate();
 	}
 	// TODO: outros tabs
 };
@@ -345,6 +422,147 @@ const handleProdutoToggleStatus = async (produto: unknown): Promise<void> => {
 	}
 };
 
+/**
+ * Handler para seleção de grupo de adicionais
+ */
+const handleGrupoAdicionalSelect = (grupoAdicional: unknown): void => {
+	gruposAdicionaisComposable.openEdit(
+		grupoAdicional as Parameters<typeof gruposAdicionaisComposable.openEdit>[0],
+	);
+};
+
+/**
+ * Handler para ver mais detalhes de grupo de adicionais
+ */
+const handleGrupoAdicionalViewMore = (grupoAdicional: unknown): void => {
+	gruposAdicionaisComposable.openView(
+		grupoAdicional as Parameters<typeof gruposAdicionaisComposable.openView>[0],
+	);
+};
+
+/**
+ * Handler para editar grupo de adicionais
+ */
+const handleGrupoAdicionalEdit = (grupoAdicional: unknown): void => {
+	gruposAdicionaisComposable.openEdit(
+		grupoAdicional as Parameters<typeof gruposAdicionaisComposable.openEdit>[0],
+	);
+};
+
+/**
+ * Handler para excluir grupo de adicionais
+ */
+const handleGrupoAdicionalDelete = (_grupoAdicional: unknown): void => {
+	// TODO: implementar quando tiver modal de confirmação
+	console.warn("[CardapioManager] Delete de grupo de adicionais não implementado ainda");
+};
+
+/**
+ * Handler para toggle status de grupo de adicionais
+ */
+const handleGrupoAdicionalToggleStatus = async (grupoAdicional: unknown): Promise<void> => {
+	const grupo = grupoAdicional as GrupoAdicionalComputado;
+	const novoStatus = !grupo.ativo;
+	const success = await gruposAdicionaisComposable.handleToggleAtivo(grupo.id, novoStatus);
+
+	if (success) {
+		const toast = useToast();
+		toast.add({
+			title: novoStatus ? "Grupo ativado" : "Grupo desativado",
+			description: `${grupo.nome} foi ${novoStatus ? "ativado" : "desativado"} com sucesso`,
+			color: "success",
+			duration: 3000,
+		});
+	}
+};
+
+// ========================================
+// HANDLERS DE ADICIONAIS INDIVIDUAIS
+// ========================================
+
+/**
+ * Handler para criar adicional
+ */
+const handleCreateAdicional = (grupoId: string): void => {
+	adicionaisComposable.openCreate(grupoId);
+};
+
+/**
+ * Handler para editar adicional
+ */
+const handleEditAdicional = (adicionalId: string, _grupoId: string): void => {
+	// Busca o adicional nos dados do grupo
+	const grupo = gruposAdicionaisComposable.gruposAdicionais.value.find((g) =>
+		g.adicionais?.some((a) => a.id === adicionalId),
+	);
+	const adicional = grupo?.adicionais?.find((a) => a.id === adicionalId);
+
+	if (adicional && grupo) {
+		// Converte AdicionalComputado para Adicional completo
+		const adicionalCompleto = {
+			...adicional,
+			descricao: adicional.descricao ?? null,
+			grupo_id: grupo.id,
+			ordem: 0, // TODO: buscar ordem real se necessário
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+		};
+		adicionaisComposable.openEdit(adicionalCompleto);
+	}
+};
+
+/**
+ * Handler para excluir adicional
+ */
+const handleDeleteAdicional = async (adicionalId: string, _grupoId: string): Promise<void> => {
+	// TODO: implementar modal de confirmação
+	const success = await adicionaisComposable.handleDelete(adicionalId);
+
+	if (success) {
+		const toast = useToast();
+		toast.add({
+			title: "Adicional excluído",
+			description: "O adicional foi excluído com sucesso",
+			color: "success",
+			duration: 3000,
+		});
+
+		// Refresh dos grupos para atualizar contadores
+		await gruposAdicionaisComposable.refresh();
+	}
+};
+
+/**
+ * Handler para toggle status de adicional
+ */
+const handleToggleAdicionalStatus = async (
+	adicionalId: string,
+	ativo: boolean,
+	_grupoId: string,
+): Promise<void> => {
+	const success = await adicionaisComposable.handleToggleAtivo(adicionalId, ativo);
+
+	if (success) {
+		const toast = useToast();
+		toast.add({
+			title: ativo ? "Adicional ativado" : "Adicional desativado",
+			description: `O adicional foi ${ativo ? "ativado" : "desativado"} com sucesso`,
+			color: "success",
+			duration: 3000,
+		});
+
+		// Refresh dos grupos para atualizar os dados dos adicionais
+		await gruposAdicionaisComposable.refresh();
+	}
+};
+
+/**
+ * Handler para expansão de grupo
+ */
+const handleGrupoExpansion = (grupoId: string | null): void => {
+	expandedGrupoId.value = grupoId;
+};
+
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
@@ -354,6 +572,8 @@ onMounted(async () => {
 	await categoriasComposable.init();
 	// Carrega produtos ao montar
 	await produtosComposable.init();
+	// Carrega grupos de adicionais ao montar
+	await gruposAdicionaisComposable.init();
 });
 </script>
 
@@ -419,13 +639,23 @@ onMounted(async () => {
 						@toggle-status="handleProdutoToggleStatus"
 					/>
 
-					<!-- TODO: Adicionais -->
-					<div
+					<!-- Grupos de Adicionais -->
+					<GruposAdicionaisView
 						v-else-if="sectionTab === 'adicionais'"
-						class="p-6 text-center text-[var(--text-muted)]"
-					>
-						<p>TODO: AdicionaisView</p>
-					</div>
+						:grupos-adicionais="gruposAdicionaisComposable.gruposAdicionais.value"
+						:view-mode="viewMode"
+						:expanded-id="expandedGrupoId"
+						@select="handleGrupoAdicionalSelect"
+						@view-more="handleGrupoAdicionalViewMore"
+						@edit="handleGrupoAdicionalEdit"
+						@delete="handleGrupoAdicionalDelete"
+						@toggle-status="handleGrupoAdicionalToggleStatus"
+						@create-adicional="handleCreateAdicional"
+						@edit-adicional="handleEditAdicional"
+						@delete-adicional="handleDeleteAdicional"
+						@toggle-adicional-status="handleToggleAdicionalStatus"
+						@update:expanded-id="handleGrupoExpansion"
+					/>
 
 					<!-- TODO: Combos -->
 					<div v-else-if="sectionTab === 'combos'" class="p-6 text-center text-[var(--text-muted)]">
