@@ -58,7 +58,7 @@ export interface UseAdicionaisReturn {
 	handleCreate: (data: AdicionalCreateData) => Promise<boolean>;
 	handleUpdate: (id: string, data: AdicionalUpdateData) => Promise<boolean>;
 	handleDelete: (id: string) => Promise<boolean>;
-	handleToggleAtivo: (id: string, ativo: boolean) => Promise<boolean>;
+	handleToggleAtivo: (id: string, ativo: boolean, grupoId?: string) => Promise<boolean>;
 
 	// Refresh
 	refresh: (grupoId: string) => Promise<void>;
@@ -134,11 +134,19 @@ export const useAdicionais = (): UseAdicionaisReturn => {
 	/**
 	 * Toggle ativo/inativo
 	 */
-	const handleToggleAtivo = async (id: string, ativo: boolean): Promise<boolean> => {
+	const handleToggleAtivo = async (
+		id: string,
+		ativo: boolean,
+		grupoId?: string,
+	): Promise<boolean> => {
 		const success = await actionsComposable.toggleAtivo(id, ativo);
 
-		if (success && modalComposable.grupoId.value) {
-			await fetchComposable.refresh(modalComposable.grupoId.value);
+		if (success) {
+			// Usa o grupoId passado ou o do modal
+			const targetGrupoId = grupoId || modalComposable.grupoId.value;
+			if (targetGrupoId) {
+				await fetchComposable.refresh(targetGrupoId);
+			}
 			return true;
 		}
 

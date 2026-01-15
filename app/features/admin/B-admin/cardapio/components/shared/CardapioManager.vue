@@ -538,9 +538,9 @@ const handleDeleteAdicional = async (adicionalId: string, _grupoId: string): Pro
 const handleToggleAdicionalStatus = async (
 	adicionalId: string,
 	ativo: boolean,
-	_grupoId: string,
+	grupoId: string,
 ): Promise<void> => {
-	const success = await adicionaisComposable.handleToggleAtivo(adicionalId, ativo);
+	const success = await adicionaisComposable.handleToggleAtivo(adicionalId, ativo, grupoId);
 
 	if (success) {
 		const toast = useToast();
