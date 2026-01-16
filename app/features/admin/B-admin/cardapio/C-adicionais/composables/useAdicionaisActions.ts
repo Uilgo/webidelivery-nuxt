@@ -104,14 +104,16 @@ export const useAdicionaisActions = (): UseAdicionaisActionsReturn => {
 			});
 
 			if (error) {
-				throw error;
+				console.error("[useAdicionaisActions] Erro Supabase:", error);
+				actionError.value = error.message || "Erro ao excluir adicional";
+				return false;
 			}
 
 			return result as boolean;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao excluir adicional";
 			actionError.value = message;
-			console.error("[useAdicionaisActions] Erro ao excluir:", message);
+			console.error("[useAdicionaisActions] Erro ao excluir:", err);
 			return false;
 		} finally {
 			deleting.value = false;

@@ -107,14 +107,16 @@ export const useGruposAdicionaisActions = (): UseGruposAdicionaisActionsReturn =
 			});
 
 			if (error) {
-				throw error;
+				console.error("[useGruposAdicionaisActions] Erro Supabase:", error);
+				actionError.value = error.message || "Erro ao excluir grupo de adicionais";
+				return false;
 			}
 
 			return result as boolean;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao excluir grupo de adicionais";
 			actionError.value = message;
-			console.error("[useGruposAdicionaisActions] Erro ao excluir:", message);
+			console.error("[useGruposAdicionaisActions] Erro ao excluir:", err);
 			return false;
 		} finally {
 			deleting.value = false;

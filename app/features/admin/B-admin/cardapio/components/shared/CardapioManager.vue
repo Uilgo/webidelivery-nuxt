@@ -33,6 +33,10 @@ import CategoriaDrawer from "../../A-categorias/components/CategoriaDrawer.vue";
 import CategoriaDeleteModal from "../../A-categorias/components/CategoriaDeleteModal.vue";
 import ProdutoDrawer from "../../B-produtos/components/ProdutoDrawer.vue";
 import ProdutoDeleteModal from "../../B-produtos/components/ProdutoDeleteModal.vue";
+import GrupoAdicionalDrawer from "../../C-adicionais/components/GrupoAdicionalDrawer.vue";
+import GrupoAdicionalDeleteModal from "../../C-adicionais/components/GrupoAdicionalDeleteModal.vue";
+import AdicionalDrawer from "../../C-adicionais/components/AdicionalDrawer.vue";
+import AdicionalDeleteModal from "../../C-adicionais/components/AdicionalDeleteModal.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -63,6 +67,14 @@ const categoriaToDelete = ref<CategoriaComputada | null>(null);
 // Estado do modal de exclusão de produto
 const isProdutoDeleteModalOpen = ref(false);
 const produtoToDelete = ref<ProdutoComputado | null>(null);
+
+// Estado do modal de exclusão de grupo de adicionais
+const isGrupoAdicionalDeleteModalOpen = ref(false);
+const grupoAdicionalToDelete = ref<GrupoAdicionalComputado | null>(null);
+
+// Estado do modal de exclusão de adicional
+const isAdicionalDeleteModalOpen = ref(false);
+const adicionalToDelete = ref<{ id: string; nome: string; grupo_nome: string } | null>(null);
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -494,6 +506,41 @@ const handleProdutoDeleteSuccess = (): void => {
 };
 
 /**
+ * Handler para sucesso no modal de grupo de adicionais
+ */
+const handleGrupoAdicionalModalSuccess = async (): Promise<void> => {
+	// Refresh dos dados após criar/editar
+	await gruposAdicionaisComposable.refresh();
+};
+
+/**
+ * Handler para sucesso na exclusão de grupo de adicionais
+ */
+const handleGrupoAdicionalDeleteSuccess = (): void => {
+	isGrupoAdicionalDeleteModalOpen.value = false;
+	grupoAdicionalToDelete.value = null;
+};
+
+/**
+ * Handler para sucesso no modal de adicional
+ */
+const handleAdicionalModalSuccess = async (): Promise<void> => {
+	// Refresh dos grupos para atualizar contadores e dados
+	await gruposAdicionaisComposable.refresh();
+};
+
+/**
+ * Handler para sucesso na exclusão de adicional
+ */
+const handleAdicionalDeleteSuccess = (): void => {
+	// Refresh dos grupos de adicionais para atualizar a lista
+	gruposAdicionaisComposable.refresh();
+
+	isAdicionalDeleteModalOpen.value = false;
+	adicionalToDelete.value = null;
+};
+
+/**
  * Handler para seleção de produto
  */
 const handleProdutoSelect = (produto: unknown): void => {
@@ -572,9 +619,10 @@ const handleGrupoAdicionalEdit = (grupoAdicional: unknown): void => {
 /**
  * Handler para excluir grupo de adicionais
  */
-const handleGrupoAdicionalDelete = (_grupoAdicional: unknown): void => {
-	// TODO: implementar quando tiver modal de confirmação
-	console.warn("[CardapioManager] Delete de grupo de adicionais não implementado ainda");
+const handleGrupoAdicionalDelete = (grupoAdicional: unknown): void => {
+	const grupo = grupoAdicional as GrupoAdicionalComputado;
+	grupoAdicionalToDelete.value = grupo;
+	isGrupoAdicionalDeleteModalOpen.value = true;
 };
 
 /**
@@ -634,21 +682,18 @@ const handleEditAdicional = (adicionalId: string, _grupoId: string): void => {
 /**
  * Handler para excluir adicional
  */
-const handleDeleteAdicional = async (adicionalId: string, _grupoId: string): Promise<void> => {
-	// TODO: implementar modal de confirmação
-	const success = await adicionaisComposable.handleDelete(adicionalId);
+const handleDeleteAdicional = (adicionalId: string, grupoId: string): void => {
+	// Busca o adicional nos dados do grupo
+	const grupo = gruposAdicionaisComposable.gruposAdicionais.value.find((g) => g.id === grupoId);
+	const adicional = grupo?.adicionais?.find((a) => a.id === adicionalId);
 
-	if (success) {
-		const toast = useToast();
-		toast.add({
-			title: "Adicional excluído",
-			description: "O adicional foi excluído com sucesso",
-			color: "success",
-			duration: 3000,
-		});
-
-		// Refresh dos grupos para atualizar contadores
-		await gruposAdicionaisComposable.refresh();
+	if (adicional && grupo) {
+		adicionalToDelete.value = {
+			id: adicional.id,
+			nome: adicional.nome,
+			grupo_nome: grupo.nome,
+		};
+		isAdicionalDeleteModalOpen.value = true;
 	}
 };
 
@@ -874,6 +919,39 @@ onMounted(async () => {
 			v-model="isProdutoDeleteModalOpen"
 			:produto="produtoToDelete"
 			@success="handleProdutoDeleteSuccess"
+		/>
+
+		<!-- Drawer e Modal de Grupo de Adicionais -->
+		<GrupoAdicionalDrawer
+			v-model="gruposAdicionaisComposable.isModalOpen.value"
+			:is-edicao="gruposAdicionaisComposable.modalMode.value === 'edit'"
+			:grupo="
+				(gruposAdicionaisComposable.selectedGrupoAdicional.value as GrupoAdicionalComputado) || null
+			"
+			@success="handleGrupoAdicionalModalSuccess"
+		/>
+
+		<GrupoAdicionalDeleteModal
+			v-if="grupoAdicionalToDelete"
+			v-model="isGrupoAdicionalDeleteModalOpen"
+			:grupo="grupoAdicionalToDelete"
+			@success="handleGrupoAdicionalDeleteSuccess"
+		/>
+
+		<!-- Drawer e Modal de Adicional -->
+		<AdicionalDrawer
+			v-model="adicionaisComposable.isModalOpen.value"
+			:is-edicao="adicionaisComposable.modalMode.value === 'edit'"
+			:adicional="adicionaisComposable.selectedAdicional.value as any"
+			:grupo-id-padrao="adicionaisComposable.grupoId.value"
+			@success="handleAdicionalModalSuccess"
+		/>
+
+		<AdicionalDeleteModal
+			v-if="adicionalToDelete"
+			v-model="isAdicionalDeleteModalOpen"
+			:adicional="adicionalToDelete as any"
+			@success="handleAdicionalDeleteSuccess"
 		/>
 	</div>
 </template>
