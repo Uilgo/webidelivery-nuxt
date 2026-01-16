@@ -12,7 +12,6 @@ import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-p
 // Imports explícitos dos componentes
 import CardapioSkeleton from "~/features/public/cardapio/components/CardapioSkeleton.vue";
 import CardapioHeader from "~/features/public/cardapio/components/CardapioHeader.vue";
-import CardapioCapa from "~/features/public/cardapio/components/CardapioCapa.vue";
 import CardapioBanners from "~/features/public/cardapio/components/CardapioBanners.vue";
 import CardapioCategorias from "~/features/public/cardapio/components/CardapioCategorias.vue";
 import CardapioBusca from "~/features/public/cardapio/components/CardapioBusca.vue";
@@ -190,17 +189,14 @@ useSeoMeta({
 
 		<!-- Content -->
 		<div v-else-if="estabelecimento">
-			<!-- Capa (Largura Total) -->
-			<CardapioCapa :estabelecimento="estabelecimento" />
-
 			<!-- Container Principal com Grid -->
-			<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+			<div class="w-full max-w-7xl mx-auto px-2 sm:px-3 md:px-4 lg:px-8 pt-3 sm:pt-4 md:pt-6">
 				<!-- Grid: 2 colunas no desktop -->
-				<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+				<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-3 sm:gap-4 md:gap-6">
 					<!-- Coluna Esquerda: Conteúdo Principal -->
 					<div class="min-w-0">
 						<!-- Header -->
-						<div class="mb-6">
+						<div class="mb-2 sm:mb-3">
 							<CardapioHeader :estabelecimento="estabelecimento" />
 						</div>
 
@@ -218,7 +214,7 @@ useSeoMeta({
 						<CardapioBusca v-model="termoBusca" @ordenar="handleOrdenar" @filtrar="handleFiltrar" />
 
 						<!-- Container com padding para seções abaixo -->
-						<div class="px-4">
+						<div class="px-2 sm:px-3 md:px-4">
 							<!-- Ofertas Imperdíveis (apenas quando não há filtros) -->
 							<CardapioOfertasScroll v-show="!temFiltrosAtivos" :ofertas="ofertas" />
 
@@ -227,7 +223,7 @@ useSeoMeta({
 
 							<!-- Produtos por Categoria -->
 							<section class="pb-20">
-								<div v-for="categoria in categoriasVisiveis" :key="categoria.id" class="mb-10">
+								<div v-for="categoria in categoriasVisiveis" :key="categoria.id" class="mb-4">
 									<!-- Só exibe categoria se tiver produtos -->
 									<template v-if="produtosPorCategoria(categoria.id).length > 0">
 										<!-- Título da Categoria -->

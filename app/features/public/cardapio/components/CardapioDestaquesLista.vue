@@ -16,7 +16,7 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-	<section v-if="destaques.length" class="mb-10">
+	<section v-if="destaques.length" class="mb-4">
 		<!-- Header -->
 		<h3 class="text-2xl font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
 			<Icon name="lucide:star" class="w-6 h-6 text-primary fill-current" />

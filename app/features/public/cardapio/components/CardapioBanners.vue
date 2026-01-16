@@ -89,8 +89,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="px-4 py-3 bg-[var(--bg-page)]">
-		<div class="max-w-3xl mx-auto">
+	<div class="bg-[var(--bg-page)]">
+		<div class="w-full">
 			<!-- Carrossel -->
 			<div class="relative rounded-xl overflow-hidden shadow-md">
 				<!-- Banners -->
@@ -102,7 +102,7 @@ onUnmounted(() => {
 					<div
 						v-for="(banner, index) in banners"
 						:key="banner.id"
-						class="min-w-full snap-start relative h-28 flex items-center justify-center"
+						class="min-w-full snap-start relative h-32 sm:h-36 md:h-40 lg:h-44 flex items-center justify-center"
 						:style="{ backgroundColor: banner.cor_fundo }"
 					>
 						<!-- Imagem de fundo com overlay -->
@@ -114,17 +114,19 @@ onUnmounted(() => {
 						</div>
 
 						<!-- Conteúdo -->
-						<div class="relative z-10 text-center px-6">
-							<h3 class="text-lg font-bold text-white mb-1">{{ banner.titulo }}</h3>
-							<p class="text-xs text-white/90">{{ banner.descricao }}</p>
+						<div class="relative z-10 text-center px-4 sm:px-6">
+							<h3 class="text-base sm:text-lg md:text-xl font-bold text-white mb-1">
+								{{ banner.titulo }}
+							</h3>
+							<p class="text-xs sm:text-sm text-white/90">{{ banner.descricao }}</p>
 						</div>
 					</div>
 				</div>
 
-				<!-- Botões de navegação -->
+				<!-- Botões de navegação (apenas desktop) -->
 				<button
 					type="button"
-					class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-md"
+					class="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white items-center justify-center transition-colors shadow-md"
 					@click="bannerAnterior"
 				>
 					<Icon name="lucide:chevron-left" class="w-5 h-5 text-gray-800" />
@@ -132,20 +134,20 @@ onUnmounted(() => {
 
 				<button
 					type="button"
-					class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-md"
+					class="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white items-center justify-center transition-colors shadow-md"
 					@click="proximoBanner"
 				>
 					<Icon name="lucide:chevron-right" class="w-5 h-5 text-gray-800" />
 				</button>
 
 				<!-- Indicadores -->
-				<div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+				<div class="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
 					<button
 						v-for="(banner, index) in banners"
 						:key="banner.id"
 						type="button"
-						class="w-2 h-2 rounded-full transition-all"
-						:class="index === bannerAtivo ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/75'"
+						class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all"
+						:class="index === bannerAtivo ? 'bg-white w-4 sm:w-6' : 'bg-white/50 hover:bg-white/75'"
 						@click="irParaBanner(index)"
 					></button>
 				</div>

@@ -89,8 +89,10 @@ watch(
 </script>
 
 <template>
-	<nav class="sticky top-[72px] z-30 px-4 py-3 bg-[var(--bg-page)]">
-		<div class="max-w-3xl mx-auto relative">
+	<nav
+		class="sticky top-[72px] z-30 py-3 bg-[var(--bg-page)] -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4"
+	>
+		<div class="w-full relative">
 			<!-- Botão Esquerda (Desktop) -->
 			<Transition
 				enter-active-class="transition-opacity duration-200"

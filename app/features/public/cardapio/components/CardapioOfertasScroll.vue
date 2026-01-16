@@ -17,7 +17,7 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-	<section v-if="ofertas.length" class="mb-10">
+	<section v-if="ofertas.length" class="mb-4">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
 			<h3 class="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">

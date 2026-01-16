@@ -83,8 +83,8 @@ const temFiltrosAtivos = computed(() => {
 </script>
 
 <template>
-	<div class="px-4 py-3 bg-[var(--bg-page)]">
-		<div class="max-w-3xl mx-auto flex gap-2">
+	<div class="py-3 pb-8 bg-[var(--bg-page)] -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4">
+		<div class="w-full flex gap-2">
 			<!-- Campo de busca -->
 			<div class="flex-1">
 				<UiInput

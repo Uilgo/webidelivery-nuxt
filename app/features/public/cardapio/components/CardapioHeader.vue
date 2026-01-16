@@ -56,12 +56,12 @@ const abrirWhatsApp = (): void => {
 </script>
 
 <template>
-	<header class="sticky top-0 z-40 pb-2 bg-transparent">
-		<div class="max-w-3xl mx-auto bg-[var(--bg-surface)] rounded-xl shadow-lg p-4">
-			<div class="flex items-start gap-4">
+	<header class="sticky top-0 z-40 bg-transparent">
+		<div class="bg-[var(--bg-surface)] rounded-lg sm:rounded-xl shadow-lg p-2 sm:p-3 md:p-4">
+			<div class="flex items-start gap-2 sm:gap-3 md:gap-4">
 				<!-- Logo Quadrado -->
 				<div
-					class="size-20 sm:size-24 rounded-lg overflow-hidden bg-[var(--bg-surface)] shadow-lg shrink-0"
+					class="size-16 sm:size-20 md:size-24 lg:size-28 rounded-md sm:rounded-lg overflow-hidden bg-[var(--bg-surface)] shadow-lg shrink-0"
 				>
 					<img
 						v-if="estabelecimento.logo"
@@ -74,33 +74,35 @@ const abrirWhatsApp = (): void => {
 						v-else
 						class="w-full h-full flex items-center justify-center bg-[var(--bg-muted)] text-[var(--text-muted)]"
 					>
-						<Icon name="lucide:store" class="w-10 h-10" />
+						<Icon name="lucide:store" class="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
 					</div>
 				</div>
 
 				<!-- Info -->
 				<div class="flex-1 min-w-0">
-					<!-- Linha 1: Nome + Descrição + ModeToggle -->
-					<div class="flex items-start justify-between gap-3 mb-2">
-						<div class="flex-1 min-w-0 space-y-1">
-							<h1 class="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+					<!-- Linha 1: Nome + ModeToggle -->
+					<div class="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+						<div class="flex-1 min-w-0">
+							<h1
+								class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[var(--text-primary)] leading-tight"
+							>
 								{{ estabelecimento.nome ?? "Estabelecimento" }}
 							</h1>
 							<p
 								v-if="estabelecimento.descricao"
-								class="text-sm text-[var(--text-muted)] line-clamp-2"
+								class="text-sm sm:text-base text-[var(--text-muted)] line-clamp-1 mt-1"
 							>
 								{{ estabelecimento.descricao }}
 							</p>
 						</div>
-						<LayoutsModeToggle />
+						<LayoutsModeToggle class="shrink-0" />
 					</div>
 
 					<!-- Linha 2: Tempo + Entrega Grátis -->
-					<div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm mb-2">
+					<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm mb-2">
 						<!-- Tempo de Entrega -->
 						<div class="flex items-center gap-1 text-[var(--text-muted)]">
-							<Icon name="lucide:clock" class="w-3 h-3" />
+							<Icon name="lucide:clock" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							<span>{{ tempoEntrega }}</span>
 						</div>
 
@@ -119,13 +121,18 @@ const abrirWhatsApp = (): void => {
 							<template #iconLeft>
 								<Icon
 									:name="estaAberto ? 'lucide:check-circle' : 'lucide:x-circle'"
-									class="w-3 h-3"
+									class="w-3 h-3 sm:w-3.5 sm:h-3.5"
 								/>
 							</template>
-							{{ estaAberto ? "Aberto agora" : "Fechado" }}
+							{{ estaAberto ? "Aberto" : "Fechado" }}
 						</UiBadge>
 
-						<UiButton variant="ghost" size="sm" @click="modalInfoAberto = true">
+						<UiButton
+							variant="ghost"
+							size="sm"
+							class="text-xs sm:text-sm"
+							@click="modalInfoAberto = true"
+						>
 							Ver Mais
 						</UiButton>
 					</div>
