@@ -70,10 +70,11 @@ export const useProdutosFetch = (): UseProdutosFetchReturn => {
 					`
 					*,
 					categoria:categorias!produtos_categoria_id_fkey(id, nome),
-					variacoes:produto_variacoes(id)
+					variacoes:produto_variacoes(id, nome, preco, preco_promocional, ordem, ativo),
+					grupos_adicionais:produto_grupos_adicionais(grupo_adicional_id)
 				`,
 				)
-				.order("ordem", { ascending: true });
+				.order("created_at", { ascending: false });
 
 			if (fetchError) {
 				throw fetchError;

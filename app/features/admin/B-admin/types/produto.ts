@@ -35,14 +35,25 @@ export interface ProdutoVariacao {
 	readonly ativo: boolean;
 }
 
+export interface ProdutoGrupoAdicional {
+	readonly id: UUID;
+	readonly created_at: TimestampTz;
+	readonly produto_id: UUID;
+	readonly grupo_adicional_id: UUID;
+	readonly ordem: number;
+}
+
 export interface ProdutoCreateData {
 	categoria_id: UUID;
 	nome: string;
 	descricao?: string;
 	imagem_url?: string;
 	ordem?: number;
+	ativo?: boolean;
 	destaque?: boolean;
 	em_promocao?: boolean;
+	variacoes?: ProdutoVariacaoCreateData[];
+	grupos_adicionais_ids?: UUID[];
 }
 
 export interface ProdutoUpdateData {
@@ -51,13 +62,16 @@ export interface ProdutoUpdateData {
 	imagem_url?: string | null;
 	ativo?: boolean;
 	destaque?: boolean;
+	em_promocao?: boolean;
 	categoria_id?: UUID | null;
+	variacoes?: ProdutoVariacaoCreateData[];
+	grupos_adicionais_ids?: UUID[];
 }
 
 export interface ProdutoVariacaoCreateData {
 	nome: string;
 	preco: number;
-	preco_promocional?: number;
+	preco_promocional?: number | null;
 	ordem?: number;
 }
 
@@ -94,6 +108,17 @@ export interface ProdutoStats {
 export interface ProdutoComputado extends Produto {
 	categoria_nome: string;
 	variacoes_count: number;
+	variacoes?: Array<{
+		id: string;
+		nome: string;
+		preco: number;
+		preco_promocional: number | null;
+		ordem: number;
+		ativo: boolean;
+	}>;
+	grupos_adicionais?: Array<{
+		grupo_adicional_id: string;
+	}>;
 	preco_minimo?: number;
 	preco_maximo?: number;
 	status_display: string;

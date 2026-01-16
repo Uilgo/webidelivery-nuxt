@@ -31,6 +31,8 @@ import GruposAdicionaisView from "../../C-adicionais/components/GruposAdicionais
 import CombosView from "../../D-combos/components/CombosView.vue";
 import CategoriaDrawer from "../../A-categorias/components/CategoriaDrawer.vue";
 import CategoriaDeleteModal from "../../A-categorias/components/CategoriaDeleteModal.vue";
+import ProdutoDrawer from "../../B-produtos/components/ProdutoDrawer.vue";
+import ProdutoDeleteModal from "../../B-produtos/components/ProdutoDeleteModal.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -57,6 +59,10 @@ const expandedGrupoId = ref<string | null>(null);
 // Estado do modal de exclusão de categoria
 const isDeleteModalOpen = ref(false);
 const categoriaToDelete = ref<CategoriaComputada | null>(null);
+
+// Estado do modal de exclusão de produto
+const isProdutoDeleteModalOpen = ref(false);
+const produtoToDelete = ref<ProdutoComputado | null>(null);
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -467,6 +473,26 @@ const handleCategoriaDeleteSuccess = (): void => {
 	categoriaToDelete.value = null;
 };
 
+// ========================================
+// HANDLERS DOS MODAIS DE PRODUTO
+// ========================================
+
+/**
+ * Handler para sucesso no modal de produto
+ */
+const handleProdutoModalSuccess = async (): Promise<void> => {
+	// Refresh dos dados após criar/editar
+	await produtosComposable.refresh();
+};
+
+/**
+ * Handler para sucesso na exclusão de produto
+ */
+const handleProdutoDeleteSuccess = (): void => {
+	isProdutoDeleteModalOpen.value = false;
+	produtoToDelete.value = null;
+};
+
 /**
  * Handler para seleção de produto
  */
@@ -491,9 +517,10 @@ const handleProdutoEdit = (produto: unknown): void => {
 /**
  * Handler para excluir produto
  */
-const handleProdutoDelete = (_produto: unknown): void => {
-	// TODO: implementar quando tiver modal de confirmação
-	console.warn("[CardapioManager] Delete de produto não implementado ainda");
+const handleProdutoDelete = (produto: unknown): void => {
+	const prod = produto as ProdutoComputado;
+	produtoToDelete.value = prod;
+	isProdutoDeleteModalOpen.value = true;
 };
 
 /**
@@ -832,6 +859,21 @@ onMounted(async () => {
 			v-model="isDeleteModalOpen"
 			:categoria="categoriaToDelete"
 			@success="handleCategoriaDeleteSuccess"
+		/>
+
+		<!-- Drawer e Modal de Produto -->
+		<ProdutoDrawer
+			v-model="produtosComposable.isModalOpen.value"
+			:is-edicao="produtosComposable.modalMode.value === 'edit'"
+			:produto="(produtosComposable.selectedProduto.value as ProdutoComputado) || null"
+			@success="handleProdutoModalSuccess"
+		/>
+
+		<ProdutoDeleteModal
+			v-if="produtoToDelete"
+			v-model="isProdutoDeleteModalOpen"
+			:produto="produtoToDelete"
+			@success="handleProdutoDeleteSuccess"
 		/>
 	</div>
 </template>

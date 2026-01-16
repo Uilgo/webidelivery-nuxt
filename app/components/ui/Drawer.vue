@@ -83,8 +83,8 @@ const drawerClasses = computed(() => {
 	const sizeClasses = {
 		sm: "w-80",
 		md: "w-96",
-		lg: "w-[32rem]", // 512px
-		xl: "w-[40rem]", // 640px
+		lg: "w-[40rem]", // 640px - Maior para produtos
+		xl: "w-[48rem]", // 768px
 	};
 
 	// Classes responsivas
