@@ -65,10 +65,11 @@ const irParaBanner = (index: number): void => {
 const rolarParaBanner = (index: number): void => {
 	if (!carrosselRef.value) return;
 
-	const banner = carrosselRef.value.children[index] as HTMLElement;
-	if (banner) {
-		banner.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-	}
+	const larguraBanner = carrosselRef.value.clientWidth;
+	carrosselRef.value.scrollTo({
+		left: larguraBanner * index,
+		behavior: "smooth",
+	});
 };
 
 // Auto-play do carrossel (a cada 5 segundos)

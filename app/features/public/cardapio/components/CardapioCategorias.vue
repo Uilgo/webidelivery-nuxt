@@ -9,12 +9,12 @@
 import type { CategoriaPublica } from "../types/cardapio-publico";
 
 interface Props {
-	categorias: CategoriaPublica[];
+	categorias: readonly CategoriaPublica[] | CategoriaPublica[];
 	categoriaSelecionada: string | null;
 }
 
 interface Emits {
-	(e: "selecionar", categoriaId: string): void;
+	(e: "selecionar", categoriaId: string | null): void;
 }
 
 const props = defineProps<Props>();
@@ -26,16 +26,10 @@ const mostrarBotaoEsquerda = ref(false);
 const mostrarBotaoDireita = ref(false);
 
 /**
- * Seleciona uma categoria e faz scroll suave até ela
+ * Seleciona uma categoria
  */
-const selecionarCategoria = (categoriaId: string) => {
+const selecionarCategoria = (categoriaId: string | null) => {
 	emit("selecionar", categoriaId);
-
-	// Scroll para a seção da categoria na página
-	const elemento = document.getElementById(`categoria-${categoriaId}`);
-	if (elemento) {
-		elemento.scrollIntoView({ behavior: "smooth", block: "start" });
-	}
 };
 
 /**
@@ -122,6 +116,18 @@ watch(
 				class="flex gap-2 overflow-x-auto scrollbar-hide"
 				style="scrollbar-width: none; -ms-overflow-style: none"
 			>
+				<!-- Botão "Todos" -->
+				<UiButton
+					:variant="categoriaSelecionada === null ? 'solid' : 'ghost'"
+					:color="categoriaSelecionada === null ? 'primary' : 'neutral'"
+					size="sm"
+					class="flex-shrink-0 whitespace-nowrap"
+					@click="selecionarCategoria(null)"
+				>
+					Todos
+				</UiButton>
+
+				<!-- Botões de Categorias -->
 				<UiButton
 					v-for="categoria in categorias"
 					:key="categoria.id"

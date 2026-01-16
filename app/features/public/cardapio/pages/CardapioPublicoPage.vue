@@ -2,24 +2,25 @@
 /**
  * 📌 CardapioPublicoPage
  *
- * Página principal do cardápio público de um estabelecimento.
- * Usa SSR para carregar dados no servidor com cache.
+ * Página principal do cardápio público.
+ * Exibe hero, banners, ofertas, destaques e produtos com infinite scroll.
  */
 
-import type { ProdutoPublico } from "../types/cardapio-publico";
-import { useCardapioPublico } from "../composables/useCardapioPublico";
-import { useCarrinhoStore } from "~/stores/carrinho";
+import { useCardapioPublico } from "~/features/public/cardapio/composables/useCardapioPublico";
+import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
 
-// Componentes do cardápio
-import CardapioHeader from "../components/CardapioHeader.vue";
-import CardapioBanners from "../components/CardapioBanners.vue";
-import CardapioCategorias from "../components/CardapioCategorias.vue";
-import CardapioBusca from "../components/CardapioBusca.vue";
-import CardapioProdutoLista from "../components/CardapioProdutoLista.vue";
-import CardapioProdutoModal from "../components/CardapioProdutoModal.vue";
-import CardapioCarrinhoFlutuante from "../components/CardapioCarrinhoFlutuante.vue";
-import CardapioCarrinhoDrawer from "../components/CardapioCarrinhoDrawer.vue";
-import CardapioSkeleton from "../components/CardapioSkeleton.vue";
+// Imports explícitos dos componentes
+import CardapioSkeleton from "~/features/public/cardapio/components/CardapioSkeleton.vue";
+import CardapioHeader from "~/features/public/cardapio/components/CardapioHeader.vue";
+import CardapioCapa from "~/features/public/cardapio/components/CardapioCapa.vue";
+import CardapioBanners from "~/features/public/cardapio/components/CardapioBanners.vue";
+import CardapioCategorias from "~/features/public/cardapio/components/CardapioCategorias.vue";
+import CardapioBusca from "~/features/public/cardapio/components/CardapioBusca.vue";
+import CardapioOfertasScroll from "~/features/public/cardapio/components/CardapioOfertasScroll.vue";
+import CardapioDestaquesLista from "~/features/public/cardapio/components/CardapioDestaquesLista.vue";
+import CardapioProdutoCard from "~/features/public/cardapio/components/CardapioProdutoCard.vue";
+import CardapioCarrinhoLateral from "~/features/public/cardapio/components/CardapioCarrinhoLateral.vue";
+import CardapioCarrinhoFlutuante from "~/features/public/cardapio/components/CardapioCarrinhoFlutuante.vue";
 
 // Props recebidas da rota
 interface Props {
@@ -28,27 +29,138 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Composable do cardápio (SSR com cache)
-const { estabelecimento, categorias, loading, error, categoriaSelecionada, termoBusca } =
-	useCardapioPublico(props.slug);
+// Carrega dados do cardápio
+const {
+	estabelecimento,
+	categorias,
+	ofertas,
+	destaques,
+	produtos,
+	loading,
+	error,
+	hasMore,
+	loadMore,
+} = useCardapioPublico(props.slug);
 
-// Verifica se está aberto (usa campo direto do banco)
-const estaAberto = computed(() => estabelecimento.value?.aberto ?? false);
+// Estado da busca
+const termoBusca = ref("");
+const filtrosAtivos = ref({ destaque: false, promocao: false });
+const ordenacaoAtual = ref("padrao");
+const categoriaSelecionada = ref<string | null>(null);
 
-// Store do carrinho (client-side only)
-const carrinhoStore = useCarrinhoStore();
+// Produtos filtrados (reativo)
+const produtosFiltrados = computed<readonly ProdutoPublico[]>(() => {
+	// Combina todos os produtos (ofertas + destaques + produtos paginados)
+	// Remove duplicatas usando um Map com ID como chave
+	const todosOsProdutos = new Map<string, ProdutoPublico>();
 
-// Estado do modal de produto
-const modalProdutoAberto = ref(false);
-const produtoSelecionado = ref<ProdutoPublico | null>(null);
+	// Adiciona ofertas
+	ofertas.value.forEach((p) => todosOsProdutos.set(p.id, p));
 
-// Estado do drawer do carrinho
-const drawerCarrinhoAberto = ref(false);
+	// Adiciona destaques
+	destaques.value.forEach((p) => todosOsProdutos.set(p.id, p));
 
-// Carrega carrinho do localStorage (client-side only)
-onMounted(() => {
-	carrinhoStore.carregarDoStorage();
+	// Adiciona produtos paginados
+	produtos.value.forEach((p) => todosOsProdutos.set(p.id, p));
+
+	// Converte Map para array
+	let resultado = Array.from(todosOsProdutos.values());
+
+	// Filtro de busca
+	if (termoBusca.value.trim()) {
+		const termo = termoBusca.value.toLowerCase().trim();
+		resultado = resultado.filter(
+			(p) => p.nome.toLowerCase().includes(termo) || p.descricao?.toLowerCase().includes(termo),
+		);
+	}
+
+	// Filtros
+	if (filtrosAtivos.value.destaque) {
+		resultado = resultado.filter((p) => p.destaque);
+	}
+	if (filtrosAtivos.value.promocao) {
+		resultado = resultado.filter((p) => p.em_promocao);
+	}
+
+	// Ordenação
+	if (ordenacaoAtual.value === "menor-preco") {
+		resultado.sort((a, b) => {
+			const precoA = Math.min(...a.variacoes.map((v) => v.preco_promocional || v.preco));
+			const precoB = Math.min(...b.variacoes.map((v) => v.preco_promocional || v.preco));
+			return precoA - precoB;
+		});
+	} else if (ordenacaoAtual.value === "maior-preco") {
+		resultado.sort((a, b) => {
+			const precoA = Math.min(...a.variacoes.map((v) => v.preco_promocional || v.preco));
+			const precoB = Math.min(...b.variacoes.map((v) => v.preco_promocional || v.preco));
+			return precoB - precoA;
+		});
+	} else if (ordenacaoAtual.value === "a-z") {
+		resultado.sort((a, b) => a.nome.localeCompare(b.nome));
+	} else if (ordenacaoAtual.value === "z-a") {
+		resultado.sort((a, b) => b.nome.localeCompare(a.nome));
+	}
+
+	return resultado;
 });
+
+/**
+ * Retorna produtos de uma categoria específica (com filtros aplicados)
+ */
+const produtosPorCategoria = (categoriaId: string): readonly ProdutoPublico[] => {
+	return produtosFiltrados.value.filter((p) => p.categoria_id === categoriaId);
+};
+
+/**
+ * Verifica se há algum filtro/busca/ordenação ativa
+ */
+const temFiltrosAtivos = computed(() => {
+	return (
+		termoBusca.value.trim() !== "" ||
+		filtrosAtivos.value.destaque ||
+		filtrosAtivos.value.promocao ||
+		ordenacaoAtual.value !== "padrao" ||
+		categoriaSelecionada.value !== null
+	);
+});
+
+/**
+ * Categorias visíveis (filtra se há categoria selecionada)
+ */
+const categoriasVisiveis = computed(() => {
+	if (categoriaSelecionada.value) {
+		return categorias.value.filter((c) => c.id === categoriaSelecionada.value);
+	}
+	return categorias.value;
+});
+
+/**
+ * Handler de ordenação
+ */
+const handleOrdenar = (tipo: string): void => {
+	ordenacaoAtual.value = tipo;
+};
+
+/**
+ * Handler de filtros
+ */
+const handleFiltrar = (filtros: { destaque: boolean; promocao: boolean }): void => {
+	filtrosAtivos.value = filtros;
+};
+
+/**
+ * Handler de seleção de categoria
+ */
+const handleSelecionarCategoria = (categoriaId: string | null) => {
+	categoriaSelecionada.value = categoriaId;
+};
+
+/**
+ * Handler de carregar mais produtos
+ */
+const handleLoadMore = async () => {
+	await loadMore();
+};
 
 /**
  * SEO dinâmico
@@ -58,113 +170,147 @@ useSeoMeta({
 	description: () => estabelecimento.value?.descricao ?? "Veja nosso cardápio e faça seu pedido",
 	ogTitle: () => estabelecimento.value?.nome ?? "Cardápio",
 	ogDescription: () => estabelecimento.value?.descricao ?? "Veja nosso cardápio e faça seu pedido",
-	ogImage: () => estabelecimento.value?.logo_url ?? undefined,
+	ogImage: () => estabelecimento.value?.capa ?? estabelecimento.value?.logo ?? undefined,
 });
-
-/**
- * Abre modal de produto
- */
-const abrirProduto = (produto: ProdutoPublico): void => {
-	produtoSelecionado.value = produto;
-	modalProdutoAberto.value = true;
-};
-
-/**
- * Abre drawer do carrinho
- */
-const abrirCarrinho = (): void => {
-	drawerCarrinhoAberto.value = true;
-};
-
-/**
- * Vai para checkout
- */
-const irParaCheckout = (): void => {
-	// TODO: Implementar modal/página de checkout
-	drawerCarrinhoAberto.value = false;
-};
-
-/**
- * Seleciona categoria
- */
-const selecionarCategoria = (categoriaId: string): void => {
-	categoriaSelecionada.value = categoriaId;
-	termoBusca.value = "";
-};
-
-// Estado de ordenação e filtros
-const ordenacao = ref("padrao");
-const filtros = ref({ destaque: false, promocao: false });
-
-/**
- * Aplica ordenação
- */
-const aplicarOrdenacao = (tipo: string): void => {
-	ordenacao.value = tipo;
-};
-
-/**
- * Aplica filtros
- */
-const aplicarFiltros = (novosFiltros: { destaque: boolean; promocao: boolean }): void => {
-	filtros.value = novosFiltros;
-};
 </script>
 
 <template>
 	<div class="min-h-screen bg-[var(--bg-page)]">
-		<!-- Loading Skeleton -->
-		<CardapioSkeleton v-if="loading" />
+		<!-- Loading State -->
+		<CardapioSkeleton v-if="loading && !estabelecimento" />
 
-		<!-- Erro -->
-		<div v-else-if="error" class="flex items-center justify-center min-h-screen">
-			<UiEmptyState icon="lucide:alert-circle" title="Ops!" :description="error" />
+		<!-- Error State -->
+		<div v-else-if="error" class="flex items-center justify-center min-h-screen p-4">
+			<div class="text-center">
+				<Icon name="lucide:alert-circle" class="w-16 h-16 text-red-500 mx-auto mb-4" />
+				<h2 class="text-xl font-bold text-[var(--text-primary)] mb-2">Erro ao carregar cardápio</h2>
+				<p class="text-[var(--text-muted)]">{{ error }}</p>
+			</div>
 		</div>
 
-		<!-- Cardápio -->
-		<template v-else-if="estabelecimento">
-			<!-- Header -->
-			<CardapioHeader :estabelecimento="estabelecimento" />
+		<!-- Content -->
+		<div v-else-if="estabelecimento">
+			<!-- Capa (Largura Total) -->
+			<CardapioCapa :estabelecimento="estabelecimento" />
 
-			<!-- Banners -->
-			<CardapioBanners />
+			<!-- Container Principal com Grid -->
+			<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+				<!-- Grid: 2 colunas no desktop -->
+				<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+					<!-- Coluna Esquerda: Conteúdo Principal -->
+					<div class="min-w-0">
+						<!-- Header -->
+						<div class="mb-6">
+							<CardapioHeader :estabelecimento="estabelecimento" />
+						</div>
 
-			<!-- Categorias -->
-			<CardapioCategorias
-				:categorias="categorias"
-				:categoria-selecionada="categoriaSelecionada"
-				@selecionar="selecionarCategoria"
-			/>
+						<!-- Banners Promocionais -->
+						<CardapioBanners />
 
-			<!-- Busca -->
-			<CardapioBusca v-model="termoBusca" @ordenar="aplicarOrdenacao" @filtrar="aplicarFiltros" />
+						<!-- Menu de Categorias (Sticky) -->
+						<CardapioCategorias
+							:categorias="categorias"
+							:categoria-selecionada="categoriaSelecionada"
+							@selecionar="handleSelecionarCategoria"
+						/>
 
-			<!-- Lista de produtos -->
-			<CardapioProdutoLista
-				:categorias="categorias"
-				:termo-busca="termoBusca"
-				:ordenacao="ordenacao"
-				:filtros="filtros"
-				@selecionar-produto="abrirProduto"
-			/>
+						<!-- Busca + Filtros + Ordenação -->
+						<CardapioBusca v-model="termoBusca" @ordenar="handleOrdenar" @filtrar="handleFiltrar" />
 
-			<!-- Modal de produto -->
-			<CardapioProdutoModal
-				v-model="modalProdutoAberto"
-				:produto="produtoSelecionado"
-				:estabelecimento-id="estabelecimento.id"
-				:estabelecimento-slug="estabelecimento.slug"
-			/>
+						<!-- Container com padding para seções abaixo -->
+						<div class="px-4">
+							<!-- Ofertas Imperdíveis (apenas quando não há filtros) -->
+							<CardapioOfertasScroll v-show="!temFiltrosAtivos" :ofertas="ofertas" />
 
-			<!-- Carrinho flutuante -->
-			<CardapioCarrinhoFlutuante @abrir="abrirCarrinho" />
+							<!-- Mais Vendidos (apenas quando não há filtros) -->
+							<CardapioDestaquesLista v-show="!temFiltrosAtivos" :destaques="destaques" />
 
-			<!-- Drawer do carrinho -->
-			<CardapioCarrinhoDrawer
-				v-model="drawerCarrinhoAberto"
-				:esta-aberto="estaAberto"
-				@checkout="irParaCheckout"
-			/>
-		</template>
+							<!-- Produtos por Categoria -->
+							<section class="pb-20">
+								<div v-for="categoria in categoriasVisiveis" :key="categoria.id" class="mb-10">
+									<!-- Só exibe categoria se tiver produtos -->
+									<template v-if="produtosPorCategoria(categoria.id).length > 0">
+										<!-- Título da Categoria -->
+										<h3 class="text-2xl font-bold text-[var(--text-primary)] mb-4">
+											{{ categoria.nome }}
+										</h3>
+
+										<!-- Descrição da Categoria (se houver) -->
+										<p
+											v-if="categoria.descricao"
+											class="text-sm text-[var(--text-muted)] mb-4 -mt-2"
+										>
+											{{ categoria.descricao }}
+										</p>
+
+										<!-- Produtos da Categoria -->
+										<div class="space-y-3">
+											<div
+												v-for="produto in produtosPorCategoria(categoria.id)"
+												:key="produto.id"
+												class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden"
+											>
+												<CardapioProdutoCard :produto="produto" />
+											</div>
+										</div>
+									</template>
+								</div>
+
+								<!-- Mensagem quando não há resultados -->
+								<div
+									v-if="temFiltrosAtivos && produtosFiltrados.length === 0"
+									class="text-center py-12"
+								>
+									<Icon
+										name="lucide:search-x"
+										class="w-16 h-16 text-[var(--text-muted)] mx-auto mb-4"
+									/>
+									<h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">
+										Nenhum produto encontrado
+									</h3>
+									<p class="text-sm text-[var(--text-muted)]">Tente ajustar sua busca ou filtros</p>
+								</div>
+
+								<!-- Loading -->
+								<div v-if="loading" class="space-y-3">
+									<div
+										v-for="i in 3"
+										:key="`skeleton-${i}`"
+										class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden p-4 animate-pulse"
+									>
+										<div class="flex gap-3">
+											<div class="w-24 h-24 bg-[var(--bg-muted)] rounded-lg"></div>
+											<div class="flex-1">
+												<div class="h-4 bg-[var(--bg-muted)] rounded w-3/4 mb-2"></div>
+												<div class="h-3 bg-[var(--bg-muted)] rounded w-full mb-1"></div>
+												<div class="h-3 bg-[var(--bg-muted)] rounded w-2/3"></div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Fim da Lista -->
+								<div v-if="!hasMore && produtos.length > 0" class="text-center py-8">
+									<p class="text-[var(--text-muted)] flex items-center justify-center gap-2">
+										<Icon name="lucide:check-circle" class="w-5 h-5 text-green-500" />
+										Você viu todos os produtos!
+									</p>
+								</div>
+							</section>
+						</div>
+					</div>
+
+					<!-- Coluna Direita: Carrinho Lateral (Desktop Only) -->
+					<div class="hidden lg:block">
+						<CardapioCarrinhoLateral />
+					</div>
+				</div>
+			</div>
+
+			<!-- Carrinho Flutuante (Mobile Only) -->
+			<div class="lg:hidden">
+				<CardapioCarrinhoFlutuante />
+			</div>
+		</div>
 	</div>
 </template>

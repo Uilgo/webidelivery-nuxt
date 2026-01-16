@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * 📌 CardapioProdutoItem
+ * 📌 CardapioProdutoCardHorizontal
  *
- * Item de produto na listagem vertical do cardápio.
- * Estilo similar ao iFood/Rappi com imagem à direita.
+ * Card horizontal de produto (estilo iFood/Rappi).
+ * Imagem à direita, informações à esquerda.
  */
 
 import type { ProdutoPublico } from "../types/cardapio-publico";
@@ -39,7 +39,7 @@ const temPromocao = computed(() => {
 });
 
 /**
- * Preço original (maior preço sem promoção)
+ * Preço original (se tiver promoção)
  */
 const precoOriginal = computed(() => {
 	if (!temPromocao.value) return null;
@@ -59,7 +59,7 @@ const formatarPreco = (valor: number): string => {
 };
 
 /**
- * Verifica se tem múltiplas variações (mostra "A partir de")
+ * Verifica se tem múltiplas variações
  */
 const temMultiplasVariacoes = computed(() => {
 	return props.produto.variacoes.length > 1;
@@ -69,10 +69,23 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="w-full flex gap-3 p-4 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] transition-colors text-left border-b border-[var(--border-muted)] last:border-b-0"
+		class="w-full flex gap-3 p-4 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] transition-colors text-left"
 		@click="emit('click', produto)"
 	>
-		<!-- Conteúdo (esquerda) -->
+		<!-- Imagem (esquerda) -->
+		<div
+			class="w-24 h-24 rounded-lg bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
+		>
+			<img
+				v-if="produto.imagem_url"
+				:src="produto.imagem_url"
+				:alt="produto.nome"
+				class="w-full h-full object-cover"
+			/>
+			<Icon v-else name="lucide:image" class="w-8 h-8 text-[var(--text-muted)]" />
+		</div>
+
+		<!-- Conteúdo (direita) -->
 		<div class="flex-1 min-w-0">
 			<!-- Nome -->
 			<h3 class="font-medium text-[var(--text-primary)] line-clamp-2">
@@ -85,7 +98,7 @@ const temMultiplasVariacoes = computed(() => {
 			</p>
 
 			<!-- Preço -->
-			<div class="mt-2 flex items-center gap-2">
+			<div class="mt-2 flex items-center gap-2 flex-wrap">
 				<!-- Preço promocional ou normal -->
 				<span class="text-sm font-semibold text-[var(--text-primary)]">
 					<span v-if="temMultiplasVariacoes" class="text-[var(--text-muted)] font-normal"
@@ -101,20 +114,10 @@ const temMultiplasVariacoes = computed(() => {
 
 				<!-- Badge de promoção -->
 				<UiBadge v-if="produto.em_promocao" color="error" size="sm"> Promoção </UiBadge>
-			</div>
-		</div>
 
-		<!-- Imagem (direita) -->
-		<div
-			class="w-24 h-24 rounded-lg bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
-		>
-			<img
-				v-if="produto.imagem_url"
-				:src="produto.imagem_url"
-				:alt="produto.nome"
-				class="w-full h-full object-cover"
-			/>
-			<Icon v-else name="lucide:image" class="w-8 h-8 text-[var(--text-muted)]" />
+				<!-- Badge de destaque -->
+				<UiBadge v-if="produto.destaque" color="warning" size="sm"> Destaque da Casa </UiBadge>
+			</div>
 		</div>
 	</button>
 </template>

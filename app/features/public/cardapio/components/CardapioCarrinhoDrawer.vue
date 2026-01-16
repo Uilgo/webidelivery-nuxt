@@ -113,8 +113,7 @@ const irParaCheckout = (): void => {
 								<UiButton
 									variant="outline"
 									color="neutral"
-									size="xs"
-									icon
+									size="sm"
 									@click="carrinhoStore.decrementar(item.id)"
 								>
 									<Icon name="lucide:minus" class="w-3 h-3" />
@@ -127,8 +126,7 @@ const irParaCheckout = (): void => {
 								<UiButton
 									variant="outline"
 									color="neutral"
-									size="xs"
-									icon
+									size="sm"
 									@click="carrinhoStore.incrementar(item.id)"
 								>
 									<Icon name="lucide:plus" class="w-3 h-3" />
@@ -138,8 +136,7 @@ const irParaCheckout = (): void => {
 								<UiButton
 									variant="ghost"
 									color="error"
-									size="xs"
-									icon
+									size="sm"
 									class="ml-2"
 									@click="carrinhoStore.removerItem(item.id)"
 								>

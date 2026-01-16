@@ -10,6 +10,7 @@ export interface EstabelecimentoPublico {
 	nome: string;
 	slug: string;
 	logo_url: string | null;
+	capa_url: string | null;
 	descricao: string | null;
 	whatsapp: string | null;
 	endereco_rua: string | null;
@@ -20,6 +21,21 @@ export interface EstabelecimentoPublico {
 	status: "ativo" | "inativo" | "rascunho";
 	aberto: boolean;
 	config_geral: ConfiguracoesEstabelecimento | null;
+}
+
+// Tipo simplificado para o Hero Section
+export interface Estabelecimento {
+	id: string;
+	nome: string;
+	slug: string;
+	logo: string | null;
+	capa: string | null;
+	descricao: string | null;
+	whatsapp: string | null;
+	tempo_entrega_min: number;
+	tempo_entrega_max: number;
+	entrega_gratis_acima: number | null;
+	aberto: boolean;
 }
 
 // Horário de funcionamento
@@ -63,7 +79,7 @@ export interface CategoriaPublica {
 	descricao: string | null;
 	imagem_url: string | null;
 	ordem: number;
-	produtos: ProdutoPublico[];
+	produtos: readonly ProdutoPublico[];
 }
 
 // Produto público
@@ -75,8 +91,8 @@ export interface ProdutoPublico {
 	destaque: boolean;
 	em_promocao: boolean;
 	categoria_id: string;
-	variacoes: VariacaoPublica[];
-	grupos_adicionais: GrupoAdicionalPublico[];
+	variacoes: readonly VariacaoPublica[];
+	grupos_adicionais: readonly GrupoAdicionalPublico[];
 }
 
 // Variação pública
@@ -95,7 +111,7 @@ export interface GrupoAdicionalPublico {
 	min_selecao: number;
 	max_selecao: number;
 	obrigatorio: boolean;
-	adicionais: AdicionalPublico[];
+	adicionais: readonly AdicionalPublico[];
 }
 
 // Adicional público
@@ -114,7 +130,7 @@ export interface ComboPublico {
 	preco_combo: number;
 	preco_original: number;
 	destaque: boolean;
-	produtos: ComboProdutoPublico[];
+	produtos: readonly ComboProdutoPublico[];
 }
 
 export interface ComboProdutoPublico {
@@ -136,7 +152,7 @@ export interface ItemCarrinho {
 		nome: string;
 		preco: number;
 	};
-	adicionais: {
+	adicionais: readonly {
 		id: string;
 		nome: string;
 		preco: number;
@@ -152,7 +168,7 @@ export interface ItemCarrinho {
 export interface Carrinho {
 	estabelecimento_id: string;
 	estabelecimento_slug: string;
-	itens: ItemCarrinho[];
+	itens: readonly ItemCarrinho[];
 	subtotal: number;
 	taxa_entrega: number;
 	desconto: number;

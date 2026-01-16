@@ -2,13 +2,13 @@
 /**
  * 📌 CardapioHeader
  *
- * Cabeçalho do cardápio público com logo, nome e status de funcionamento.
+ * Cabeçalho do cardápio público com logo, nome, informações e status de funcionamento.
  */
 
-import type { EstabelecimentoPublico } from "../types/cardapio-publico";
+import type { Estabelecimento } from "../types/cardapio-publico";
 
 interface Props {
-	estabelecimento: EstabelecimentoPublico;
+	estabelecimento: Estabelecimento;
 }
 
 const props = defineProps<Props>();
@@ -23,16 +23,25 @@ const modalInfoAberto = ref(false);
  * Formata endereço completo
  */
 const enderecoCompleto = computed(() => {
-	const { endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado } =
-		props.estabelecimento;
+	// Por enquanto retorna null, pois não temos endereço no tipo simplificado
+	// TODO: Buscar endereço do estabelecimento se necessário
+	return null;
+});
 
-	const partes = [
-		endereco_rua && endereco_numero ? `${endereco_rua}, ${endereco_numero}` : null,
-		endereco_bairro,
-		endereco_cidade && endereco_estado ? `${endereco_cidade} - ${endereco_estado}` : null,
-	].filter(Boolean);
+/**
+ * Formata tempo de entrega
+ */
+const tempoEntrega = computed(() => {
+	const { tempo_entrega_min, tempo_entrega_max } = props.estabelecimento;
+	return `${tempo_entrega_min}-${tempo_entrega_max} min`;
+});
 
-	return partes.join(" • ");
+/**
+ * Texto de entrega grátis
+ */
+const entregaGratisTexto = computed(() => {
+	const valor = props.estabelecimento.entrega_gratis_acima;
+	return valor ? `Entrega grátis acima de R$ ${valor.toFixed(2)}` : null;
 });
 
 /**
@@ -47,29 +56,39 @@ const abrirWhatsApp = (): void => {
 </script>
 
 <template>
-	<header class="sticky top-0 z-40 px-4 pt-4 pb-2 bg-[var(--bg-page)]">
-		<div class="max-w-3xl mx-auto bg-[var(--bg-surface)] rounded-xl shadow-md p-4">
+	<header class="sticky top-0 z-40 pb-2 bg-transparent">
+		<div class="max-w-3xl mx-auto bg-[var(--bg-surface)] rounded-xl shadow-lg p-4">
 			<div class="flex items-start gap-4">
-				<!-- Logo -->
-				<UiAvatar
-					:src="estabelecimento.logo_url ?? undefined"
-					:alt="estabelecimento.nome"
-					size="lg"
-					:fallback="estabelecimento.nome.charAt(0)"
-					class="flex-shrink-0"
-				/>
+				<!-- Logo Quadrado -->
+				<div
+					class="size-20 sm:size-24 rounded-lg overflow-hidden bg-[var(--bg-surface)] shadow-lg shrink-0"
+				>
+					<img
+						v-if="estabelecimento.logo"
+						:src="estabelecimento.logo"
+						:alt="`Logo de ${estabelecimento.nome}`"
+						class="w-full h-full object-cover"
+						loading="eager"
+					/>
+					<div
+						v-else
+						class="w-full h-full flex items-center justify-center bg-[var(--bg-muted)] text-[var(--text-muted)]"
+					>
+						<Icon name="lucide:store" class="w-10 h-10" />
+					</div>
+				</div>
 
 				<!-- Info -->
 				<div class="flex-1 min-w-0">
-					<!-- Linha 1: Título + Descrição + ModeToggle -->
-					<div class="flex items-start justify-between gap-2 mb-2">
+					<!-- Linha 1: Nome + Descrição + ModeToggle -->
+					<div class="flex items-start justify-between gap-3 mb-2">
 						<div class="flex-1 min-w-0 space-y-1">
-							<h1 class="text-lg font-bold text-[var(--text-primary)] truncate">
-								{{ estabelecimento.nome }}
+							<h1 class="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+								{{ estabelecimento.nome ?? "Estabelecimento" }}
 							</h1>
 							<p
 								v-if="estabelecimento.descricao"
-								class="text-sm text-[var(--text-muted)] line-clamp-1"
+								class="text-sm text-[var(--text-muted)] line-clamp-2"
 							>
 								{{ estabelecimento.descricao }}
 							</p>
@@ -77,16 +96,36 @@ const abrirWhatsApp = (): void => {
 						<LayoutsModeToggle />
 					</div>
 
-					<!-- Linha 2: Badge + Botão Ver Mais -->
+					<!-- Linha 2: Tempo + Entrega Grátis -->
+					<div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm mb-2">
+						<!-- Tempo de Entrega -->
+						<div class="flex items-center gap-1 text-[var(--text-muted)]">
+							<Icon name="lucide:clock" class="w-3 h-3" />
+							<span>{{ tempoEntrega }}</span>
+						</div>
+
+						<!-- Entrega Grátis -->
+						<template v-if="entregaGratisTexto">
+							<span class="text-[var(--text-muted)]">•</span>
+							<div class="flex items-center gap-1 text-green-600 font-medium">
+								{{ entregaGratisTexto }}
+							</div>
+						</template>
+					</div>
+
+					<!-- Linha 3: Badge + Botão Ver Mais -->
 					<div class="flex items-center justify-between gap-2">
-						<UiBadge :color="estaAberto ? 'success' : 'error'" size="sm">
+						<UiBadge :color="estaAberto ? 'success' : 'error'" size="md">
+							<template #iconLeft>
+								<Icon
+									:name="estaAberto ? 'lucide:check-circle' : 'lucide:x-circle'"
+									class="w-3 h-3"
+								/>
+							</template>
 							{{ estaAberto ? "Aberto agora" : "Fechado" }}
 						</UiBadge>
 
 						<UiButton variant="ghost" size="sm" @click="modalInfoAberto = true">
-							<template #iconLeft>
-								<Icon name="lucide:info" class="w-4 h-4" />
-							</template>
 							Ver Mais
 						</UiButton>
 					</div>
@@ -119,6 +158,18 @@ const abrirWhatsApp = (): void => {
 					</template>
 					Falar no WhatsApp
 				</UiButton>
+			</div>
+
+			<!-- Tempo de Entrega -->
+			<div>
+				<h3 class="text-sm font-semibold text-[var(--text-primary)] mb-1">Tempo de Entrega</h3>
+				<p class="text-sm text-[var(--text-muted)]">{{ tempoEntrega }}</p>
+			</div>
+
+			<!-- Entrega Grátis -->
+			<div v-if="entregaGratisTexto">
+				<h3 class="text-sm font-semibold text-[var(--text-primary)] mb-1">Entrega Grátis</h3>
+				<p class="text-sm text-green-600 font-medium">{{ entregaGratisTexto }}</p>
 			</div>
 
 			<!-- Status -->
