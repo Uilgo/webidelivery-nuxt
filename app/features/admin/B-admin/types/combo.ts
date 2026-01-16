@@ -28,6 +28,23 @@ export interface Combo {
 }
 
 // =====================================================
+// PRODUTOS DO COMBO
+// =====================================================
+
+export interface ComboProduto {
+	readonly id: UUID;
+	readonly combo_id: UUID;
+	readonly produto_id: UUID;
+	readonly quantidade: number;
+	readonly ordem: number;
+}
+
+export interface ComboProdutoInput {
+	produto_id: UUID;
+	quantidade: number;
+}
+
+// =====================================================
 // DTOs (Data Transfer Objects)
 // =====================================================
 
@@ -38,9 +55,11 @@ export interface ComboCreateData {
 	imagem_url?: string;
 	preco_combo: number;
 	preco_original: number;
+	ativo?: boolean;
 	destaque?: boolean;
 	data_inicio?: string;
 	data_fim?: string;
+	produtos?: ComboProdutoInput[];
 }
 
 export interface ComboUpdateData {
@@ -49,9 +68,11 @@ export interface ComboUpdateData {
 	imagem_url?: string;
 	preco_combo: number;
 	preco_original: number;
+	ativo: boolean;
 	destaque: boolean;
 	data_inicio?: string;
 	data_fim?: string;
+	produtos?: ComboProdutoInput[];
 }
 
 // =====================================================

@@ -44,14 +44,13 @@ const listConfig = {
 	statusField: "ativo",
 	priceField: "preco_combo",
 	primaryInfo: {
-		field: "preco_original",
+		field: "preco_display",
 		label: "",
 		icon: "lucide:tag",
-		format: (value: unknown) => {
-			if (typeof value === "number") {
-				return `De R$ ${value.toFixed(2).replace(".", ",")}`;
-			}
-			return "";
+		format: () => {
+			const precoOriginal = Number(props.combo.preco_original).toFixed(2).replace(".", ",");
+			const precoCombo = Number(props.combo.preco_combo).toFixed(2).replace(".", ",");
+			return `De R$ ${precoOriginal} por R$ ${precoCombo}`;
 		},
 	},
 	secondaryInfo: {

@@ -354,14 +354,18 @@ const handleClickOutside = (event: MouseEvent): void => {
 	const target = event.target as Node;
 	const isClickInsideSelect = selectRef.value?.contains(target);
 
-	if (!isClickInsideSelect) {
+	// Verificar se o clique foi dentro do dropdown (que pode estar fora do selectRef devido ao z-index)
+	const dropdownElement = selectRef.value?.querySelector('[role="listbox"]');
+	const isClickInsideDropdown = dropdownElement?.contains(target);
+
+	if (!isClickInsideSelect && !isClickInsideDropdown) {
 		close();
 	}
 };
 
 // Lifecycle hooks
 onMounted(() => {
-	document.addEventListener("click", handleClickOutside);
+	document.addEventListener("click", handleClickOutside, true);
 });
 
 // Atualizar posição ao redimensionar
@@ -379,7 +383,7 @@ onMounted(() => {
 
 // Cleanup
 onUnmounted(() => {
-	document.removeEventListener("click", handleClickOutside);
+	document.removeEventListener("click", handleClickOutside, true);
 	window.removeEventListener("resize", handleResize);
 	window.removeEventListener("scroll", handleResize, true);
 });
@@ -535,7 +539,7 @@ defineExpose({
 						<div
 							v-for="option in filteredOptions"
 							:key="option.value"
-							class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1"
+							class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1 my-1"
 							:class="{
 								'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
 									!option.disabled && !normalizedValue.includes(option.value),

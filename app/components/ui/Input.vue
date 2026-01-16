@@ -12,7 +12,7 @@ interface Props {
 	/** Valor do input (v-model) */
 	modelValue?: string | number;
 	/** Tipo do input HTML */
-	type?: "text" | "email" | "password" | "number" | "tel" | "url" | "search";
+	type?: "text" | "email" | "password" | "number" | "tel" | "url" | "search" | "date";
 	/** Placeholder do input */
 	placeholder?: string;
 	/** Tamanho do input */

@@ -17,18 +17,21 @@ export const useCombosActions = () => {
 	/**
 	 * Criar novo combo
 	 */
-	const createCombo = async (data: ComboCreateData): Promise<string | null> => {
+	const createCombo = async (
+		data: Omit<ComboCreateData, "estabelecimento_id">,
+	): Promise<string | null> => {
 		try {
 			const { data: result, error } = await supabase.rpc("fn_combos_criar", {
-				p_estabelecimento_id: data.estabelecimento_id,
 				p_nome: data.nome,
-				p_descricao: data.descricao || null,
-				p_imagem_url: data.imagem_url || null,
 				p_preco_combo: data.preco_combo,
 				p_preco_original: data.preco_original,
+				p_descricao: data.descricao || null,
+				p_imagem_url: data.imagem_url || null,
 				p_destaque: data.destaque || false,
+				p_ativo: data.ativo !== undefined ? data.ativo : true,
 				p_data_inicio: data.data_inicio || null,
 				p_data_fim: data.data_fim || null,
+				p_produtos: data.produtos || [],
 			});
 
 			if (error) throw error;
@@ -55,21 +58,39 @@ export const useCombosActions = () => {
 	};
 
 	/**
-	 * Atualizar combo existente
+	 * Atualizar combo existente via RPC
 	 */
 	const updateCombo = async (id: string, data: ComboUpdateData): Promise<boolean> => {
 		try {
-			const { error } = await supabase.rpc("fn_combos_atualizar", {
+			// Garantir que preços são números
+			const precoCombo =
+				typeof data.preco_combo === "string"
+					? parseFloat((data.preco_combo as string).replace(",", "."))
+					: Number(data.preco_combo);
+
+			const precoOriginal =
+				typeof data.preco_original === "string"
+					? parseFloat((data.preco_original as string).replace(",", "."))
+					: Number(data.preco_original);
+
+			// Montar parâmetros dinamicamente - só adiciona se não for null/undefined
+			const params: Record<string, unknown> = {
 				p_combo_id: id,
 				p_nome: data.nome,
-				p_descricao: data.descricao || null,
-				p_imagem_url: data.imagem_url || null,
-				p_preco_combo: data.preco_combo,
-				p_preco_original: data.preco_original,
+				p_preco_combo: precoCombo,
+				p_preco_original: precoOriginal,
 				p_destaque: data.destaque,
-				p_data_inicio: data.data_inicio || null,
-				p_data_fim: data.data_fim || null,
-			});
+				p_ativo: data.ativo,
+			};
+
+			// Adicionar opcionais apenas se tiverem valor
+			if (data.descricao) params.p_descricao = data.descricao;
+			if (data.imagem_url) params.p_imagem_url = data.imagem_url;
+			if (data.data_inicio) params.p_data_inicio = data.data_inicio;
+			if (data.data_fim) params.p_data_fim = data.data_fim;
+			if (data.produtos && data.produtos.length > 0) params.p_produtos = data.produtos;
+
+			const { error } = await supabase.rpc("fn_combos_atualizar", params);
 
 			if (error) throw error;
 

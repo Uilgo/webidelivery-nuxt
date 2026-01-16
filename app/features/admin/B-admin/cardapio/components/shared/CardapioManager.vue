@@ -37,6 +37,8 @@ import GrupoAdicionalDrawer from "../../C-adicionais/components/GrupoAdicionalDr
 import GrupoAdicionalDeleteModal from "../../C-adicionais/components/GrupoAdicionalDeleteModal.vue";
 import AdicionalDrawer from "../../C-adicionais/components/AdicionalDrawer.vue";
 import AdicionalDeleteModal from "../../C-adicionais/components/AdicionalDeleteModal.vue";
+import ComboDrawer from "../../D-combos/components/ComboDrawer.vue";
+import ComboDeleteModal from "../../D-combos/components/ComboDeleteModal.vue";
 
 // Composable global do cardápio
 const { activeTab, viewMode, handleTabChange, handleViewModeChange, setTabData, setTabLoading } =
@@ -75,6 +77,10 @@ const grupoAdicionalToDelete = ref<GrupoAdicionalComputado | null>(null);
 // Estado do modal de exclusão de adicional
 const isAdicionalDeleteModalOpen = ref(false);
 const adicionalToDelete = ref<{ id: string; nome: string; grupo_nome: string } | null>(null);
+
+// Estado do modal de exclusão de combo
+const isComboDeleteModalOpen = ref(false);
+const comboToDelete = ref<Combo | null>(null);
 
 // ========================================
 // SINCRONIZAÇÃO COM useCardapio
@@ -766,9 +772,29 @@ const handleComboEdit = (combo: Combo): void => {
 /**
  * Handler para excluir combo
  */
-const handleComboDelete = (_id: string): void => {
-	// TODO: implementar modal de confirmação
-	console.warn("[CardapioManager] Delete de combo não implementado ainda");
+const handleComboDelete = (id: string): void => {
+	// Busca o combo completo pelo ID
+	const combo = combosComposable.combos.value.find((c) => c.id === id);
+	if (combo) {
+		comboToDelete.value = combo;
+		isComboDeleteModalOpen.value = true;
+	}
+};
+
+/**
+ * Handler para sucesso na exclusão de combo
+ */
+const handleComboDeleteSuccess = (): void => {
+	isComboDeleteModalOpen.value = false;
+	comboToDelete.value = null;
+};
+
+/**
+ * Handler para sucesso no modal de combo
+ */
+const handleComboModalSuccess = async (): Promise<void> => {
+	// Refresh dos dados após criar/editar
+	await combosComposable.refresh();
 };
 
 // ========================================
@@ -952,6 +978,21 @@ onMounted(async () => {
 			v-model="isAdicionalDeleteModalOpen"
 			:adicional="adicionalToDelete as any"
 			@success="handleAdicionalDeleteSuccess"
+		/>
+
+		<!-- Drawer e Modal de Combo -->
+		<ComboDrawer
+			v-model="combosComposable.isModalOpen.value"
+			:is-edicao="combosComposable.modalMode.value === 'edit'"
+			:combo="(combosComposable.selectedCombo.value as Combo) || null"
+			@success="handleComboModalSuccess"
+		/>
+
+		<ComboDeleteModal
+			v-if="comboToDelete"
+			v-model="isComboDeleteModalOpen"
+			:combo="comboToDelete"
+			@success="handleComboDeleteSuccess"
 		/>
 	</div>
 </template>
