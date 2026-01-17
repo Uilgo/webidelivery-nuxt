@@ -45,10 +45,22 @@ const fechar = (): void => {
 };
 
 /**
+ * Slug do estabelecimento
+ */
+const route = useRoute();
+const slug = computed(() => route.params.slug as string);
+
+/**
  * Vai para checkout
  */
-const irParaCheckout = (): void => {
-	emit("checkout");
+const irParaCheckout = async (): Promise<void> => {
+	if (!slug.value) {
+		console.error("Slug não encontrado");
+		return;
+	}
+
+	fechar();
+	await navigateTo(`/${slug.value}/checkout`);
 };
 </script>
 

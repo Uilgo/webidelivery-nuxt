@@ -18,6 +18,15 @@ const emit = defineEmits<Emits>();
 const carrinhoStore = useCarrinhoStore();
 
 /**
+ * Estado de hidratação - evita mismatch SSR
+ */
+const montado = ref(false);
+
+onMounted(() => {
+	montado.value = true;
+});
+
+/**
  * Formata preço para exibição
  */
 const formatarPreco = (valor: number): string => {
@@ -35,7 +44,7 @@ const formatarPreco = (valor: number): string => {
 		leave-to-class="translate-y-full opacity-0"
 	>
 		<div
-			v-if="!carrinhoStore.estaVazio"
+			v-if="montado && !carrinhoStore.estaVazio"
 			class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[var(--bg-surface)] border-t border-[var(--border-default)] shadow-lg"
 		>
 			<div class="max-w-3xl mx-auto">

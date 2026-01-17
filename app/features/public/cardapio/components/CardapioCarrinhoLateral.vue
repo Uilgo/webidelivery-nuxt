@@ -11,6 +11,15 @@ import { useCarrinhoStore } from "~/stores/carrinho";
 const carrinhoStore = useCarrinhoStore();
 
 /**
+ * Estado de hidratação - evita mismatch SSR
+ */
+const montado = ref(false);
+
+onMounted(() => {
+	montado.value = true;
+});
+
+/**
  * Formata valor em reais
  */
 const formatarPreco = (valor: number): string => {
@@ -32,11 +41,17 @@ const limparCarrinho = () => {
 };
 
 /**
- * Finalizar pedido
+ * Slug do estabelecimento
+ */
+const route = useRoute();
+const slug = computed(() => route.params.slug as string);
+
+/**
+ * Finalizar pedido - redireciona para checkout
  */
 const finalizarPedido = () => {
-	// TODO: Implementar navegação para checkout
-	console.log("Finalizar pedido");
+	if (!slug.value) return;
+	window.location.href = `/${slug.value}/checkout`;
 };
 </script>
 
@@ -51,14 +66,14 @@ const finalizarPedido = () => {
 					<Icon name="lucide:shopping-cart" class="w-5 h-5" />
 					Seu Pedido
 				</h3>
-				<UiBadge v-if="carrinhoStore.quantidadeTotal > 0" variant="primary" size="sm">
+				<UiBadge v-if="montado && carrinhoStore.quantidadeTotal > 0" variant="primary" size="sm">
 					{{ carrinhoStore.quantidadeTotal }}
 				</UiBadge>
 			</div>
 
 			<!-- Carrinho Vazio -->
 			<div
-				v-if="carrinhoStore.itens.length === 0"
+				v-if="!montado || carrinhoStore.itens.length === 0"
 				class="flex flex-col items-center justify-center py-8 text-center"
 			>
 				<Icon name="lucide:shopping-bag" class="w-16 h-16 text-[var(--text-muted)] mb-3" />
@@ -67,7 +82,10 @@ const finalizarPedido = () => {
 			</div>
 
 			<!-- Itens do Carrinho -->
-			<div v-else class="space-y-3 mb-4 max-h-[400px] overflow-y-auto">
+			<div
+				v-if="montado && carrinhoStore.itens.length > 0"
+				class="space-y-3 mb-4 max-h-[400px] overflow-y-auto"
+			>
 				<div
 					v-for="item in carrinhoStore.itens"
 					:key="item.id"
@@ -117,7 +135,7 @@ const finalizarPedido = () => {
 			</div>
 
 			<!-- Resumo -->
-			<div v-if="carrinhoStore.itens.length > 0" class="space-y-3">
+			<div v-if="montado && carrinhoStore.itens.length > 0" class="space-y-3">
 				<!-- Subtotal -->
 				<div class="flex items-center justify-between text-sm">
 					<span class="text-[var(--text-muted)]">Subtotal</span>
@@ -151,7 +169,12 @@ const finalizarPedido = () => {
 						color="primary"
 						size="md"
 						class="w-full"
-						@click="finalizarPedido"
+						@click="
+							() => {
+								console.log('Botão clicado!', slug);
+								finalizarPedido();
+							}
+						"
 					>
 						<template #iconLeft>
 							<Icon name="lucide:check" class="w-4 h-4" />
