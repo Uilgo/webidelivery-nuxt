@@ -7,6 +7,7 @@
  */
 
 import { useCardapioPublico } from "~/features/public/cardapio/composables/useCardapioPublico";
+import { useProdutoDrawer } from "~/features/public/cardapio/composables/useProdutoDrawer";
 import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
 
 // Imports explícitos dos componentes
@@ -18,6 +19,7 @@ import CardapioBusca from "~/features/public/cardapio/components/CardapioBusca.v
 import CardapioOfertasScroll from "~/features/public/cardapio/components/CardapioOfertasScroll.vue";
 import CardapioDestaquesLista from "~/features/public/cardapio/components/CardapioDestaquesLista.vue";
 import CardapioProdutoCard from "~/features/public/cardapio/components/CardapioProdutoCard.vue";
+import CardapioProdutoDrawer from "~/features/public/cardapio/components/CardapioProdutoDrawer.vue";
 import CardapioCarrinhoLateral from "~/features/public/cardapio/components/CardapioCarrinhoLateral.vue";
 import CardapioCarrinhoFlutuante from "~/features/public/cardapio/components/CardapioCarrinhoFlutuante.vue";
 
@@ -46,6 +48,9 @@ const termoBusca = ref("");
 const filtrosAtivos = ref({ destaque: false, promocao: false });
 const ordenacaoAtual = ref("padrao");
 const categoriaSelecionada = ref<string | null>(null);
+
+// Estado do drawer de produto (usando composable)
+const { drawerAberto: drawerProdutoAberto, produtoSelecionado } = useProdutoDrawer();
 
 // Produtos filtrados (reativo)
 const produtosFiltrados = computed<readonly ProdutoPublico[]>(() => {
@@ -155,6 +160,13 @@ const handleSelecionarCategoria = (categoriaId: string | null) => {
 };
 
 /**
+ * Handler quando produto é adicionado ao carrinho
+ */
+const handleProdutoAdicionado = (): void => {
+	// Produto adicionado com sucesso
+};
+
+/**
  * Handler de carregar mais produtos
  */
 const handleLoadMore = async () => {
@@ -241,13 +253,12 @@ useSeoMeta({
 
 										<!-- Produtos da Categoria -->
 										<div class="space-y-3">
-											<div
+											<CardapioProdutoCard
 												v-for="produto in produtosPorCategoria(categoria.id)"
 												:key="produto.id"
+												:produto="produto"
 												class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden"
-											>
-												<CardapioProdutoCard :produto="produto" />
-											</div>
+											/>
 										</div>
 									</template>
 								</div>
@@ -307,6 +318,16 @@ useSeoMeta({
 			<div class="lg:hidden">
 				<CardapioCarrinhoFlutuante />
 			</div>
+
+			<!-- Drawer de Produto -->
+			<CardapioProdutoDrawer
+				v-model="drawerProdutoAberto"
+				:produto="produtoSelecionado"
+				:estabelecimento-id="estabelecimento.id"
+				:estabelecimento-slug="estabelecimento.slug"
+				:categorias="categorias"
+				@adicionado="handleProdutoAdicionado"
+			/>
 		</div>
 	</div>
 </template>

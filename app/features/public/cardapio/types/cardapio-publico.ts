@@ -79,6 +79,7 @@ export interface CategoriaPublica {
 	descricao: string | null;
 	imagem_url: string | null;
 	ordem: number;
+	categoria_pai_id: string | null;
 	produtos: readonly ProdutoPublico[];
 }
 
@@ -119,6 +120,7 @@ export interface AdicionalPublico {
 	id: string;
 	nome: string;
 	preco: number;
+	permite_multiplas_unidades: boolean;
 }
 
 // Combo público

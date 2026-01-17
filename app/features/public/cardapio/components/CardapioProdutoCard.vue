@@ -6,6 +6,7 @@
  * Imagem à esquerda, informações à direita.
  */
 
+import { useProdutoDrawer } from "../composables/useProdutoDrawer";
 import type { ProdutoPublico } from "../types/cardapio-publico";
 
 interface Props {
@@ -13,11 +14,14 @@ interface Props {
 }
 
 interface Emits {
-	(e: "click", produto: ProdutoPublico): void;
+	"produto-click": [produto: ProdutoPublico];
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+// Usar composable global para abrir drawer
+const { abrir: abrirDrawer } = useProdutoDrawer();
 
 /**
  * Retorna o menor preço entre as variações
@@ -70,7 +74,7 @@ const temMultiplasVariacoes = computed(() => {
 	<button
 		type="button"
 		class="w-full flex gap-2 sm:gap-2.5 md:gap-3 p-2 sm:p-2.5 md:p-3 lg:p-4 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] transition-colors text-left"
-		@click="emit('click', produto)"
+		@click="abrirDrawer(produto)"
 	>
 		<!-- Imagem (esquerda - muito menor no mobile) -->
 		<div
@@ -129,7 +133,7 @@ const temMultiplasVariacoes = computed(() => {
 				<!-- Badge de promoção -->
 				<UiBadge
 					v-if="produto.em_promocao"
-					color="error"
+					variant="error"
 					size="sm"
 					class="text-[9px] sm:text-[10px] md:text-xs scale-90 sm:scale-100"
 				>
@@ -139,7 +143,7 @@ const temMultiplasVariacoes = computed(() => {
 				<!-- Badge de destaque -->
 				<UiBadge
 					v-if="produto.destaque"
-					color="warning"
+					variant="warning"
 					size="sm"
 					class="text-[9px] sm:text-[10px] md:text-xs scale-90 sm:scale-100"
 				>

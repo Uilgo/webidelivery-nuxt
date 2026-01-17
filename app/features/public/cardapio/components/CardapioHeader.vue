@@ -98,34 +98,33 @@ const abrirWhatsApp = (): void => {
 						<LayoutsModeToggle class="shrink-0" />
 					</div>
 
-					<!-- Linha 2: Tempo + Entrega Grátis -->
-					<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm mb-2">
-						<!-- Tempo de Entrega -->
-						<div class="flex items-center gap-1 text-[var(--text-muted)]">
-							<Icon name="lucide:clock" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-							<span>{{ tempoEntrega }}</span>
-						</div>
-
-						<!-- Entrega Grátis -->
-						<template v-if="entregaGratisTexto">
-							<span class="text-[var(--text-muted)]">•</span>
-							<div class="flex items-center gap-1 text-green-600 font-medium">
-								{{ entregaGratisTexto }}
-							</div>
-						</template>
+					<!-- Linha 2: Entrega Grátis -->
+					<div
+						v-if="entregaGratisTexto"
+						class="flex items-center gap-1 text-xs sm:text-sm text-green-600 font-medium mb-2"
+					>
+						{{ entregaGratisTexto }}
 					</div>
 
-					<!-- Linha 3: Badge + Botão Ver Mais -->
+					<!-- Linha 3: Badge + Tempo + Botão Ver Mais -->
 					<div class="flex items-center justify-between gap-2">
-						<UiBadge :color="estaAberto ? 'success' : 'error'" size="md">
-							<template #iconLeft>
-								<Icon
-									:name="estaAberto ? 'lucide:check-circle' : 'lucide:x-circle'"
-									class="w-3 h-3 sm:w-3.5 sm:h-3.5"
-								/>
-							</template>
-							{{ estaAberto ? "Aberto" : "Fechado" }}
-						</UiBadge>
+						<div class="flex items-center gap-2 sm:gap-3">
+							<UiBadge :variant="estaAberto ? 'success' : 'error'" size="md">
+								<template #iconLeft>
+									<Icon
+										:name="estaAberto ? 'lucide:check-circle' : 'lucide:x-circle'"
+										class="w-3 h-3 sm:w-3.5 sm:h-3.5"
+									/>
+								</template>
+								{{ estaAberto ? "Aberto" : "Fechado" }}
+							</UiBadge>
+
+							<!-- Tempo de Entrega -->
+							<div class="flex items-center gap-1 text-xs sm:text-sm text-[var(--text-muted)]">
+								<Icon name="lucide:clock" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+								<span>{{ tempoEntrega }}</span>
+							</div>
+						</div>
 
 						<UiButton
 							variant="ghost"
@@ -182,7 +181,7 @@ const abrirWhatsApp = (): void => {
 			<!-- Status -->
 			<div>
 				<h3 class="text-sm font-semibold text-[var(--text-primary)] mb-1">Status</h3>
-				<UiBadge :color="estaAberto ? 'success' : 'error'" size="md">
+				<UiBadge :variant="estaAberto ? 'success' : 'error'" size="md">
 					{{ estaAberto ? "Aberto agora" : "Fechado no momento" }}
 				</UiBadge>
 			</div>

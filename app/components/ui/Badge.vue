@@ -13,9 +13,9 @@ interface Props {
 	variant?: "default" | "primary" | "success" | "warning" | "error" | "info" | "outline";
 	/** Tamanho do badge */
 	size?: "sm" | "md" | "lg";
-	/** Ícone à esquerda */
+	/** Ícone à esquerda (deprecated - use slot iconLeft) */
 	icon?: string;
-	/** Ícone à direita */
+	/** Ícone à direita (deprecated - use slot iconRight) */
 	iconRight?: string;
 	/** Badge com formato de pílula (mais arredondado) */
 	pill?: boolean;
@@ -38,6 +38,13 @@ const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	dot: false,
 });
+
+// Slots tipados
+defineSlots<{
+	default?: () => unknown;
+	iconLeft?: () => unknown;
+	iconRight?: () => unknown;
+}>();
 
 // Emits tipados
 interface Emits {
@@ -138,14 +145,18 @@ const handleClick = (event: MouseEvent): void => {
 		<!-- Ponto indicador -->
 		<span v-if="dot" :class="dotClasses"></span>
 
-		<!-- Ícone à esquerda -->
-		<Icon v-if="icon" :name="icon" :class="iconClasses" />
+		<!-- Ícone à esquerda (slot ou prop) -->
+		<slot name="iconLeft">
+			<Icon v-if="icon" :name="icon" :class="iconClasses" />
+		</slot>
 
 		<!-- Conteúdo -->
 		<slot></slot>
 
-		<!-- Ícone à direita -->
-		<Icon v-if="iconRight" :name="iconRight" :class="iconClasses" />
+		<!-- Ícone à direita (slot ou prop) -->
+		<slot name="iconRight">
+			<Icon v-if="iconRight" :name="iconRight" :class="iconClasses" />
+		</slot>
 	</span>
 </template>
 

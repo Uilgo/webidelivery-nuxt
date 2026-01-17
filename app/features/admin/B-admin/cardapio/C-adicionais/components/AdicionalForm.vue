@@ -32,6 +32,7 @@ interface FormData {
 	descricao: string;
 	preco: number;
 	ativo: boolean;
+	permite_multiplas_unidades: boolean;
 }
 
 const emit = defineEmits<Emits>();
@@ -46,6 +47,7 @@ const form = reactive({
 	descricao: "",
 	preco: 0,
 	ativo: true,
+	permite_multiplas_unidades: false,
 });
 
 // Estado de erros
@@ -73,6 +75,7 @@ const inicializarFormulario = (): void => {
 		form.descricao = props.adicional.descricao || "";
 		form.preco = Number(props.adicional.preco);
 		form.ativo = props.adicional.ativo;
+		form.permite_multiplas_unidades = props.adicional.permite_multiplas_unidades || false;
 	} else {
 		// Reset para criação
 		form.grupo_id = props.grupoIdPadrao || "";
@@ -80,6 +83,7 @@ const inicializarFormulario = (): void => {
 		form.descricao = "";
 		form.preco = 0;
 		form.ativo = true;
+		form.permite_multiplas_unidades = false;
 	}
 };
 
@@ -235,15 +239,36 @@ defineExpose({
 		<div class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg">
 			<h3 class="text-base font-semibold text-[var(--text-primary)] mb-4">Configurações</h3>
 
-			<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
-				<div class="flex items-center justify-between">
-					<div class="flex-1">
-						<label for="ativo" class="block text-sm font-medium text-[var(--text-primary)] mb-1">
-							Adicional Ativo
-						</label>
-						<p class="text-xs text-[var(--text-muted)]">Disponível para seleção</p>
+			<div class="space-y-3">
+				<!-- Adicional Ativo -->
+				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
+					<div class="flex items-center justify-between">
+						<div class="flex-1">
+							<label for="ativo" class="block text-sm font-medium text-[var(--text-primary)] mb-1">
+								Adicional Ativo
+							</label>
+							<p class="text-xs text-[var(--text-muted)]">Disponível para seleção</p>
+						</div>
+						<UiSwitch id="ativo" v-model="form.ativo" />
 					</div>
-					<UiSwitch id="ativo" v-model="form.ativo" />
+				</div>
+
+				<!-- Permite Múltiplas Unidades -->
+				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
+					<div class="flex items-center justify-between">
+						<div class="flex-1">
+							<label
+								for="permite_multiplas_unidades"
+								class="block text-sm font-medium text-[var(--text-primary)] mb-1"
+							>
+								Permite Múltiplas Unidades
+							</label>
+							<p class="text-xs text-[var(--text-muted)]">
+								Cliente pode escolher mais de uma unidade (ex: 2x queijo, 3x bacon)
+							</p>
+						</div>
+						<UiSwitch id="permite_multiplas_unidades" v-model="form.permite_multiplas_unidades" />
+					</div>
 				</div>
 			</div>
 		</div>

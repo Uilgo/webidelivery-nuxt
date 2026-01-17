@@ -51,7 +51,7 @@ const finalizarPedido = () => {
 					<Icon name="lucide:shopping-cart" class="w-5 h-5" />
 					Seu Pedido
 				</h3>
-				<UiBadge v-if="carrinhoStore.quantidadeTotal > 0" color="primary" size="sm">
+				<UiBadge v-if="carrinhoStore.quantidadeTotal > 0" variant="primary" size="sm">
 					{{ carrinhoStore.quantidadeTotal }}
 				</UiBadge>
 			</div>

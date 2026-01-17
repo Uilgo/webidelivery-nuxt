@@ -17,6 +17,7 @@ interface Estabelecimento {
 	slug?: string;
 	logo_url?: string | null;
 	status?: string;
+	aberto?: boolean;
 }
 
 interface EstabelecimentoState {
@@ -105,7 +106,7 @@ export const useEstabelecimentoStore = defineStore("estabelecimento", {
 
 				const { data, error } = await supabase
 					.from("estabelecimentos")
-					.select("id, nome, slug, logo_url, status")
+					.select("id, nome, slug, logo_url, status, aberto")
 					.eq("id", estabelecimentoId)
 					.single();
 

@@ -76,7 +76,7 @@ export const useCardapioPublico = (slug: string) => {
 			// 2. Busca categorias
 			const { data: categoriasData } = await supabase
 				.from("categorias")
-				.select("id, nome, descricao, imagem_url, ordem")
+				.select("id, nome, descricao, imagem_url, ordem, categoria_pai_id")
 				.eq("estabelecimento_id", estabelecimentoData.id)
 				.eq("ativo", true)
 				.order("ordem", { ascending: true });

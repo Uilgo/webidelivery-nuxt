@@ -40,7 +40,8 @@ export default defineNuxtPlugin(async () => {
 					nome,
 					slug,
 					logo_url,
-					status
+					status,
+					aberto
 				)
 			`,
 			)

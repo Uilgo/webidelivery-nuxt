@@ -7,6 +7,7 @@
  */
 
 import { useEstabelecimentos } from "~/composables/data/useEstabelecimentos";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 import { useToast } from "~/composables/ui/useToast";
 import type { Estabelecimento } from "#shared/types/estabelecimentos";
 
@@ -61,12 +62,9 @@ const handleToggleLojaStatus = async (novoStatus: boolean): Promise<void> => {
 		const result = await toggleStoreStatus(novoStatus);
 
 		if (result.success) {
-			// Atualizar dados centralizados do layout
-			if (estabelecimentoAtual.value) {
-				// Recarregar dados para refletir mudança
-				const { getCurrentEstablishment } = useEstabelecimentos();
-				estabelecimentoAtual.value = await getCurrentEstablishment();
-			}
+			// Atualizar store diretamente para refletir mudança imediatamente
+			const estabelecimentoStore = useEstabelecimentoStore();
+			await estabelecimentoStore.refresh(estabelecimentoAtual.value.id);
 
 			success({
 				title: "Status alterado",

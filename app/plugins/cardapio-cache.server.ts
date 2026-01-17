@@ -71,7 +71,7 @@ export default defineNuxtPlugin(async () => {
 				.select(
 					`
 					*,
-					adicionais (id, nome, preco, ativo)
+					adicionais (id, nome, preco, ativo, permite_multiplas_unidades)
 				`,
 				)
 				.order("ordem", { ascending: true }),

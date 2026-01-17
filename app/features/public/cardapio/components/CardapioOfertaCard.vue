@@ -7,6 +7,7 @@
  */
 
 import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
+import { useProdutoDrawer } from "~/features/public/cardapio/composables/useProdutoDrawer";
 
 interface Props {
 	produto: ProdutoPublico;
@@ -18,37 +19,53 @@ const props = defineProps<Props>();
  * Calcula o preço mínimo do produto
  */
 const precoMinimo = computed(() => {
-	if (!props.produto.variacoes.length) return 0;
+	if (!props.produto.variacoes?.length) return 0;
 
-	const precos = props.produto.variacoes.map((v) => v.preco_promocional || v.preco);
-	return Math.min(...precos);
+	const precos = props.produto.variacoes
+		.map((v) => v.preco_promocional || v.preco)
+		.filter((preco) => typeof preco === "number" && !isNaN(preco));
+
+	return precos.length > 0 ? Math.min(...precos) : 0;
 });
 
 /**
  * Calcula o desconto percentual
  */
 const descontoPercentual = computed(() => {
-	if (!props.produto.variacoes.length) return null;
+	if (!props.produto.variacoes?.length) return null;
 
 	const variacao = props.produto.variacoes[0];
-	if (!variacao?.preco_promocional) return null;
+	if (!variacao?.preco_promocional || !variacao?.preco) return null;
 
 	const desconto = ((variacao.preco - variacao.preco_promocional) / variacao.preco) * 100;
 	return Math.round(desconto);
 });
 
 /**
- * Adiciona produto ao carrinho
+ * Composable para abrir o drawer do produto
+ */
+const { abrir } = useProdutoDrawer();
+
+/**
+ * Abre o drawer do produto ao clicar no card
+ */
+const abrirProduto = () => {
+	abrir(props.produto);
+};
+
+/**
+ * Adiciona produto ao carrinho (botão +)
  */
 const adicionarAoCarrinho = () => {
-	// TODO: Implementar lógica de adicionar ao carrinho
-	console.log("Adicionar ao carrinho:", props.produto.id);
+	// Abre o drawer para selecionar variações e adicionais
+	abrir(props.produto);
 };
 </script>
 
 <template>
 	<div
 		class="shrink-0 w-[140px] bg-[var(--bg-surface)] rounded-xl overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all cursor-pointer group"
+		@click="abrirProduto"
 	>
 		<!-- Imagem -->
 		<div class="aspect-square bg-[var(--bg-muted)] overflow-hidden relative">
@@ -79,7 +96,7 @@ const adicionarAoCarrinho = () => {
 			</h4>
 
 			<div class="flex items-center justify-between">
-				<span class="text-primary font-bold text-sm"> R$ {{ precoMinimo.toFixed(2) }} </span>
+				<span class="text-primary font-bold text-sm"> R$ {{ (precoMinimo || 0).toFixed(2) }} </span>
 
 				<button
 					type="button"
