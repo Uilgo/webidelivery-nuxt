@@ -11,6 +11,43 @@ import type { UUID, TimestampTz, Json } from "./database";
 // CATEGORIAS
 // ========================================
 
+/**
+ * 📌 Configurações JSONB da Categoria
+ *
+ * Define o comportamento do modal e customizações específicas da categoria.
+ */
+export interface CategoriaConfiguracoes {
+	/**
+	 * Configuração para produtos que permitem múltiplas seleções (ex: pizzas com vários sabores)
+	 */
+	multiplos_produtos?: {
+		/** Se a categoria permite selecionar múltiplos produtos */
+		readonly habilitado: boolean;
+		/** Quantidade mínima de produtos (ex: 1 para pizza inteira) */
+		readonly min: number;
+		/** Quantidade máxima de produtos (ex: 4 para pizza com 4 sabores) */
+		readonly max: number;
+		/** Tipo de visualização no modal: 'pizza' (fatias), 'camadas', 'grid', null (lista) */
+		readonly tipo_visualizacao: "pizza" | "camadas" | "grid" | null;
+		/** Labels customizados para singular/plural */
+		readonly labels?: {
+			readonly singular: string; // ex: 'sabor', 'ingrediente', 'item'
+			readonly plural: string; // ex: 'sabores', 'ingredientes', 'itens'
+		};
+		/**
+		 * IDs das categorias relacionadas para busca de produtos
+		 * Ex: Para pizzas, incluir IDs das categorias "Tradicionais", "Doces", "Especiais"
+		 * Se não especificado, usa apenas a categoria atual
+		 */
+		readonly categorias_relacionadas?: readonly string[];
+	};
+	/**
+	 * Ordem de exibição das seções no modal
+	 * Exemplo: ['quantidade', 'produtos', 'tamanho', 'adicionais']
+	 */
+	readonly ordem_modal?: readonly ("quantidade" | "produtos" | "tamanho" | "adicionais")[];
+}
+
 export interface Categoria {
 	readonly id: UUID;
 	readonly created_at: TimestampTz;
@@ -21,11 +58,42 @@ export interface Categoria {
 	readonly imagem_url: string | null;
 	readonly ordem: number;
 	readonly ativo: boolean;
+	readonly categoria_pai_id: UUID | null; // ✅ NOVO: ID da categoria pai para hierarquia
+	readonly configuracoes: CategoriaConfiguracoes | null; // ✅ Campo JSONB para configurações
 }
 
 // ========================================
 // PRODUTOS
 // ========================================
+
+/**
+ * 📌 Metadata JSONB do Produto
+ *
+ * Informações adicionais sobre o produto (nutricional, tags, características).
+ */
+export interface ProdutoMetadata {
+	/** Informações nutricionais */
+	readonly nutricional?: {
+		readonly calorias?: number;
+		readonly proteinas?: number;
+		readonly carboidratos?: number;
+		readonly gorduras?: number;
+		readonly fibras?: number;
+		readonly sodio?: number;
+	};
+	/** Tags de classificação */
+	readonly tags?: readonly string[]; // ex: ['vegetariano', 'sem_gluten', 'picante', 'vegano']
+	/** Tempo de preparo em minutos */
+	readonly tempo_preparo_min?: number;
+	/** Quantidade de pessoas que serve */
+	readonly serve_pessoas?: number;
+	/** Lista de alergenos */
+	readonly alergenos?: readonly string[]; // ex: ['gluten', 'lactose', 'amendoim', 'frutos_do_mar']
+	/** Ingredientes principais */
+	readonly ingredientes?: readonly string[];
+	/** Informações adicionais customizadas */
+	readonly [key: string]: unknown;
+}
 
 export interface Produto {
 	readonly id: UUID;
@@ -41,6 +109,7 @@ export interface Produto {
 	readonly destaque: boolean;
 	readonly em_promocao: boolean;
 	readonly total_vendas: number;
+	readonly metadata: ProdutoMetadata | null;
 }
 
 // ========================================
@@ -63,6 +132,27 @@ export interface ProdutoVariacao {
 // GRUPOS DE ADICIONAIS
 // ========================================
 
+/**
+ * 📌 Configurações JSONB do Grupo de Adicionais
+ *
+ * Comportamento e visualização do grupo no modal.
+ */
+export interface GrupoAdicionalConfiguracoes {
+	/** Tipo de visualização no modal */
+	readonly tipo_visualizacao?: "lista" | "grid" | "chips";
+	/** Permitir busca dentro do grupo (útil para muitos itens) */
+	readonly permitir_busca?: boolean;
+	/** Mostrar imagens dos adicionais */
+	readonly mostrar_imagens?: boolean;
+	/** Agrupar adicionais por subcategoria */
+	readonly subcategorias?: readonly {
+		readonly nome: string;
+		readonly adicional_ids: readonly string[];
+	}[];
+	/** Informações adicionais customizadas */
+	readonly [key: string]: unknown;
+}
+
 export interface GrupoAdicional {
 	readonly id: UUID;
 	readonly created_at: TimestampTz;
@@ -75,6 +165,7 @@ export interface GrupoAdicional {
 	readonly obrigatorio: boolean;
 	readonly ordem: number;
 	readonly ativo: boolean;
+	readonly configuracoes: GrupoAdicionalConfiguracoes | null;
 }
 
 // ========================================
@@ -109,6 +200,34 @@ export interface ProdutoGrupoAdicional {
 // COMBOS
 // ========================================
 
+/**
+ * 📌 Configurações JSONB do Combo
+ *
+ * Regras especiais e comportamentos do combo.
+ */
+export interface ComboConfiguracoes {
+	/** Regras de disponibilidade */
+	readonly disponibilidade?: {
+		readonly dias_semana?: readonly number[]; // 0=domingo, 6=sábado
+		readonly horario_inicio?: string; // "18:00"
+		readonly horario_fim?: string; // "22:00"
+	};
+	/** Limites de uso */
+	readonly limites?: {
+		readonly por_cliente?: number;
+		readonly total_geral?: number;
+		readonly usos_realizados?: number;
+	};
+	/** Customizações visuais */
+	readonly visual?: {
+		readonly badge_texto?: string; // ex: "SUPER OFERTA"
+		readonly badge_cor?: string;
+		readonly destaque_especial?: boolean;
+	};
+	/** Informações adicionais customizadas */
+	readonly [key: string]: unknown;
+}
+
 export interface Combo {
 	readonly id: UUID;
 	readonly created_at: TimestampTz;
@@ -124,6 +243,7 @@ export interface Combo {
 	readonly destaque: boolean;
 	readonly data_inicio: TimestampTz | null;
 	readonly data_fim: TimestampTz | null;
+	readonly configuracoes: ComboConfiguracoes | null;
 }
 
 // ========================================
