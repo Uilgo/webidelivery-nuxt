@@ -3,13 +3,13 @@
  *
  * Responsável por:
  * - Controle de abertura/fechamento do modal
- * - Modo do modal (criar/editar/visualizar)
+ * - Modo do modal (criar/editar/visualizar/criar-subcategoria)
  * - Categoria selecionada para edição
  */
 
-import type { Categoria } from "../../../types/categoria";
+import type { Categoria, CategoriaComputada } from "../../../types/categoria";
 
-export type ModalMode = "create" | "edit" | "view";
+export type ModalMode = "create" | "edit" | "view" | "create-subcategoria";
 
 export interface UseCategoriasModalReturn {
 	isOpen: Ref<boolean>;
@@ -18,6 +18,7 @@ export interface UseCategoriasModalReturn {
 	openCreate: () => void;
 	openEdit: (categoria: Categoria) => void;
 	openView: (categoria: Categoria) => void;
+	openCreateSubcategoria: (categoriaPai: CategoriaComputada) => void; // ✅ NOVO
 	close: () => void;
 }
 
@@ -55,6 +56,15 @@ export const useCategoriasModal = (): UseCategoriasModalReturn => {
 	};
 
 	/**
+	 * ✅ NOVO: Abre modal para criar subcategoria
+	 */
+	const openCreateSubcategoria = (_categoriaPai: CategoriaComputada): void => {
+		mode.value = "create-subcategoria";
+		selected.value = null; // Não há categoria selecionada, será criada nova
+		isOpen.value = true;
+	};
+
+	/**
 	 * Fecha o modal e limpa seleção
 	 */
 	const close = (): void => {
@@ -73,6 +83,7 @@ export const useCategoriasModal = (): UseCategoriasModalReturn => {
 		openCreate,
 		openEdit,
 		openView,
+		openCreateSubcategoria, // ✅ NOVO
 		close,
 	};
 };

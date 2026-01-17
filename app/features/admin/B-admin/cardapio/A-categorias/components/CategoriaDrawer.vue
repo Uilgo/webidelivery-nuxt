@@ -23,6 +23,8 @@ interface Props {
 	isEdicao: boolean;
 	/** Categoria selecionada para edição/visualização */
 	categoria?: CategoriaComputada | null;
+	/** Categoria pai (quando está criando subcategoria) */
+	categoriaPai?: CategoriaComputada | null;
 }
 
 interface Emits {
@@ -33,6 +35,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
 	categoria: null,
+	categoriaPai: null,
 });
 
 const emit = defineEmits<Emits>();
@@ -59,7 +62,14 @@ const isLoading = computed(() => creating.value || updating.value);
 
 // Título do drawer baseado no modo
 const drawerTitle = computed(() => {
-	return props.isEdicao ? "Editar Categoria" : "Nova Categoria";
+	if (props.isEdicao) {
+		// Se está editando e a categoria tem categoria_pai_id, é subcategoria
+		const isSubcategoria =
+			props.categoria?.categoria_pai_id !== null && props.categoria?.categoria_pai_id !== undefined;
+		return isSubcategoria ? "Editar Subcategoria" : "Editar Categoria";
+	}
+	// Se está criando e tem categoriaPai, é subcategoria
+	return props.categoriaPai ? "Nova Subcategoria" : "Nova Categoria";
 });
 
 // Tamanho do drawer (sempre md para criação e edição)

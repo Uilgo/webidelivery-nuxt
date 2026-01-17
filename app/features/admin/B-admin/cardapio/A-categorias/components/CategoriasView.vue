@@ -8,10 +8,11 @@
 
 import type { CategoriaComputada } from "../../../types/categoria";
 import CategoriasCard from "./CategoriasCard.vue";
-import CategoriasList from "./CategoriasList.vue";
+import CategoriasListHierarchy from "./CategoriasListHierarchy.vue";
 
 interface Props {
 	categorias: CategoriaComputada[];
+	categoriasRaw: CategoriaComputada[]; // Array sem filtros para subcategorias
 	viewMode: "card" | "list";
 	loading?: boolean;
 }
@@ -22,13 +23,28 @@ interface Emits {
 	edit: [categoria: CategoriaComputada];
 	delete: [categoria: CategoriaComputada];
 	toggleStatus: [categoria: CategoriaComputada];
+	// Eventos para subcategorias
+	createSubcategoria: [categoriaPaiId: string];
+	editSubcategoria: [subcategoriaId: string, categoriaPaiId: string];
+	deleteSubcategoria: [subcategoriaId: string, categoriaPaiId: string];
+	toggleSubcategoriaStatus: [subcategoriaId: string, ativo: boolean, categoriaPaiId: string];
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
 	loading: false,
 });
 
 const emit = defineEmits<Emits>();
+
+// Estado de expansão (apenas para modo lista)
+const expandedId = ref<string | null>(null);
+
+/**
+ * Handler para toggle de expansão
+ */
+const handleToggleExpansion = (categoriaId: string | null): void => {
+	expandedId.value = categoriaId;
+};
 
 /**
  * Handler para seleção de categoria
@@ -64,6 +80,48 @@ const handleDelete = (categoria: CategoriaComputada): void => {
 const handleToggleStatus = (categoria: CategoriaComputada): void => {
 	emit("toggleStatus", categoria);
 };
+
+/**
+ * Handlers para subcategorias
+ */
+const handleCreateSubcategoria = (categoriaPaiId: string): void => {
+	emit("createSubcategoria", categoriaPaiId);
+};
+
+const handleEditSubcategoria = (subcategoriaId: string, categoriaPaiId: string): void => {
+	emit("editSubcategoria", subcategoriaId, categoriaPaiId);
+};
+
+const handleDeleteSubcategoria = (subcategoriaId: string, categoriaPaiId: string): void => {
+	emit("deleteSubcategoria", subcategoriaId, categoriaPaiId);
+};
+
+const handleToggleSubcategoriaStatus = (
+	subcategoriaId: string,
+	ativo: boolean,
+	categoriaPaiId: string,
+): void => {
+	emit("toggleSubcategoriaStatus", subcategoriaId, ativo, categoriaPaiId);
+};
+
+/**
+ * Filtra apenas categorias pai (sem categoria_pai_id) e adiciona suas subcategorias
+ * IMPORTANTE: Usa categoriasRaw para subcategorias (sem filtro de ativo),
+ * mas usa categorias filtradas para as categorias pai
+ */
+const categoriasPai = computed(() => {
+	// Categorias pai já vêm filtradas (respeitam filtro de ativo)
+	const pais = props.categorias.filter((cat) => !cat.categoria_pai_id);
+
+	// Subcategorias vêm do array RAW (sem filtro) para sempre exibir todas
+	const subcategorias = props.categoriasRaw.filter((cat) => cat.categoria_pai_id);
+
+	// Monta hierarquia: cada pai recebe TODAS suas subcategorias (ativas e inativas)
+	return pais.map((pai) => ({
+		...pai,
+		subcategorias: subcategorias.filter((sub) => sub.categoria_pai_id === pai.id),
+	}));
+});
 </script>
 
 <template>
@@ -84,15 +142,21 @@ const handleToggleStatus = (categoria: CategoriaComputada): void => {
 
 		<!-- Modo Lista (Horizontal) -->
 		<div v-else class="space-y-3 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-			<CategoriasList
-				v-for="categoria in categorias"
+			<CategoriasListHierarchy
+				v-for="categoria in categoriasPai"
 				:key="categoria.id"
 				:categoria="categoria"
+				:is-expanded="expandedId === categoria.id"
 				@click="handleSelect"
 				@view-more="handleViewMore"
 				@edit="handleEdit"
 				@delete="handleDelete"
 				@toggle-status="handleToggleStatus"
+				@create-subcategoria="handleCreateSubcategoria"
+				@edit-subcategoria="handleEditSubcategoria"
+				@delete-subcategoria="handleDeleteSubcategoria"
+				@toggle-subcategoria-status="handleToggleSubcategoriaStatus"
+				@toggle-expansion="handleToggleExpansion"
 			/>
 		</div>
 	</div>

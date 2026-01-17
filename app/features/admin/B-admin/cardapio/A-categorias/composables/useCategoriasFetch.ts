@@ -3,6 +3,7 @@
  *
  * Responsável por:
  * - Buscar lista de categorias do estabelecimento com dados computados
+ * - Organizar hierarquia de categorias pai e subcategorias
  * - Usa useState que é populado pelo plugin de servidor para carregamento instantâneo
  * - Salva no localStorage como backup para navegação client-side
  *
@@ -42,6 +43,24 @@ const saveToStorage = (data: CategoriaComputada[]): void => {
 	}
 };
 
+/**
+ * ✅ NOVO: Organiza categorias em hierarquia
+ */
+const organizarHierarquia = (categorias: CategoriaComputada[]): CategoriaComputada[] => {
+	// Separa categorias pai e subcategorias
+	const categoriasPai = categorias.filter((cat) => !cat.categoria_pai_id);
+	const subcategorias = categorias.filter((cat) => cat.categoria_pai_id);
+
+	// Adiciona subcategorias às categorias pai
+	return categoriasPai.map((pai) => ({
+		...pai,
+		nivel: 0,
+		subcategorias: subcategorias
+			.filter((sub) => sub.categoria_pai_id === pai.id)
+			.map((sub) => ({ ...sub, nivel: 1 })),
+	}));
+};
+
 export interface UseCategoriasFetchReturn {
 	categorias: Ref<CategoriaComputada[]>;
 	loading: Ref<boolean>;
@@ -49,6 +68,7 @@ export interface UseCategoriasFetchReturn {
 	fetch: () => Promise<void>;
 	refresh: () => Promise<void>;
 	init: () => Promise<void>;
+	organizarHierarquia: (categorias: CategoriaComputada[]) => CategoriaComputada[]; // ✅ NOVO
 }
 
 export const useCategoriasFetch = (): UseCategoriasFetchReturn => {
@@ -76,6 +96,7 @@ export const useCategoriasFetch = (): UseCategoriasFetchReturn => {
 		error.value = null;
 
 		try {
+			// ✅ NOVO: Inclui categoria_pai_id na query
 			const { data, error: fetchError } = await supabase
 				.from("categorias")
 				.select(`*, produtos:produtos(count)`)
@@ -95,6 +116,7 @@ export const useCategoriasFetch = (): UseCategoriasFetchReturn => {
 					produtos_count,
 					status_display: categoria.ativo ? "Ativa" : "Inativa",
 					pode_excluir: produtos_count === 0,
+					nivel: categoria.categoria_pai_id ? 1 : 0, // ✅ NOVO: Define nível
 				} as CategoriaComputada;
 			});
 
@@ -148,5 +170,6 @@ export const useCategoriasFetch = (): UseCategoriasFetchReturn => {
 		fetch,
 		refresh,
 		init,
+		organizarHierarquia, // ✅ NOVO: Expõe função de organização
 	};
 };

@@ -48,9 +48,11 @@ export interface UseCategoriasReturn {
 	isModalOpen: Ref<boolean>;
 	modalMode: Ref<ModalMode>;
 	selectedCategoria: Ref<Categoria | null>;
+	categoriaPai: Ref<CategoriaComputada | null>; // ✅ NOVO: categoria pai para subcategorias
 	openCreate: () => void;
 	openEdit: (categoria: Categoria) => void;
 	openView: (categoria: Categoria) => void;
+	openCreateSubcategoria: (categoriaPai: CategoriaComputada) => void; // ✅ NOVO: criar subcategoria
 	closeModal: () => void;
 
 	// Ações
@@ -71,6 +73,9 @@ export const useCategorias = (): UseCategoriasReturn => {
 	const filtersComposable = useCategoriasFilters();
 	const modalComposable = useCategoriasModal();
 
+	// ✅ NOVO: Estado para categoria pai (subcategorias)
+	const categoriaPai = ref<CategoriaComputada | null>(null);
+
 	// ========================================
 	// DADOS FILTRADOS
 	// ========================================
@@ -89,10 +94,17 @@ export const useCategorias = (): UseCategoriasReturn => {
 	 * Criar categoria e atualizar lista
 	 */
 	const handleCreate = async (data: CategoriaCreateData): Promise<boolean> => {
-		const id = await actionsComposable.create(data);
+		// ✅ NOVO: Inclui categoria_pai_id se estiver criando subcategoria
+		const createData = {
+			...data,
+			...(categoriaPai.value && { categoria_pai_id: categoriaPai.value.id }),
+		};
+
+		const id = await actionsComposable.create(createData);
 
 		if (id) {
 			modalComposable.close();
+			categoriaPai.value = null; // ✅ NOVO: Limpa categoria pai
 			await fetchComposable.refresh();
 			return true;
 		}
@@ -144,6 +156,12 @@ export const useCategorias = (): UseCategoriasReturn => {
 		return false;
 	};
 
+	// ✅ NOVO: Abre modal para criar subcategoria
+	const openCreateSubcategoria = (pai: CategoriaComputada): void => {
+		categoriaPai.value = pai;
+		modalComposable.openCreateSubcategoria(pai);
+	};
+
 	// ========================================
 	// INICIALIZAÇÃO
 	// ========================================
@@ -183,9 +201,11 @@ export const useCategorias = (): UseCategoriasReturn => {
 		isModalOpen: modalComposable.isOpen,
 		modalMode: modalComposable.mode,
 		selectedCategoria: modalComposable.selected,
+		categoriaPai: readonly(categoriaPai), // ✅ NOVO: expõe categoria pai
 		openCreate: modalComposable.openCreate,
 		openEdit: modalComposable.openEdit,
 		openView: modalComposable.openView,
+		openCreateSubcategoria, // ✅ NOVO: método para criar subcategoria
 		closeModal: modalComposable.close,
 
 		// Ações

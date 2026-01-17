@@ -129,26 +129,12 @@ export const useCategoriasActions = (): UseCategoriasActionsReturn => {
 		actionError.value = null;
 
 		try {
-			// Busca a categoria atual para manter os outros dados
 			const supabase = useSupabaseClient();
-			const { data: categoria, error: fetchError } = await supabase
-				.from("categorias")
-				.select("nome, descricao, imagem_url, ordem")
-				.eq("id", id)
-				.single();
 
-			if (fetchError || !categoria) {
-				throw new Error("Categoria não encontrada");
-			}
-
-			// Atualiza mantendo todos os dados existentes
-			const { data: result, error } = await supabase.rpc("fn_categorias_atualizar", {
+			// Usa a RPC específica para toggle que mantém categoria_pai_id intacto
+			const { data: result, error } = await supabase.rpc("fn_categorias_toggle_ativo", {
 				p_categoria_id: id,
-				p_nome: categoria.nome,
-				p_descricao: categoria.descricao,
-				p_imagem_url: categoria.imagem_url,
 				p_ativo: ativo,
-				p_ordem: categoria.ordem,
 			});
 
 			if (error) {

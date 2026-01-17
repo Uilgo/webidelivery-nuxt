@@ -16,6 +16,7 @@ export interface Categoria {
 	readonly imagem_url: string | null;
 	readonly ordem: number;
 	readonly ativo: boolean;
+	readonly categoria_pai_id: UUID | null; // ✅ Campo para hierarquia de subcategorias
 }
 
 export interface CategoriaCreateData {
@@ -23,6 +24,7 @@ export interface CategoriaCreateData {
 	descricao?: string;
 	imagem_url?: string;
 	ordem?: number;
+	categoria_pai_id?: UUID; // ✅ Permite criar subcategoria
 }
 
 export interface CategoriaUpdateData {
@@ -31,6 +33,7 @@ export interface CategoriaUpdateData {
 	imagem_url?: string;
 	ordem?: number;
 	ativo?: boolean;
+	categoria_pai_id?: UUID; // ✅ Permite alterar hierarquia
 }
 
 export interface CategoriaFilters {
@@ -54,4 +57,6 @@ export interface CategoriaComputada extends Categoria {
 	produtos_count: number;
 	status_display: string;
 	pode_excluir: boolean;
+	subcategorias?: CategoriaComputada[]; // ✅ Lista de subcategorias
+	nivel: number; // ✅ Nível na hierarquia (0 = pai, 1 = subcategoria)
 }

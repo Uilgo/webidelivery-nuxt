@@ -31,6 +31,7 @@ import GruposAdicionaisView from "../../C-adicionais/components/GruposAdicionais
 import CombosView from "../../D-combos/components/CombosView.vue";
 import CategoriaDrawer from "../../A-categorias/components/CategoriaDrawer.vue";
 import CategoriaDeleteModal from "../../A-categorias/components/CategoriaDeleteModal.vue";
+import CategoriaSubcategoriaFlow from "../../A-categorias/components/CategoriaSubcategoriaFlow.vue";
 import ProdutoDrawer from "../../B-produtos/components/ProdutoDrawer.vue";
 import ProdutoDeleteModal from "../../B-produtos/components/ProdutoDeleteModal.vue";
 import GrupoAdicionalDrawer from "../../C-adicionais/components/GrupoAdicionalDrawer.vue";
@@ -65,6 +66,18 @@ const expandedGrupoId = ref<string | null>(null);
 // Estado do modal de exclusão de categoria
 const isDeleteModalOpen = ref(false);
 const categoriaToDelete = ref<CategoriaComputada | null>(null);
+
+// Subcategorias da categoria a ser deletada
+const subcategoriasToDelete = computed(() => {
+	if (!categoriaToDelete.value) return [];
+	return categoriasComposable.categoriasRaw.value.filter(
+		(cat) => cat.categoria_pai_id === categoriaToDelete.value?.id,
+	);
+});
+
+// ✅ NOVO: Estado do fluxo de subcategorias
+const isSubcategoriaFlowOpen = ref(false);
+const categoriaPaiParaSubcategoria = ref<CategoriaComputada | null>(null);
 
 // Estado do modal de exclusão de produto
 const isProdutoDeleteModalOpen = ref(false);
@@ -471,6 +484,60 @@ const handleCategoriaToggleStatus = async (categoria: unknown): Promise<void> =>
 	}
 };
 
+/**
+ * Handler para criar subcategoria (recebe ID da categoria pai)
+ */
+const handleCategoriaCreateSubcategoria = (categoriaPaiId: string): void => {
+	const pai = categoriasComposable.categorias.value.find((cat) => cat.id === categoriaPaiId);
+	if (pai) {
+		// Abre o drawer de categoria no modo criar subcategoria
+		categoriasComposable.openCreateSubcategoria(pai);
+	}
+};
+
+/**
+ * Handler para editar subcategoria
+ */
+const handleCategoriaEditSubcategoria = (subcategoriaId: string, _categoriaPaiId: string): void => {
+	const subcategoria = categoriasComposable.categorias.value.find(
+		(cat) => cat.id === subcategoriaId,
+	);
+	if (subcategoria) {
+		handleCategoriaEdit(subcategoria);
+	}
+};
+
+/**
+ * Handler para deletar subcategoria
+ */
+const handleCategoriaDeleteSubcategoria = (
+	subcategoriaId: string,
+	_categoriaPaiId: string,
+): void => {
+	const subcategoria = categoriasComposable.categorias.value.find(
+		(cat) => cat.id === subcategoriaId,
+	);
+	if (subcategoria) {
+		handleCategoriaDelete(subcategoria);
+	}
+};
+
+/**
+ * Handler para toggle status de subcategoria
+ */
+const handleCategoriaToggleSubcategoriaStatus = (
+	subcategoriaId: string,
+	_ativo: boolean,
+	_categoriaPaiId: string,
+): void => {
+	const subcategoria = categoriasComposable.categorias.value.find(
+		(cat) => cat.id === subcategoriaId,
+	);
+	if (subcategoria) {
+		handleCategoriaToggleStatus(subcategoria);
+	}
+};
+
 // ========================================
 // HANDLERS DOS MODAIS DE CATEGORIA
 // ========================================
@@ -489,6 +556,22 @@ const handleCategoriaModalSuccess = (): void => {
 const handleCategoriaDeleteSuccess = (): void => {
 	isDeleteModalOpen.value = false;
 	categoriaToDelete.value = null;
+};
+
+/**
+ * ✅ NOVO: Handler para sucesso no fluxo de subcategorias
+ */
+const handleSubcategoriaFlowSuccess = (): void => {
+	isSubcategoriaFlowOpen.value = false;
+	categoriaPaiParaSubcategoria.value = null;
+
+	const toast = useToast();
+	toast.add({
+		title: "Subcategoria criada",
+		description: "Subcategoria criada com sucesso",
+		color: "success",
+		duration: 3000,
+	});
 };
 
 // ========================================
@@ -866,12 +949,17 @@ onMounted(async () => {
 					<CategoriasView
 						v-if="sectionTab === 'categorias'"
 						:categorias="categoriasComposable.categorias.value"
+						:categorias-raw="categoriasComposable.categoriasRaw.value"
 						:view-mode="viewMode"
 						@select="handleCategoriaSelect"
 						@view-more="handleCategoriaViewMore"
 						@edit="handleCategoriaEdit"
 						@delete="handleCategoriaDelete"
 						@toggle-status="handleCategoriaToggleStatus"
+						@create-subcategoria="handleCategoriaCreateSubcategoria"
+						@edit-subcategoria="handleCategoriaEditSubcategoria"
+						@delete-subcategoria="handleCategoriaDeleteSubcategoria"
+						@toggle-subcategoria-status="handleCategoriaToggleSubcategoriaStatus"
 					/>
 
 					<!-- Produtos -->
@@ -923,13 +1011,22 @@ onMounted(async () => {
 			v-model="categoriasComposable.isModalOpen.value"
 			:is-edicao="categoriasComposable.modalMode.value === 'edit'"
 			:categoria="categoriasComposable.selectedCategoria.value as CategoriaComputada"
+			:categoria-pai="categoriasComposable.categoriaPai.value as CategoriaComputada"
 			@success="handleCategoriaModalSuccess"
 		/>
 
 		<CategoriaDeleteModal
 			v-model="isDeleteModalOpen"
 			:categoria="categoriaToDelete"
+			:subcategorias="subcategoriasToDelete"
 			@success="handleCategoriaDeleteSuccess"
+		/>
+
+		<!-- ✅ NOVO: Fluxo de Subcategorias -->
+		<CategoriaSubcategoriaFlow
+			v-model="isSubcategoriaFlowOpen"
+			:categoria-pai="categoriaPaiParaSubcategoria"
+			@success="handleSubcategoriaFlowSuccess"
 		/>
 
 		<!-- Drawer e Modal de Produto -->

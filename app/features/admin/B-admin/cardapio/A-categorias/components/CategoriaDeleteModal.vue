@@ -16,6 +16,8 @@ interface Props {
 	modelValue: boolean;
 	/** Categoria a ser excluída */
 	categoria?: CategoriaComputada | null;
+	/** Subcategorias da categoria (se for categoria pai) */
+	subcategorias?: CategoriaComputada[];
 }
 
 interface Emits {
@@ -26,6 +28,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
 	categoria: null,
+	subcategorias: () => [],
 });
 
 const emit = defineEmits<Emits>();
@@ -58,22 +61,73 @@ const isConfirmacaoValida = computed(() => {
 	return confirmacaoNome.value.trim() === props.categoria.nome.trim();
 });
 
-// Mensagem de aviso baseada na situação
+// Detecta se é subcategoria
+const isSubcategoria = computed(() => {
+	return (
+		props.categoria?.categoria_pai_id !== null && props.categoria?.categoria_pai_id !== undefined
+	);
+});
+
+// Verifica se tem subcategorias
+const temSubcategorias = computed(() => {
+	return props.subcategorias && props.subcategorias.length > 0;
+});
+
+// Calcula total de produtos nas subcategorias
+const totalProdutosSubcategorias = computed(() => {
+	if (!props.subcategorias) return 0;
+	return props.subcategorias.reduce((total, sub) => total + (sub.produtos_count || 0), 0);
+});
+
+// Mensagem de aviso inteligente
 const warningMessage = computed(() => {
 	if (!props.categoria) return "";
 
-	const produtosCount = props.categoria.produtos_count ?? 0;
+	const produtosCategoria = props.categoria.produtos_count ?? 0;
 
-	if (produtosCount > 0) {
-		return `Esta categoria possui ${produtosCount} produto(s) vinculado(s). Ao excluir a categoria, TODOS os ${produtosCount} produto(s) serão permanentemente excluídos do sistema.`;
+	// Caso 1: Categoria pai COM subcategorias
+	if (!isSubcategoria.value && temSubcategorias.value) {
+		const qtdSubcategorias = props.subcategorias?.length || 0;
+		const totalProdutos = produtosCategoria + totalProdutosSubcategorias.value;
+
+		let mensagem = `Esta categoria possui ${qtdSubcategorias} subcategoria(s) com um total de ${totalProdutos} produto(s) distribuídos entre elas.`;
+
+		if (produtosCategoria > 0) {
+			mensagem += ` A categoria principal tem ${produtosCategoria} produto(s) direto(s).`;
+		}
+
+		mensagem += ` Ao excluir esta categoria, TODAS as ${qtdSubcategorias} subcategoria(s) e TODOS os ${totalProdutos} produto(s) serão permanentemente excluídos do sistema.`;
+
+		return mensagem;
 	}
 
+	// Caso 2: Categoria pai SEM subcategorias mas COM produtos
+	if (!isSubcategoria.value && produtosCategoria > 0) {
+		return `Esta categoria possui ${produtosCategoria} produto(s) vinculado(s). Ao excluir a categoria, TODOS os ${produtosCategoria} produto(s) serão permanentemente excluídos do sistema.`;
+	}
+
+	// Caso 3: Subcategoria COM produtos
+	if (isSubcategoria.value && produtosCategoria > 0) {
+		return `Esta subcategoria possui ${produtosCategoria} produto(s) vinculado(s). Ao excluir a subcategoria, TODOS os ${produtosCategoria} produto(s) serão permanentemente excluídos do sistema.`;
+	}
+
+	// Caso 4: Categoria/Subcategoria SEM produtos
 	return "Esta ação não pode ser desfeita. A categoria será permanentemente removida do sistema.";
 });
 
 // Tipo de aviso (sempre warning, pois é possível excluir mas com consequências)
 const warningType = computed(() => {
 	return "warning";
+});
+
+// Título do modal
+const modalTitle = computed(() => {
+	return isSubcategoria.value ? "Excluir Subcategoria" : "Excluir Categoria";
+});
+
+// Texto do botão
+const buttonText = computed(() => {
+	return isSubcategoria.value ? "Excluir Subcategoria" : "Excluir Categoria";
 });
 
 /**
@@ -180,7 +234,7 @@ watch(
 <template>
 	<UiModal
 		v-model="isOpen"
-		title="Excluir Categoria"
+		:title="modalTitle"
 		size="md"
 		:close-on-overlay="!deleting"
 		:close-on-escape="!deleting"
@@ -315,7 +369,7 @@ watch(
 					<template #iconLeft>
 						<Icon name="lucide:trash-2" />
 					</template>
-					Excluir Categoria
+					{{ buttonText }}
 				</UiButton>
 			</div>
 		</template>
