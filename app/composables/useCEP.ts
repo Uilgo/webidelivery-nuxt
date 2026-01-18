@@ -7,7 +7,7 @@
 
 import { consultarCEP } from "../../services/api/cep";
 import { isValidCEP, parseCEP } from "../../lib/formatters/address";
-import type { EnderecoCompleto } from "../../services/api/cep";
+import type { EnderecoViaCEP } from "../../services/api/cep";
 
 /**
  * Composable para consulta de CEP reativa
@@ -20,7 +20,7 @@ import type { EnderecoCompleto } from "../../services/api/cep";
  */
 export const useCEP = (cep: Ref<string> | string) => {
 	const cepRef = typeof cep === "string" ? ref(cep) : cep;
-	const data = ref<EnderecoCompleto | null>(null);
+	const data = ref<EnderecoViaCEP | null>(null);
 	const error = ref<string | null>(null);
 	const loading = ref(false);
 

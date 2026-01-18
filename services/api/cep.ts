@@ -8,9 +8,9 @@
 import { parseCEP, isValidCEP } from "../../lib/formatters/address";
 
 /**
- * Interface padronizada para endereço
+ * Interface padronizada para resposta da API de CEP
  */
-export interface EnderecoCompleto {
+export interface EnderecoViaCEP {
 	cep: string;
 	logradouro: string;
 	complemento?: string;
@@ -36,7 +36,7 @@ export interface CepError {
 /**
  * Resultado da consulta
  */
-export type CepResult = EnderecoCompleto | CepError;
+export type CepResult = EnderecoViaCEP | CepError;
 
 /**
  * Tipos de resposta dos provedores
@@ -80,7 +80,7 @@ interface PostmonResponse {
 interface CepProvider {
 	name: string;
 	url: (cep: string) => string;
-	transform: (data: unknown) => EnderecoCompleto;
+	transform: (data: unknown) => EnderecoViaCEP;
 	timeout: number;
 }
 
@@ -93,7 +93,7 @@ const CEP_PROVIDERS: CepProvider[] = [
 		name: "ViaCEP",
 		url: (cep: string) => `https://viacep.com.br/ws/${cep}/json/`,
 		timeout: 5000,
-		transform: (data: unknown): EnderecoCompleto => {
+		transform: (data: unknown): EnderecoViaCEP => {
 			const response = data as ViaCepResponse;
 
 			// ViaCEP retorna erro como { erro: true }
@@ -122,7 +122,7 @@ const CEP_PROVIDERS: CepProvider[] = [
 		name: "BrasilAPI",
 		url: (cep: string) => `https://brasilapi.com.br/api/cep/v2/${cep}`,
 		timeout: 4000,
-		transform: (data: unknown): EnderecoCompleto => {
+		transform: (data: unknown): EnderecoViaCEP => {
 			const response = data as BrasilApiResponse;
 
 			return {
@@ -146,7 +146,7 @@ const CEP_PROVIDERS: CepProvider[] = [
 		name: "Postmon",
 		url: (cep: string) => `https://api.postmon.com.br/v1/cep/${cep}`,
 		timeout: 4000,
-		transform: (data: unknown): EnderecoCompleto => {
+		transform: (data: unknown): EnderecoViaCEP => {
 			const response = data as PostmonResponse;
 
 			return {

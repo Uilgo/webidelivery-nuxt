@@ -7,7 +7,7 @@
 
 import type { CheckoutData } from "~/features/public/checkout/types/checkout";
 import { useCarrinhoStore } from "~/stores/carrinho";
-import { formatCEP } from "~/lib/formatters/address";
+import { formatCEP } from "../../../../../lib/formatters/address";
 
 interface Props {
 	dados: Partial<CheckoutData>;
@@ -192,7 +192,7 @@ const handleConfirmar = () => {
 				<div v-for="item in carrinho.itens" :key="item.id" class="flex justify-between text-sm">
 					<div class="flex-1">
 						<p class="font-medium text-[var(--text-primary)]">
-							{{ item.quantidade }}x {{ item.produto.nome }}
+							{{ item.quantidade }}x {{ item.nome }}
 						</p>
 						<p v-if="item.variacao" class="text-xs text-[var(--text-muted)]">
 							{{ item.variacao.nome }}
@@ -200,8 +200,8 @@ const handleConfirmar = () => {
 						<p v-if="item.adicionais.length" class="text-xs text-[var(--text-muted)]">
 							+ {{ item.adicionais.map((a) => a.nome).join(", ") }}
 						</p>
-						<p v-if="item.observacoes" class="text-xs text-[var(--text-muted)] italic">
-							Obs: {{ item.observacoes }}
+						<p v-if="item.observacao" class="text-xs text-[var(--text-muted)] italic">
+							Obs: {{ item.observacao }}
 						</p>
 					</div>
 					<p class="font-bold text-[var(--text-primary)]">R$ {{ item.preco_total.toFixed(2) }}</p>
