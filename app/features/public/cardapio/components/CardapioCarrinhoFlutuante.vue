@@ -7,6 +7,7 @@
  */
 
 import { useCarrinhoStore } from "~/stores/carrinho";
+import { formatCurrency } from "../../../../../lib/formatters/currency";
 
 interface Emits {
 	(e: "abrir"): void;
@@ -25,13 +26,6 @@ const montado = ref(false);
 onMounted(() => {
 	montado.value = true;
 });
-
-/**
- * Formata preço para exibição
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
 </script>
 
 <template>
@@ -59,7 +53,7 @@ const formatarPreco = (valor: number): string => {
 
 					<span class="flex-1">Ver carrinho</span>
 
-					<span class="font-semibold">{{ formatarPreco(carrinhoStore.total) }}</span>
+					<span class="font-semibold">{{ formatCurrency(carrinhoStore.total) }}</span>
 				</UiButton>
 			</div>
 		</div>

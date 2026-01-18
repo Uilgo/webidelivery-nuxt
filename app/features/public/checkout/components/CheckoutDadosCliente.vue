@@ -6,6 +6,7 @@
  */
 
 import type { DadosCliente } from "~/features/public/checkout/types/checkout";
+import { formatPhone, parsePhone } from "../../../../../lib/formatters/phone";
 
 interface Props {
 	dadosIniciais?: DadosCliente;
@@ -51,18 +52,12 @@ const handleSubmit = () => {
 };
 
 /**
- * Formata telefone enquanto digita
+ * Formata telefone enquanto digita usando formatter centralizado
  */
 const formatarTelefone = (event: Event) => {
 	const input = event.target as HTMLInputElement;
-	let valor = input.value.replace(/\D/g, "");
-
-	if (valor.length <= 11) {
-		valor = valor.replace(/^(\d{2})(\d)/g, "($1) $2");
-		valor = valor.replace(/(\d)(\d{4})$/, "$1-$2");
-	}
-
-	form.telefone = valor;
+	const apenasNumeros = parsePhone(input.value);
+	form.telefone = formatPhone(apenasNumeros);
 };
 
 /**

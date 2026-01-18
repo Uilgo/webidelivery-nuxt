@@ -6,6 +6,7 @@
  */
 
 import type { FormaPagamento, DadosPagamento } from "~/features/public/checkout/types/checkout";
+import { parseCurrency } from "../../../../../lib/formatters/currency";
 
 interface Props {
 	dadosIniciais?: DadosPagamento;
@@ -69,7 +70,7 @@ const formValido = computed(() => {
 
 	// Se for dinheiro e informou troco, validar se é número válido
 	if (formaSelecionada.value === "dinheiro" && trocoPara.value) {
-		const valor = parseFloat(trocoPara.value.replace(",", "."));
+		const valor = parseCurrency(trocoPara.value);
 		return !isNaN(valor) && valor > 0;
 	}
 
@@ -88,7 +89,7 @@ const handleSubmit = () => {
 
 	// Adicionar troco se for dinheiro e tiver valor
 	if (formaSelecionada.value === "dinheiro" && trocoPara.value) {
-		const valor = parseFloat(trocoPara.value.replace(",", "."));
+		const valor = parseCurrency(trocoPara.value);
 		if (!isNaN(valor) && valor > 0) {
 			dados.troco_para = valor;
 		}

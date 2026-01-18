@@ -13,6 +13,7 @@ import type {
 	AdicionalPublico,
 } from "../types/cardapio-publico";
 import { useCarrinhoStore } from "~/stores/carrinho";
+import { formatCurrency } from "../../../../../lib/formatters/currency";
 
 interface Props {
 	modelValue: boolean;
@@ -92,13 +93,6 @@ const precoUnitario = computed(() => precoVariacao.value + totalAdicionais.value
  * Preço total (unitário * quantidade)
  */
 const precoTotal = computed(() => precoUnitario.value * quantidade.value);
-
-/**
- * Formata preço para exibição
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
 
 /**
  * Verifica se um grupo de adicionais está válido
@@ -253,10 +247,10 @@ const adicionarAoCarrinho = (): void => {
 									v-if="variacao.preco_promocional"
 									class="text-sm text-[var(--text-muted)] line-through"
 								>
-									{{ formatarPreco(variacao.preco) }}
+									{{ formatCurrency(variacao.preco) }}
 								</span>
 								<span class="font-medium text-[var(--text-primary)]">
-									{{ formatarPreco(variacao.preco_promocional ?? variacao.preco) }}
+									{{ formatCurrency(variacao.preco_promocional ?? variacao.preco) }}
 								</span>
 							</div>
 						</label>
@@ -299,7 +293,7 @@ const adicionarAoCarrinho = (): void => {
 							<div>
 								<span class="text-[var(--text-primary)]">{{ adicional.nome }}</span>
 								<span v-if="adicional.preco > 0" class="text-sm text-[var(--text-muted)] ml-2">
-									+ {{ formatarPreco(adicional.preco) }}
+									+ {{ formatCurrency(adicional.preco) }}
 								</span>
 							</div>
 
@@ -308,8 +302,7 @@ const adicionarAoCarrinho = (): void => {
 								<UiButton
 									variant="outline"
 									color="neutral"
-									size="xs"
-									icon
+									size="sm"
 									:disabled="getQuantidadeAdicional(adicional.id) === 0"
 									@click="alterarAdicional(grupo, adicional, -1)"
 								>
@@ -323,8 +316,7 @@ const adicionarAoCarrinho = (): void => {
 								<UiButton
 									variant="outline"
 									color="neutral"
-									size="xs"
-									icon
+									size="sm"
 									@click="alterarAdicional(grupo, adicional, 1)"
 								>
 									<Icon name="lucide:plus" class="w-4 h-4" />
@@ -351,7 +343,6 @@ const adicionarAoCarrinho = (): void => {
 						variant="outline"
 						color="neutral"
 						size="sm"
-						icon
 						:disabled="quantidade <= 1"
 						@click="quantidade--"
 					>
@@ -362,7 +353,7 @@ const adicionarAoCarrinho = (): void => {
 						{{ quantidade }}
 					</span>
 
-					<UiButton variant="outline" color="neutral" size="sm" icon @click="quantidade++">
+					<UiButton variant="outline" color="neutral" size="sm" @click="quantidade++">
 						<Icon name="lucide:plus" class="w-5 h-5" />
 					</UiButton>
 				</div>
@@ -376,7 +367,7 @@ const adicionarAoCarrinho = (): void => {
 					:disabled="!podeAdicionar"
 					@click="adicionarAoCarrinho"
 				>
-					Adicionar {{ formatarPreco(precoTotal) }}
+					Adicionar {{ formatCurrency(precoTotal) }}
 				</UiButton>
 			</div>
 		</template>

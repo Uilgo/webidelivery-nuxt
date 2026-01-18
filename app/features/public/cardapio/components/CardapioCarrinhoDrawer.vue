@@ -7,6 +7,7 @@
  */
 
 import { useCarrinhoStore } from "~/stores/carrinho";
+import { formatCurrency } from "../../../../../lib/formatters/currency";
 
 interface Props {
 	modelValue: boolean;
@@ -29,13 +30,6 @@ const isOpen = computed({
 	get: () => props.modelValue,
 	set: (value: boolean) => emit("update:modelValue", value),
 });
-
-/**
- * Formata preço para exibição
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
 
 /**
  * Fecha o drawer
@@ -117,7 +111,7 @@ const irParaCheckout = async (): Promise<void> => {
 						<!-- Preço e controles -->
 						<div class="flex items-center justify-between mt-2">
 							<span class="font-medium text-[var(--text-primary)]">
-								{{ formatarPreco(item.preco_total) }}
+								{{ formatCurrency(item.preco_total) }}
 							</span>
 
 							<!-- Controles de quantidade -->
@@ -168,7 +162,7 @@ const irParaCheckout = async (): Promise<void> => {
 				<div class="space-y-2 text-sm">
 					<div class="flex justify-between text-[var(--text-secondary)]">
 						<span>Subtotal</span>
-						<span>{{ formatarPreco(carrinhoStore.subtotal) }}</span>
+						<span>{{ formatCurrency(carrinhoStore.subtotal) }}</span>
 					</div>
 
 					<div
@@ -176,19 +170,19 @@ const irParaCheckout = async (): Promise<void> => {
 						class="flex justify-between text-[var(--text-secondary)]"
 					>
 						<span>Taxa de entrega</span>
-						<span>{{ formatarPreco(carrinhoStore.taxa_entrega) }}</span>
+						<span>{{ formatCurrency(carrinhoStore.taxa_entrega) }}</span>
 					</div>
 
 					<div v-if="carrinhoStore.desconto > 0" class="flex justify-between text-[var(--success)]">
 						<span>Desconto</span>
-						<span>- {{ formatarPreco(carrinhoStore.desconto) }}</span>
+						<span>- {{ formatCurrency(carrinhoStore.desconto) }}</span>
 					</div>
 
 					<div
 						class="flex justify-between font-semibold text-[var(--text-primary)] text-base pt-2 border-t border-[var(--border-muted)]"
 					>
 						<span>Total</span>
-						<span>{{ formatarPreco(carrinhoStore.total) }}</span>
+						<span>{{ formatCurrency(carrinhoStore.total) }}</span>
 					</div>
 				</div>
 

@@ -7,6 +7,7 @@
 
 import type { CheckoutData } from "~/features/public/checkout/types/checkout";
 import { useCarrinhoStore } from "~/stores/carrinho";
+import { formatCEP } from "~/lib/formatters/address";
 
 interface Props {
 	dados: Partial<CheckoutData>;
@@ -144,7 +145,7 @@ const handleConfirmar = () => {
 					<p>
 						{{ dados.endereco.bairro }} - {{ dados.endereco.cidade }}/{{ dados.endereco.estado }}
 					</p>
-					<p>CEP: {{ dados.endereco.cep }}</p>
+					<p>CEP: {{ formatCEP(dados.endereco.cep) }}</p>
 					<p v-if="dados.endereco.referencia" class="mt-1">
 						<strong>Referência:</strong> {{ dados.endereco.referencia }}
 					</p>

@@ -7,6 +7,9 @@
 
 import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
+import { formatDateTime } from "../../../../../lib/formatters/date";
+import { formatPhone } from "../../../../../lib/formatters/phone";
+import { formatCEP } from "../../../../../lib/formatters/address";
 
 interface Props {
 	pedido: PedidoCompleto;
@@ -15,19 +18,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const { formatarFormaPagamento, formatarTipoEntrega } = usePedido();
-
-/**
- * Formata data para exibição
- */
-const formatarData = (data: string): string => {
-	return new Date(data).toLocaleString("pt-BR", {
-		day: "2-digit",
-		month: "2-digit",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-};
 </script>
 
 <template>
@@ -45,7 +35,7 @@ const formatarData = (data: string): string => {
 				</div>
 				<div class="flex justify-between">
 					<span class="text-[var(--text-muted)]">Data:</span>
-					<span class="text-[var(--text-primary)]">{{ formatarData(pedido.created_at) }}</span>
+					<span class="text-[var(--text-primary)]">{{ formatDateTime(pedido.created_at) }}</span>
 				</div>
 				<div class="flex justify-between">
 					<span class="text-[var(--text-muted)]">Tipo de Entrega:</span>
@@ -79,7 +69,9 @@ const formatarData = (data: string): string => {
 				</div>
 				<div>
 					<span class="text-[var(--text-muted)]">Telefone:</span>
-					<span class="ml-2 text-[var(--text-primary)]">{{ pedido.cliente_telefone }}</span>
+					<span class="ml-2 text-[var(--text-primary)]">{{
+						formatPhone(pedido.cliente_telefone)
+					}}</span>
 				</div>
 				<div v-if="pedido.cliente_email">
 					<span class="text-[var(--text-muted)]">E-mail:</span>
@@ -105,7 +97,7 @@ const formatarData = (data: string): string => {
 				<p>
 					{{ pedido.endereco_bairro }} - {{ pedido.endereco_cidade }}/{{ pedido.endereco_estado }}
 				</p>
-				<p>CEP: {{ pedido.endereco_cep }}</p>
+				<p>CEP: {{ pedido.endereco_cep ? formatCEP(pedido.endereco_cep) : "Não informado" }}</p>
 				<p v-if="pedido.endereco_referencia" class="mt-2 text-[var(--text-muted)]">
 					<strong>Referência:</strong> {{ pedido.endereco_referencia }}
 				</p>

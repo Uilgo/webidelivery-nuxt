@@ -7,6 +7,8 @@
  */
 
 import type { TipoEntrega, EnderecoEntrega } from "~/features/public/checkout/types/checkout";
+import { formatCEP, parseCEP } from "../../../../../lib/formatters/address";
+import { useCEP } from "~/composables/useCEP";
 
 interface Props {
 	tipoInicial?: TipoEntrega;
@@ -81,17 +83,34 @@ const handleSubmit = () => {
 };
 
 /**
- * Formata CEP enquanto digita
+ * CEP Lookup usando composable global
+ */
+const cepRef = ref(endereco.cep);
+const { data: dadosCEP, error: erroCEP, loading: buscandoCEP } = useCEP(cepRef);
+
+// Watch para preencher campos automaticamente quando CEP for encontrado
+watch(dadosCEP, (novosDados) => {
+	if (novosDados) {
+		endereco.rua = novosDados.logradouro;
+		endereco.bairro = novosDados.bairro;
+		endereco.cidade = novosDados.localidade;
+		endereco.estado = novosDados.uf;
+	}
+});
+
+// Computed para verificar se CEP foi encontrado com sucesso
+const cepEncontrado = computed(() => !!dadosCEP.value && !erroCEP.value);
+
+/**
+ * Formata CEP enquanto digita e atualiza ref para busca automática
  */
 const formatarCEP = (event: Event) => {
 	const input = event.target as HTMLInputElement;
-	let valor = input.value.replace(/\D/g, "");
+	const apenasNumeros = parseCEP(input.value);
+	endereco.cep = formatCEP(apenasNumeros);
 
-	if (valor.length <= 8) {
-		valor = valor.replace(/(\d{5})(\d)/, "$1-$2");
-	}
-
-	endereco.cep = valor;
+	// Atualizar ref para trigger automático do useCEP
+	cepRef.value = endereco.cep;
 };
 </script>
 
@@ -142,16 +161,40 @@ const formatarCEP = (event: Event) => {
 					<label for="cep" class="block text-sm font-medium text-[var(--text-primary)] mb-1">
 						CEP <span class="text-red-500">*</span>
 					</label>
-					<input
-						id="cep"
-						v-model="endereco.cep"
-						type="text"
-						required
-						placeholder="00000-000"
-						maxlength="9"
-						@input="formatarCEP"
-						class="w-full px-4 py-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-primary"
-					/>
+					<div class="relative">
+						<input
+							id="cep"
+							v-model="endereco.cep"
+							type="text"
+							required
+							placeholder="00000-000"
+							maxlength="9"
+							@input="formatarCEP"
+							:disabled="buscandoCEP"
+							class="w-full px-4 py-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+							:class="{
+								'border-red-500': erroCEP,
+								'border-green-500': endereco.rua && !erroCEP,
+							}"
+						/>
+						<!-- Loading indicator -->
+						<div v-if="buscandoCEP" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+							<Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-primary" />
+						</div>
+						<!-- Success indicator -->
+						<div
+							v-else-if="cepEncontrado && !erroCEP"
+							class="absolute right-3 top-1/2 transform -translate-y-1/2"
+						>
+							<Icon name="lucide:check" class="w-5 h-5 text-green-500" />
+						</div>
+					</div>
+					<!-- Mensagem de erro -->
+					<p v-if="erroCEP" class="text-sm text-red-500 mt-1">{{ erroCEP }}</p>
+					<!-- Mensagem de sucesso -->
+					<p v-else-if="cepEncontrado && !buscandoCEP" class="text-sm text-green-600 mt-1">
+						✅ Endereço encontrado automaticamente
+					</p>
 				</div>
 
 				<!-- Rua -->

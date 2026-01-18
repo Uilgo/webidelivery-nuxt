@@ -15,6 +15,7 @@ import type {
 } from "../types/cardapio-publico";
 import { useCarrinhoStore } from "~/stores/carrinho";
 import { useProdutosSabores } from "../composables/useProdutosSabores";
+import { formatCurrency } from "../../../../../lib/formatters/currency";
 
 interface Props {
 	modelValue: boolean;
@@ -114,9 +115,9 @@ const variacoesOptions = computed(() => {
 
 		// Se tem preço promocional, mostra ambos
 		if (variacao.preco_promocional) {
-			label += ` - ${formatarPreco(variacao.preco_promocional)}`;
+			label += ` - ${formatCurrency(variacao.preco_promocional)}`;
 		} else {
-			label += ` - ${formatarPreco(variacao.preco)}`;
+			label += ` - ${formatCurrency(variacao.preco)}`;
 		}
 
 		return {
@@ -332,13 +333,6 @@ const precoUnitario = computed(() => precoVariacao.value + totalAdicionais.value
  * Preço total (unitário * quantidade)
  */
 const precoTotal = computed(() => precoUnitario.value * quantidade.value);
-
-/**
- * Formata preço para exibição
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
 
 /**
  * Verifica se um grupo de adicionais está válido
@@ -870,7 +864,7 @@ const adicionarAoCarrinho = (): void => {
 									"
 									:options="
 										grupo.adicionais.map((a) => ({
-											label: `${a.nome}${a.preco > 0 ? ' - ' + formatarPreco(a.preco) : ''}`,
+											label: `${a.nome}${a.preco > 0 ? ' - ' + formatCurrency(a.preco) : ''}`,
 											value: a.id,
 										}))
 									"
@@ -905,7 +899,7 @@ const adicionarAoCarrinho = (): void => {
 										v-if="adicional.preco > 0"
 										class="text-sm font-semibold text-[var(--primary)] whitespace-nowrap"
 									>
-										+ {{ formatarPreco(adicional.preco * getQuantidadeAdicional(adicional.id)) }}
+										+ {{ formatCurrency(adicional.preco * getQuantidadeAdicional(adicional.id)) }}
 									</span>
 
 									<!-- Botões de quantidade -->
@@ -1023,7 +1017,7 @@ const adicionarAoCarrinho = (): void => {
 					:disabled="!podeAdicionar"
 					@click="adicionarAoCarrinho"
 				>
-					Adicionar {{ formatarPreco(precoTotal) }}
+					Adicionar {{ formatCurrency(precoTotal) }}
 				</UiButton>
 			</div>
 		</template>

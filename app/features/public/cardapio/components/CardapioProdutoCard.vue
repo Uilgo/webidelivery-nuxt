@@ -8,6 +8,7 @@
 
 import { useProdutoDrawer } from "../composables/useProdutoDrawer";
 import type { ProdutoPublico } from "../types/cardapio-publico";
+import { formatCurrency } from "../../../../../lib/formatters/currency";
 
 interface Props {
 	produto: ProdutoPublico;
@@ -51,16 +52,6 @@ const precoOriginal = computed(() => {
 	const variacaoComPromocao = props.produto.variacoes.find((v) => v.preco_promocional !== null);
 	return variacaoComPromocao?.preco ?? null;
 });
-
-/**
- * Formata preço para exibição
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toLocaleString("pt-BR", {
-		style: "currency",
-		currency: "BRL",
-	});
-};
 
 /**
  * Verifica se tem múltiplas variações
@@ -119,7 +110,7 @@ const temMultiplasVariacoes = computed(() => {
 						class="text-[var(--text-muted)] font-normal text-[10px] sm:text-xs md:text-sm"
 						>A partir de
 					</span>
-					{{ formatarPreco(menorPreco) }}
+					{{ formatCurrency(menorPreco) }}
 				</span>
 
 				<!-- Preço original riscado (se em promoção) -->
@@ -127,7 +118,7 @@ const temMultiplasVariacoes = computed(() => {
 					v-if="precoOriginal"
 					class="text-[10px] sm:text-xs text-[var(--text-muted)] line-through"
 				>
-					{{ formatarPreco(precoOriginal) }}
+					{{ formatCurrency(precoOriginal) }}
 				</span>
 
 				<!-- Badge de promoção -->
