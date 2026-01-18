@@ -7,7 +7,7 @@
  */
 
 // Importar a página da feature
-import CardapioPage from "~/features/admin/B-admin/cardapio/pages/CardapioPage.vue";
+import CardapioPage from "~/features/admin/cardapio/pages/CardapioPage.vue";
 
 // Meta da página
 definePageMeta({

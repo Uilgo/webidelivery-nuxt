@@ -7,7 +7,7 @@
  */
 
 // Importar componente da feature
-import DashboardPage from "~/features/admin/B-admin/dashboard/pages/DashboardPage.vue";
+import DashboardPage from "~/features/admin/dashboard/pages/DashboardPage.vue";
 
 // Definir layout
 definePageMeta({

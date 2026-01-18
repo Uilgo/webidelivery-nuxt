@@ -1,89 +1,102 @@
 /**
- * 📌 usePedidos
+ * 📌 usePedidos - Composable Orquestrador de Pedidos
  *
- * Composable para buscar e gerenciar pedidos no painel admin.
- * Leitura com RLS (chamadas diretas).
+ * Unifica todos os composables de pedidos em uma API única:
+ * - usePedidosFetch (listagem e polling)
+ * - usePedidosActions (ações de status)
+ * - usePedidosFilters (filtros)
+ * - usePedidosDrawer (drawer de detalhes)
  */
 
-import type { PedidoCompleto, FiltrosPedidos } from "~/features/admin/pedidos/types/pedidos-admin";
+import type {
+	PedidoCompleto,
+	StatusPedido,
+	TipoEntregaPedido,
+	FormaPagamentoPedido,
+	FiltrosPedidos,
+} from "~/features/admin/pedidos/types/pedidos-admin";
+import { usePedidosFetch } from "./usePedidosFetch";
+import { usePedidosActions } from "./usePedidosActions";
+import { usePedidosFilters } from "./usePedidosFilters";
+import { usePedidosDrawer } from "./usePedidosDrawer";
 
-export const usePedidos = () => {
-	const supabase = useSupabaseClient();
+export interface UsePedidosReturn {
+	// Dados
+	pedidos: Ref<PedidoCompleto[]>;
+	pedidosFiltrados: ComputedRef<PedidoCompleto[]>;
+	pedidosPorStatus: ComputedRef<Record<string, PedidoCompleto[]>>;
+	contadores: ComputedRef<Record<StatusPedido, number>>;
+
+	// Estados
+	loading: Ref<boolean>;
+	error: Ref<string | null>;
+	updating: Ref<Record<string, boolean>>;
+
+	// Filtros
+	filters: Ref<FiltrosPedidos>;
+	setStatus: (value: StatusPedido | null) => void;
+	setTipoEntrega: (value: TipoEntregaPedido | null) => void;
+	setFormaPagamento: (value: FormaPagamentoPedido | null) => void;
+	setDataInicio: (value: Date | null) => void;
+	setDataFim: (value: Date | null) => void;
+	setSearch: (value: string) => void;
+	clearFilters: () => void;
+
+	// Drawer
+	isDrawerOpen: Ref<boolean>;
+	selectedPedido: Ref<PedidoCompleto | null>;
+	openDrawer: (pedido: PedidoCompleto) => void;
+	closeDrawer: () => void;
+
+	// Ações
+	handleUpdateStatus: (
+		pedidoId: string,
+		novoStatus: StatusPedido,
+		observacao?: string,
+	) => Promise<boolean>;
+	handleAccept: (pedidoId: string) => Promise<boolean>;
+	handleStartPreparation: (pedidoId: string) => Promise<boolean>;
+	handleMarkReady: (pedidoId: string) => Promise<boolean>;
+	handleStartDelivery: (pedidoId: string) => Promise<boolean>;
+	handleComplete: (pedidoId: string) => Promise<boolean>;
+	handleCancel: (pedidoId: string, motivo: string) => Promise<boolean>;
+
+	// Polling
+	startPolling: (intervalMs?: number) => void;
+	stopPolling: () => void;
+
+	// Refresh
+	refresh: () => Promise<void>;
+	init: () => Promise<void>;
+}
+
+export const usePedidos = (): UsePedidosReturn => {
+	// Composables internos
+	const fetchComposable = usePedidosFetch();
+	const actionsComposable = usePedidosActions();
+	const filtersComposable = usePedidosFilters();
+	const drawerComposable = usePedidosDrawer();
+
+	// ========================================
+	// DADOS FILTRADOS
+	// ========================================
 
 	/**
-	 * Estado dos pedidos com cache persistente (useState)
-	 * IMPORTANTE: useState mantém o estado durante toda a sessão do app
+	 * Pedidos filtrados (client-side)
 	 */
-	const pedidos = useState<PedidoCompleto[]>("admin-pedidos", () => []);
-	const loading = useState<boolean>("admin-pedidos-loading", () => false);
-	const erro = useState<string | null>("admin-pedidos-erro", () => null);
-	const cacheLoaded = useState<boolean>("admin-pedidos-cache-loaded", () => false);
-
-	/**
-	 * Filtros aplicados com cache
-	 */
-	const filtros = useState<FiltrosPedidos>("admin-pedidos-filtros", () => ({
-		status: null,
-		data_inicio: null,
-		data_fim: null,
-		tipo_entrega: null,
-		forma_pagamento: null,
-		busca: "",
-	}));
-
-	/**
-	 * Buscar pedidos com RLS
-	 * RLS garante que só vê pedidos do seu estabelecimento
-	 *
-	 * IMPORTANTE: Busca TODOS os pedidos e filtra no client-side
-	 * para manter o cache completo e evitar perda de dados ao trocar tabs
-	 */
-	const buscarPedidos = async () => {
-		loading.value = true;
-		erro.value = null;
-
-		try {
-			const query = supabase
-				.from("pedidos")
-				.select(
-					`
-          *,
-          itens:pedido_itens(
-            *,
-            adicionais:pedido_itens_adicionais(*)
-          )
-        `,
-				)
-				.order("created_at", { ascending: false });
-
-			// NÃO aplicar filtros aqui - buscar TODOS os pedidos
-			// Os filtros são aplicados no client-side via computed pedidosFiltrados
-
-			const { data, error } = await query;
-
-			if (error) {
-				throw error;
-			}
-
-			pedidos.value = (data || []) as PedidoCompleto[];
-		} catch (err) {
-			erro.value = "Erro ao buscar pedidos";
-			console.error(err);
-		} finally {
-			loading.value = false;
-		}
-	};
+	const pedidosFiltrados = computed(() => {
+		return filtersComposable.applyFilters(fetchComposable.pedidos.value);
+	});
 
 	/**
 	 * Pedidos agrupados por status
 	 */
 	const pedidosPorStatus = computed(() => {
-		return pedidos.value.reduce(
+		return fetchComposable.pedidos.value.reduce(
 			(acc, pedido) => {
 				if (!acc[pedido.status]) {
 					acc[pedido.status] = [];
 				}
-				// Garantir que o array existe antes de fazer push
 				const statusArray = acc[pedido.status];
 				if (statusArray) {
 					statusArray.push(pedido);
@@ -95,67 +108,10 @@ export const usePedidos = () => {
 	});
 
 	/**
-	 * Pedidos filtrados (client-side)
-	 * Aplica filtros sobre os dados já carregados
-	 */
-	const pedidosFiltrados = computed(() => {
-		let resultado = pedidos.value;
-
-		// Filtrar por status se houver (null = todos)
-		if (filtros.value.status) {
-			resultado = resultado.filter((p) => p.status === filtros.value.status);
-		}
-
-		// Filtrar por tipo de entrega se houver
-		if (filtros.value.tipo_entrega) {
-			resultado = resultado.filter((p) => p.tipo_entrega === filtros.value.tipo_entrega);
-		}
-
-		// Filtrar por forma de pagamento se houver
-		if (filtros.value.forma_pagamento) {
-			resultado = resultado.filter((p) => p.forma_pagamento === filtros.value.forma_pagamento);
-		}
-
-		// Filtrar por data de início se houver
-		if (filtros.value.data_inicio) {
-			const dataInicio = new Date(filtros.value.data_inicio);
-			dataInicio.setHours(0, 0, 0, 0);
-			resultado = resultado.filter((p) => {
-				const dataPedido = new Date(p.created_at);
-				dataPedido.setHours(0, 0, 0, 0);
-				return dataPedido >= dataInicio;
-			});
-		}
-
-		// Filtrar por data fim se houver
-		if (filtros.value.data_fim) {
-			const dataFim = new Date(filtros.value.data_fim);
-			dataFim.setHours(23, 59, 59, 999);
-			resultado = resultado.filter((p) => {
-				const dataPedido = new Date(p.created_at);
-				return dataPedido <= dataFim;
-			});
-		}
-
-		// Filtrar por busca se houver
-		if (filtros.value.busca) {
-			const termo = filtros.value.busca.toLowerCase();
-			resultado = resultado.filter(
-				(p) =>
-					p.numero.toString().includes(termo) ||
-					p.cliente_nome.toLowerCase().includes(termo) ||
-					p.cliente_telefone.includes(termo),
-			);
-		}
-
-		return resultado;
-	});
-
-	/**
 	 * Contadores por status
 	 */
 	const contadores = computed(() => {
-		const counts = {
+		const counts: Record<StatusPedido, number> = {
 			pendente: 0,
 			aceito: 0,
 			preparo: 0,
@@ -165,75 +121,177 @@ export const usePedidos = () => {
 			cancelado: 0,
 		};
 
-		pedidos.value.forEach((p) => {
+		fetchComposable.pedidos.value.forEach((p) => {
 			counts[p.status]++;
 		});
 
 		return counts;
 	});
 
+	// ========================================
+	// HANDLERS DE AÇÕES
+	// ========================================
+
 	/**
-	 * Aplicar preset de data
+	 * Atualizar status e refresh
 	 */
-	const aplicarPresetData = (preset: "hoje" | "ontem" | "ultimos_7_dias" | "custom") => {
-		const hoje = new Date();
-		hoje.setHours(0, 0, 0, 0);
+	const handleUpdateStatus = async (
+		pedidoId: string,
+		novoStatus: StatusPedido,
+		observacao?: string,
+	): Promise<boolean> => {
+		const success = await actionsComposable.updateStatus(pedidoId, novoStatus, observacao);
 
-		switch (preset) {
-			case "hoje": {
-				filtros.value.data_inicio = hoje;
-				filtros.value.data_fim = hoje;
-				break;
-			}
-
-			case "ontem": {
-				const ontem = new Date(hoje);
-				ontem.setDate(ontem.getDate() - 1);
-				filtros.value.data_inicio = ontem;
-				filtros.value.data_fim = ontem;
-				break;
-			}
-
-			case "ultimos_7_dias": {
-				const seteDiasAtras = new Date(hoje);
-				seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-				filtros.value.data_inicio = seteDiasAtras;
-				filtros.value.data_fim = hoje;
-				break;
-			}
-
-			case "custom": {
-				// Não faz nada, usuário define manualmente
-				break;
-			}
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
 		}
+
+		return false;
 	};
 
 	/**
-	 * Limpar filtros
+	 * Aceitar pedido
 	 */
-	const limparFiltros = () => {
-		filtros.value = {
-			status: null,
-			data_inicio: null,
-			data_fim: null,
-			tipo_entrega: null,
-			forma_pagamento: null,
-			busca: "",
-		};
+	const handleAccept = async (pedidoId: string): Promise<boolean> => {
+		const success = await actionsComposable.accept(pedidoId);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
 	};
+
+	/**
+	 * Iniciar preparo
+	 */
+	const handleStartPreparation = async (pedidoId: string): Promise<boolean> => {
+		const success = await actionsComposable.startPreparation(pedidoId);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
+	 * Marcar como pronto
+	 */
+	const handleMarkReady = async (pedidoId: string): Promise<boolean> => {
+		const success = await actionsComposable.markReady(pedidoId);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
+	 * Saiu para entrega
+	 */
+	const handleStartDelivery = async (pedidoId: string): Promise<boolean> => {
+		const success = await actionsComposable.startDelivery(pedidoId);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
+	 * Concluir pedido
+	 */
+	const handleComplete = async (pedidoId: string): Promise<boolean> => {
+		const success = await actionsComposable.complete(pedidoId);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
+	 * Cancelar pedido
+	 */
+	const handleCancel = async (pedidoId: string, motivo: string): Promise<boolean> => {
+		const success = await actionsComposable.cancel(pedidoId, motivo);
+
+		if (success) {
+			await fetchComposable.refresh();
+			return true;
+		}
+
+		return false;
+	};
+
+	// ========================================
+	// INICIALIZAÇÃO
+	// ========================================
+
+	/**
+	 * Inicializa o composable buscando dados
+	 */
+	const init = async (): Promise<void> => {
+		await fetchComposable.init();
+	};
+
+	// ========================================
+	// RETORNO
+	// ========================================
 
 	return {
-		pedidos,
-		loading,
-		erro,
-		filtros,
-		cacheLoaded,
-		buscarPedidos,
-		pedidosPorStatus,
+		// Dados
+		pedidos: fetchComposable.pedidos,
 		pedidosFiltrados,
+		pedidosPorStatus,
 		contadores,
-		aplicarPresetData,
-		limparFiltros,
+
+		// Estados
+		loading: fetchComposable.loading,
+		error: fetchComposable.error,
+		updating: actionsComposable.updating,
+
+		// Filtros
+		filters: filtersComposable.filters,
+		setStatus: filtersComposable.setStatus,
+		setTipoEntrega: filtersComposable.setTipoEntrega,
+		setFormaPagamento: filtersComposable.setFormaPagamento,
+		setDataInicio: filtersComposable.setDataInicio,
+		setDataFim: filtersComposable.setDataFim,
+		setSearch: filtersComposable.setSearch,
+		clearFilters: filtersComposable.clearFilters,
+
+		// Drawer
+		isDrawerOpen: drawerComposable.isOpen,
+		selectedPedido: drawerComposable.selected,
+		openDrawer: drawerComposable.open,
+		closeDrawer: drawerComposable.close,
+
+		// Ações
+		handleUpdateStatus,
+		handleAccept,
+		handleStartPreparation,
+		handleMarkReady,
+		handleStartDelivery,
+		handleComplete,
+		handleCancel,
+
+		// Polling
+		startPolling: fetchComposable.startPolling,
+		stopPolling: fetchComposable.stopPolling,
+
+		// Refresh
+		refresh: fetchComposable.refresh,
+		init,
 	};
 };

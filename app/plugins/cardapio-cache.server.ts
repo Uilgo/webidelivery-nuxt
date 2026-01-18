@@ -7,10 +7,10 @@
  * IMPORTANTE: Os dados são protegidos por RLS, então só carrega se o usuário estiver autenticado.
  */
 
-import type { CategoriaComputada } from "~/features/admin/B-admin/types/categoria";
-import type { ProdutoComputado } from "~/features/admin/B-admin/types/produto";
-import type { GrupoAdicionalComputado } from "~/features/admin/B-admin/types/adicional";
-import type { Combo } from "~/features/admin/B-admin/types/combo";
+import type { CategoriaComputada } from "~/features/admin/types/categoria";
+import type { ProdutoComputado } from "~/features/admin/types/produto";
+import type { GrupoAdicionalComputado } from "~/features/admin/types/adicional";
+import type { Combo } from "~/features/admin/types/combo";
 
 export default defineNuxtPlugin(async () => {
 	// Só executar no server-side
