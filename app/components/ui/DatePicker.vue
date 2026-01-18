@@ -25,6 +25,8 @@ interface Props {
 	minDate?: string;
 	/** Data máxima permitida (formato ISO) */
 	maxDate?: string;
+	/** Mostrar botão de limpar no input */
+	showClearButton?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -37,6 +39,7 @@ const props = withDefaults(defineProps<Props>(), {
 	error: false,
 	minDate: undefined,
 	maxDate: undefined,
+	showClearButton: true,
 });
 
 interface Emits {
@@ -47,14 +50,13 @@ const emit = defineEmits<Emits>();
 
 // Estados
 const isOpen = ref(false);
-const inputRef = ref<HTMLInputElement>();
+const triggerRef = ref<HTMLElement>();
 const calendarRef = ref<HTMLDivElement>();
 const currentMonth = ref(new Date());
 const selectedDate = ref<Date | null>(null);
 
 // Gerar ID único
 const generatedId = useId();
-const inputId = computed(() => props.id || generatedId);
 
 // Nomes dos meses e dias em pt-BR
 const mesesPtBR = [
@@ -258,8 +260,8 @@ const handleClickOutside = (event: MouseEvent): void => {
 	if (
 		calendarRef.value &&
 		!calendarRef.value.contains(target) &&
-		inputRef.value &&
-		!inputRef.value.contains(target)
+		triggerRef.value &&
+		!triggerRef.value.contains(target)
 	) {
 		isOpen.value = false;
 	}
@@ -294,6 +296,7 @@ onUnmounted(() => {
 // Classes do container
 const containerClasses = computed(() => {
 	const baseClasses = [
+		"relative",
 		"flex items-center",
 		"bg-[var(--input-bg)]",
 		"border border-[var(--input-border)]",
@@ -301,6 +304,7 @@ const containerClasses = computed(() => {
 		"transition-all duration-200",
 		"focus-within:border-[var(--input-border-focus)]",
 		"focus-within:ring-2 focus-within:ring-[var(--input-border-focus)] focus-within:ring-opacity-20",
+		"cursor-pointer",
 	];
 
 	const sizeClasses = {
@@ -327,33 +331,21 @@ const containerClasses = computed(() => {
 
 <template>
 	<div class="relative">
-		<!-- Input -->
-		<div :class="containerClasses" @click="toggleCalendario">
+		<!-- Trigger Area -->
+		<div ref="triggerRef" :class="containerClasses" tabindex="0" @click="toggleCalendario">
 			<!-- Ícone de calendário -->
 			<Icon name="lucide:calendar" class="w-5 h-5 text-[var(--text-muted)] mr-2 flex-shrink-0" />
 
-			<!-- Input readonly -->
-			<input
-				:id="inputId"
-				ref="inputRef"
-				type="text"
-				:value="valorExibicao"
-				:placeholder="placeholder"
-				:disabled="disabled"
-				:required="required"
-				readonly
-				class="flex-1 bg-transparent border-0 outline-none text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] cursor-pointer disabled:cursor-not-allowed"
-			/>
+			<!-- Display Text (substitui Input) -->
+			<span v-if="valorExibicao" class="text-[var(--input-text)] text-sm whitespace-nowrap">
+				{{ valorExibicao }}
+			</span>
+			<span v-else class="text-[var(--input-placeholder)] text-sm whitespace-nowrap">
+				{{ placeholder }}
+			</span>
 
-			<!-- Botão limpar (se tiver valor) -->
-			<button
-				v-if="valorExibicao && !disabled"
-				type="button"
-				class="flex items-center justify-center p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-				@click.stop="limpar"
-			>
-				<Icon name="lucide:x" class="w-4 h-4" />
-			</button>
+			<!-- Hidden input for form submission compatibility if needed -->
+			<input type="hidden" :name="id || generatedId" :value="modelValue" />
 		</div>
 
 		<!-- Calendário Dropdown -->
@@ -368,7 +360,7 @@ const containerClasses = computed(() => {
 			<div
 				v-if="isOpen"
 				ref="calendarRef"
-				class="absolute z-50 mt-2 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-lg min-w-[320px]"
+				class="absolute z-50 mt-2 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-lg min-w-[320px] right-0"
 			>
 				<!-- Header: Navegação de mês -->
 				<div class="flex items-center justify-between mb-4">

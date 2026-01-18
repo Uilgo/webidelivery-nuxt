@@ -6,6 +6,15 @@
  */
 
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
+import { useCancelarPedido } from "~/features/public/pedido/composables/useCancelarPedido";
+import {
+	clientePodeCancelar,
+	getAvisoCancelamento,
+} from "~/features/admin/pedidos/utils/status-transitions";
+import {
+	MOTIVOS_CANCELAMENTO_LABELS,
+	type MotivoCancelamentoCliente,
+} from "~/features/admin/pedidos/types/pedidos-admin";
 import PedidoStatus from "~/features/public/pedido/components/PedidoStatus.vue";
 import PedidoDetalhes from "~/features/public/pedido/components/PedidoDetalhes.vue";
 import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
@@ -21,6 +30,8 @@ const pedidoId = computed(() => route.params.id as string);
  * Composables
  */
 const { buscarPedido } = usePedido();
+const { cancelando, cancelar } = useCancelarPedido();
+const toast = useToast();
 
 /**
  * Estado do pedido
@@ -76,6 +87,58 @@ onUnmounted(() => {
 		clearInterval(intervalId.value);
 	}
 });
+
+/**
+ * Estado do modal de cancelamento
+ */
+const mostrarModalCancelar = ref(false);
+const motivoCancelamento = ref<MotivoCancelamentoCliente | "">("");
+
+/**
+ * Verificar se pode cancelar
+ */
+const podeCancelar = computed(() => {
+	if (!pedido.value) return false;
+	return clientePodeCancelar(pedido.value.status);
+});
+
+/**
+ * Aviso sobre cancelamento
+ */
+const avisoCancelamento = computed(() => {
+	if (!pedido.value) return null;
+	return getAvisoCancelamento(pedido.value.status);
+});
+
+/**
+ * Confirmar cancelamento
+ */
+const confirmarCancelamento = async () => {
+	if (!pedido.value) return;
+
+	const resultado = await cancelar(pedido.value.id, motivoCancelamento.value || undefined);
+
+	if (resultado.success) {
+		toast.add({
+			title: "Pedido cancelado",
+			description: "Seu pedido foi cancelado com sucesso",
+			color: "success",
+		});
+
+		// Atualizar pedido
+		await carregarPedido();
+
+		// Fechar modal
+		mostrarModalCancelar.value = false;
+		motivoCancelamento.value = "";
+	} else {
+		toast.add({
+			title: "Não foi possível cancelar",
+			description: resultado.error || "Seu pedido já está sendo preparado",
+			color: "error",
+		});
+	}
+};
 </script>
 
 <template>
@@ -157,6 +220,48 @@ onUnmounted(() => {
 				<!-- Detalhes do Pedido -->
 				<PedidoDetalhes :pedido="pedido" />
 
+				<!-- Aviso sobre Cancelamento -->
+				<div
+					v-if="avisoCancelamento"
+					class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20"
+				>
+					<div class="flex items-start gap-3">
+						<Icon name="lucide:info" class="w-5 h-5 flex-shrink-0 text-blue-600" />
+						<p class="text-sm text-blue-700 dark:text-blue-400">{{ avisoCancelamento }}</p>
+					</div>
+				</div>
+
+				<!-- Aviso quando NÃO pode cancelar -->
+				<div
+					v-if="!podeCancelar && pedido.status !== 'concluido' && pedido.status !== 'cancelado'"
+					class="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20"
+				>
+					<div class="flex items-start gap-3">
+						<Icon name="lucide:alert-triangle" class="w-5 h-5 flex-shrink-0 text-orange-600" />
+						<div class="text-sm text-orange-700 dark:text-orange-400">
+							<p class="font-medium mb-1">Não é possível cancelar</p>
+							<p>
+								Seu pedido já está sendo preparado e não pode mais ser cancelado. Em caso de
+								dúvidas, entre em contato pelo WhatsApp.
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Botão de Cancelar -->
+				<div v-if="podeCancelar" class="flex justify-center">
+					<UiButton
+						color="error"
+						variant="outline"
+						size="md"
+						:loading="cancelando"
+						@click="mostrarModalCancelar = true"
+					>
+						<Icon name="lucide:x-circle" class="w-4 h-4" />
+						Cancelar Pedido
+					</UiButton>
+				</div>
+
 				<!-- Botão WhatsApp -->
 				<div class="flex gap-4">
 					<button
@@ -188,4 +293,60 @@ onUnmounted(() => {
 			</div>
 		</div>
 	</div>
+
+	<!-- Modal de Cancelamento -->
+	<UiModal v-model="mostrarModalCancelar" title="Cancelar Pedido" size="sm">
+		<div class="space-y-4">
+			<!-- Aviso -->
+			<div class="bg-[var(--warning-surface)] p-4 rounded-lg">
+				<div class="flex gap-3">
+					<Icon name="lucide:alert-triangle" class="w-5 h-5 text-[var(--warning)] flex-shrink-0" />
+					<div class="text-sm">
+						<p class="font-medium text-[var(--warning)] mb-1">Tem certeza que deseja cancelar?</p>
+						<p class="text-[var(--text-muted)]">
+							Esta ação não pode ser desfeita. Você precisará fazer um novo pedido.
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Motivo (opcional) -->
+			<div>
+				<label class="block text-sm font-medium mb-2"> Motivo do cancelamento (opcional) </label>
+				<select
+					v-model="motivoCancelamento"
+					class="w-full px-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg focus:outline-none focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20"
+				>
+					<option value="">Selecione um motivo</option>
+					<option v-for="(label, key) in MOTIVOS_CANCELAMENTO_LABELS" :key="key" :value="key">
+						{{ label }}
+					</option>
+				</select>
+			</div>
+		</div>
+
+		<template #footer>
+			<div class="flex gap-2">
+				<UiButton
+					color="neutral"
+					variant="ghost"
+					size="md"
+					class="flex-1"
+					@click="mostrarModalCancelar = false"
+				>
+					Voltar
+				</UiButton>
+				<UiButton
+					color="error"
+					variant="solid"
+					size="md"
+					class="flex-[2]"
+					:loading="cancelando"
+					@click="confirmarCancelamento"
+				>
+					Sim, Cancelar Pedido
+				</UiButton>
+			</div>
+		</template>
+	</UiModal>
 </template>
