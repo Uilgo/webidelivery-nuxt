@@ -1,10 +1,12 @@
 /**
  * 📌 Formatadores de Pedidos
  *
- * Funções utilitárias para formatar dados de pedidos.
+ * Funções utilitárias específicas do domínio de pedidos.
+ * Formatadores genéricos (data, moeda, etc) estão em lib/formatters.
  */
 
 import type { StatusPedido } from "~/features/admin/pedidos/types/pedidos-admin";
+import { formatDateTime, formatTime, formatRelativeTime } from "../../../../../lib/formatters/date";
 
 /**
  * Informações de exibição do status
@@ -17,7 +19,10 @@ export interface StatusInfo {
 }
 
 /**
- * Retorna informações de exibição do status
+ * Retorna informações de exibição do status do pedido
+ *
+ * @param status - Status do pedido
+ * @returns Objeto com informações de exibição (label, cor, ícone, descrição)
  */
 export const getStatusInfo = (status: StatusPedido): StatusInfo => {
 	const statusMap: Record<StatusPedido, StatusInfo> = {
@@ -69,7 +74,10 @@ export const getStatusInfo = (status: StatusPedido): StatusInfo => {
 };
 
 /**
- * Formata forma de pagamento
+ * Formata forma de pagamento para exibição
+ *
+ * @param forma - Código da forma de pagamento
+ * @returns Label formatado
  */
 export const formatarFormaPagamento = (forma: string): string => {
 	const mapa: Record<string, string> = {
@@ -83,7 +91,10 @@ export const formatarFormaPagamento = (forma: string): string => {
 };
 
 /**
- * Formata tipo de entrega
+ * Formata tipo de entrega para exibição
+ *
+ * @param tipo - Código do tipo de entrega
+ * @returns Label formatado
  */
 export const formatarTipoEntrega = (tipo: string): string => {
 	const mapa: Record<string, string> = {
@@ -95,56 +106,10 @@ export const formatarTipoEntrega = (tipo: string): string => {
 };
 
 /**
- * Formata data relativa (há X minutos/horas)
- */
-export const formatarDataRelativa = (data: string): string => {
-	const agora = new Date();
-	const dataObj = new Date(data);
-	const diffMs = agora.getTime() - dataObj.getTime();
-	const diffMinutos = Math.floor(diffMs / 60000);
-
-	if (diffMinutos < 1) {
-		return "Agora mesmo";
-	}
-
-	if (diffMinutos < 60) {
-		return `Há ${diffMinutos} minuto${diffMinutos > 1 ? "s" : ""}`;
-	}
-
-	const diffHoras = Math.floor(diffMinutos / 60);
-	if (diffHoras < 24) {
-		return `Há ${diffHoras} hora${diffHoras > 1 ? "s" : ""}`;
-	}
-
-	const diffDias = Math.floor(diffHoras / 24);
-	return `Há ${diffDias} dia${diffDias > 1 ? "s" : ""}`;
-};
-
-/**
- * Formata data completa
- */
-export const formatarDataCompleta = (data: string): string => {
-	return new Date(data).toLocaleString("pt-BR", {
-		day: "2-digit",
-		month: "2-digit",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-};
-
-/**
- * Formata apenas hora
- */
-export const formatarHora = (data: string): string => {
-	return new Date(data).toLocaleTimeString("pt-BR", {
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-};
-
-/**
  * Formata status do pedido (apenas o label)
+ *
+ * @param status - Status do pedido
+ * @returns Label do status
  */
 export const formatarStatus = (status: StatusPedido): string => {
 	return getStatusInfo(status).label;
@@ -152,14 +117,33 @@ export const formatarStatus = (status: StatusPedido): string => {
 
 /**
  * Formata tempo decorrido desde a criação do pedido
+ * Usa formatter centralizado de lib/formatters/date
+ *
+ * @param data - Data ISO string
+ * @returns String formatada (ex: "Há 5 minutos")
  */
 export const formatarTempoDecorrido = (data: string): string => {
-	return formatarDataRelativa(data);
+	return formatRelativeTime(data);
 };
 
 /**
- * Formata data e hora completa
+ * Formata data e hora completa do pedido
+ * Usa formatter centralizado de lib/formatters/date
+ *
+ * @param data - Data ISO string
+ * @returns String formatada (ex: "25/01/2024 14:30")
  */
 export const formatarDataHora = (data: string): string => {
-	return formatarDataCompleta(data);
+	return formatDateTime(data);
+};
+
+/**
+ * Formata apenas hora do pedido
+ * Usa formatter centralizado de lib/formatters/date
+ *
+ * @param data - Data ISO string
+ * @returns String formatada (ex: "14:30")
+ */
+export const formatarHora = (data: string): string => {
+	return formatTime(data);
 };

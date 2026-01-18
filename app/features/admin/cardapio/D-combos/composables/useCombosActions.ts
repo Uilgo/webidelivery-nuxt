@@ -8,6 +8,7 @@
 import type { ComboCreateData, ComboUpdateData } from "../../../types/combo";
 import { useCombosFetch } from "./useCombosFetch";
 import { useToast } from "~/composables/ui/useToast";
+import { parseCurrency } from "../../../../../../lib/formatters/currency";
 
 export const useCombosActions = () => {
 	const supabase = useSupabaseClient();
@@ -62,15 +63,15 @@ export const useCombosActions = () => {
 	 */
 	const updateCombo = async (id: string, data: ComboUpdateData): Promise<boolean> => {
 		try {
-			// Garantir que preços são números
+			// Garantir que preços são números usando formatter centralizado
 			const precoCombo =
 				typeof data.preco_combo === "string"
-					? parseFloat((data.preco_combo as string).replace(",", "."))
+					? parseCurrency(data.preco_combo as string)
 					: Number(data.preco_combo);
 
 			const precoOriginal =
 				typeof data.preco_original === "string"
-					? parseFloat((data.preco_original as string).replace(",", "."))
+					? parseCurrency(data.preco_original as string)
 					: Number(data.preco_original);
 
 			// Montar parâmetros dinamicamente - só adiciona se não for null/undefined
