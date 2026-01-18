@@ -3,15 +3,18 @@
  * 📌 CategoriaForm
  *
  * Formulário reutilizável para criação e edição de categorias.
- * Inclui validação em tempo real e inserção de imagem via URL.
- * Usa os componentes UI do design system do projeto.
+ * Usa VeeValidate + Zod para validação tipada e consistente.
  */
 
-import type {
-	CategoriaComputada,
-	CategoriaCreateData,
-	CategoriaUpdateData,
-} from "../../../types/categoria";
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import {
+	createCategoriaSchema,
+	updateCategoriaSchema,
+	type CreateCategoriaFormData,
+	type UpdateCategoriaFormData,
+} from "#shared/schemas/cardapio/categoria";
+import type { CategoriaComputada } from "../../../types/categoria";
 
 interface Props {
 	/** Modo do formulário - determina campos e validações */
@@ -24,7 +27,7 @@ interface Props {
 
 interface Emits {
 	/** Dados válidos do formulário */
-	submit: [data: CategoriaCreateData | CategoriaUpdateData];
+	submit: [data: CreateCategoriaFormData | UpdateCategoriaFormData];
 	/** Cancelar operação */
 	cancel: [];
 }
@@ -36,147 +39,110 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-// Estado do formulário
-const formData = reactive({
-	nome: "",
-	descricao: "",
-	imagem_url: "",
-	ativo: true,
-});
-
-// Estados de validação
-const errors = reactive({
-	nome: "",
-	descricao: "",
-	imagem_url: "",
-});
-
-// Computed para determinar se é modo de visualização
+/**
+ * Computed para determinar se é modo de visualização
+ */
 const isViewMode = computed(() => props.mode === "view");
 const isEditMode = computed(() => props.mode === "edit");
 
-// Computed para validação geral
-const isFormValid = computed(() => {
-	return (
-		formData.nome.trim().length >= 3 &&
-		formData.nome.trim().length <= 100 &&
-		formData.descricao.length <= 500 &&
-		!errors.nome &&
-		!errors.descricao &&
-		!errors.imagem_url
-	);
+/**
+ * Escolhe o schema baseado no modo
+ */
+const validationSchema = computed(() =>
+	props.mode === "edit"
+		? toTypedSchema(updateCategoriaSchema)
+		: toTypedSchema(createCategoriaSchema),
+);
+
+/**
+ * Valores iniciais do formulário
+ */
+const getInitialValues = () => {
+	if (props.initialData) {
+		return {
+			nome: props.initialData.nome || "",
+			descricao: props.initialData.descricao || "",
+			imagem_url: props.initialData.imagem_url || "",
+			ativo: props.initialData.ativo ?? true,
+		};
+	}
+
+	return {
+		nome: "",
+		descricao: "",
+		imagem_url: "",
+		ativo: true,
+	};
+};
+
+/**
+ * Configura VeeValidate
+ */
+const { handleSubmit, errors, defineField, resetForm, meta } = useForm({
+	validationSchema,
+	initialValues: getInitialValues(),
 });
 
 /**
- * Inicializa o formulário com dados existentes (modo edição)
+ * Define campos com validação automática
  */
-const initializeForm = (): void => {
-	if (props.initialData) {
-		formData.nome = props.initialData.nome;
-		formData.descricao = props.initialData.descricao || "";
-		formData.imagem_url = props.initialData.imagem_url || "";
-		formData.ativo = props.initialData.ativo;
-	} else {
-		// Reset para modo criação
-		formData.nome = "";
-		formData.descricao = "";
-		formData.imagem_url = "";
-		formData.ativo = true;
-	}
-
-	// Limpa erros
-	clearErrors();
-};
+const [nome, nomeAttrs] = defineField("nome");
+const [descricao, descricaoAttrs] = defineField("descricao", { validateOnModelUpdate: false });
+const [imagem_url, imagemUrlAttrs] = defineField("imagem_url", { validateOnModelUpdate: false });
+const [ativo] = defineField("ativo");
 
 /**
- * Limpa todos os erros de validação
+ * Computed para validação geral do formulário
  */
-const clearErrors = (): void => {
-	errors.nome = "";
-	errors.descricao = "";
-	errors.imagem_url = "";
-};
+const isFormValid = computed(() => meta.value.valid);
 
 /**
- * Valida campo nome
+ * Submit com validação automática
  */
-const validateNome = (): void => {
-	const nome = formData.nome.trim();
-
-	if (!nome) {
-		errors.nome = "Nome é obrigatório";
-	} else if (nome.length < 3) {
-		errors.nome = "Nome deve ter pelo menos 3 caracteres";
-	} else if (nome.length > 100) {
-		errors.nome = "Nome deve ter no máximo 100 caracteres";
-	} else {
-		errors.nome = "";
-	}
-};
+const onSubmit = handleSubmit((values) => {
+	emit("submit", values);
+});
 
 /**
- * Valida campo descrição
+ * Watch para resetar form quando initialData mudar
  */
-const validateDescricao = (): void => {
-	if (formData.descricao.length > 500) {
-		errors.descricao = "Descrição deve ter no máximo 500 caracteres";
-	} else {
-		errors.descricao = "";
-	}
-};
+watch(
+	() => props.initialData,
+	(newData) => {
+		if (newData) {
+			resetForm({
+				values: {
+					nome: newData.nome,
+					descricao: newData.descricao || "",
+					imagem_url: newData.imagem_url || "",
+					ativo: newData.ativo,
+				},
+			});
+		}
+	},
+);
 
 /**
- * Handler para mudança na URL da imagem
+ * Watch para resetar quando modo mudar
  */
-const handleImageUrlChange = (url: string): void => {
-	formData.imagem_url = url;
-	errors.imagem_url = ""; // Limpa erro quando URL muda
-};
+watch(
+	() => props.mode,
+	() => {
+		resetForm({ values: getInitialValues() });
+	},
+);
 
 /**
- * Submete o formulário
+ * Expõe métodos para componente pai
  */
-const handleSubmit = async (): Promise<void> => {
-	if (isViewMode.value) return;
-
-	// Valida todos os campos
-	validateNome();
-	validateDescricao();
-
-	if (!isFormValid.value) return;
-
-	try {
-		// Prepara dados para submissão
-		const submitData = {
-			nome: formData.nome.trim(),
-			descricao: formData.descricao.trim() || undefined,
-			imagem_url: formData.imagem_url.trim() || undefined,
-			...(isEditMode.value && { ativo: formData.ativo }),
-		};
-
-		emit("submit", submitData);
-	} catch (error) {
-		console.error("Erro ao submeter formulário:", error);
-	}
-};
-
-// Watchers para validação em tempo real
-watch(() => formData.nome, validateNome);
-watch(() => formData.descricao, validateDescricao);
-
-// Inicializa formulário quando dados mudam
-watch(() => props.initialData, initializeForm, { immediate: true });
-watch(() => props.mode, initializeForm);
-
-// Expõe métodos para componente pai
 defineExpose({
-	handleSubmit,
+	handleSubmit: onSubmit,
 	isFormValid,
 });
 </script>
 
 <template>
-	<form class="space-y-6" @submit.prevent="handleSubmit">
+	<form class="space-y-6" @submit.prevent="onSubmit">
 		<!-- Nome -->
 		<UiFormField
 			label="Nome da Categoria"
@@ -185,7 +151,8 @@ defineExpose({
 			required
 		>
 			<UiInput
-				v-model="formData.nome"
+				v-model="nome"
+				v-bind="nomeAttrs"
 				placeholder="Ex: Pizzas, Bebidas, Sobremesas..."
 				:disabled="isViewMode || loading"
 				:error="!!errors.nome"
@@ -200,14 +167,15 @@ defineExpose({
 			help="Descrição opcional da categoria (máximo 500 caracteres)"
 		>
 			<UiTextarea
-				v-model="formData.descricao"
+				:model-value="descricao ?? ''"
+				v-bind="descricaoAttrs"
 				placeholder="Descrição opcional da categoria..."
 				:disabled="isViewMode || loading"
-				:error="errors.descricao"
 				:rows="3"
 				:max-length="500"
 				:show-counter="true"
 				:resize="false"
+				@update:model-value="descricao = $event"
 			/>
 		</UiFormField>
 
@@ -218,13 +186,13 @@ defineExpose({
 			help="Faça upload ou insira URL de uma imagem para representar a categoria"
 		>
 			<UiPictureUpload
-				:model-value="formData.imagem_url"
+				:model-value="imagem_url ?? ''"
+				v-bind="imagemUrlAttrs"
 				:disabled="isViewMode || loading"
-				:error="errors.imagem_url"
 				hint="Categoria"
 				:max-size="512"
 				:max-size-k-b="100"
-				@update:model-value="handleImageUrlChange"
+				@update:model-value="imagem_url = $event"
 			/>
 		</UiFormField>
 
@@ -234,12 +202,7 @@ defineExpose({
 			label="Status da Categoria"
 			help="Categorias inativas não aparecem no cardápio público"
 		>
-			<UiCheckbox
-				v-model="formData.ativo"
-				label="Categoria ativa"
-				:disabled="loading"
-				color="primary"
-			/>
+			<UiCheckbox v-model="ativo" label="Categoria ativa" :disabled="loading" color="primary" />
 		</UiFormField>
 	</form>
 </template>

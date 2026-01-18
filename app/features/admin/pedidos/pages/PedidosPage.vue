@@ -7,11 +7,6 @@
  */
 
 import PedidosManager from "~/features/admin/pedidos/components/PedidosManager.vue";
-
-// Define metadata da página
-definePageMeta({
-	layout: "admin",
-});
 </script>
 
 <template>

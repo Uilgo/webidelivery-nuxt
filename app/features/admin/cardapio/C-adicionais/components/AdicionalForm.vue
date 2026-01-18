@@ -3,9 +3,17 @@
  * 📌 AdicionalForm
  *
  * Formulário unificado para criação e edição de adicionais.
- * Suporta seleção de grupo e configuração de preço.
+ * Usa VeeValidate + Zod para validação tipada e consistente.
  */
 
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import {
+	createAdicionalSchema,
+	updateAdicionalSchema,
+	type CreateAdicionalFormData,
+	type UpdateAdicionalFormData,
+} from "#shared/schemas/cardapio/adicional";
 import type { AdicionalComputado, GrupoAdicionalComputado } from "../../../types/adicional";
 import { useGruposAdicionaisFetch } from "../composables/useGruposAdicionaisFetch";
 
@@ -23,16 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits tipados
 interface Emits {
-	submit: [data: FormData];
-}
-
-interface FormData {
-	grupo_id: string;
-	nome: string;
-	descricao: string;
-	preco: number;
-	ativo: boolean;
-	permite_multiplas_unidades: boolean;
+	submit: [data: CreateAdicionalFormData | UpdateAdicionalFormData];
 }
 
 const emit = defineEmits<Emits>();
@@ -40,24 +39,56 @@ const emit = defineEmits<Emits>();
 // Composables
 const { gruposAdicionais } = useGruposAdicionaisFetch();
 
-// Estado do formulário
-const form = reactive({
-	grupo_id: "",
-	nome: "",
-	descricao: "",
-	preco: 0,
-	ativo: true,
-	permite_multiplas_unidades: false,
+/**
+ * Escolhe o schema baseado no modo
+ */
+const validationSchema = computed(() =>
+	props.isEdicao ? toTypedSchema(updateAdicionalSchema) : toTypedSchema(createAdicionalSchema),
+);
+
+/**
+ * Valores iniciais do formulário
+ */
+const getInitialValues = () => {
+	if (props.adicional && props.isEdicao) {
+		return {
+			nome: props.adicional.nome || "",
+			descricao: props.adicional.descricao || "",
+			preco: Number(props.adicional.preco) || 0,
+			ativo: props.adicional.ativo ?? true,
+		};
+	}
+
+	return {
+		grupo_id: props.grupoIdPadrao || "",
+		nome: "",
+		descricao: "",
+		preco: 0,
+		ativo: true,
+	};
+};
+
+/**
+ * Configura VeeValidate
+ */
+const { handleSubmit, errors, defineField, resetForm, meta } = useForm({
+	validationSchema,
+	initialValues: getInitialValues(),
 });
 
-// Estado de erros
-const errors = reactive({
-	grupo_id: "",
-	nome: "",
-	preco: "",
-});
+/**
+ * Define campos com validação automática
+ */
+const grupo_id = ref<string>(props.grupoIdPadrao || "");
 
-// Opções para o select de grupos
+const [nome, nomeAttrs] = defineField("nome");
+const [descricao, descricaoAttrs] = defineField("descricao", { validateOnModelUpdate: false });
+const [preco, precoAttrs] = defineField("preco");
+const [ativo] = defineField("ativo");
+
+/**
+ * Opções para o select de grupos
+ */
 const grupoOptions = computed(() => {
 	return gruposAdicionais.value
 		.filter((grupo: GrupoAdicionalComputado) => grupo.ativo)
@@ -67,99 +98,64 @@ const grupoOptions = computed(() => {
 		}));
 });
 
-// Inicializar formulário com dados do adicional (edição)
-const inicializarFormulario = (): void => {
-	if (props.adicional && props.isEdicao) {
-		form.grupo_id = props.adicional.grupo_id;
-		form.nome = props.adicional.nome;
-		form.descricao = props.adicional.descricao || "";
-		form.preco = Number(props.adicional.preco);
-		form.ativo = props.adicional.ativo;
-		form.permite_multiplas_unidades = props.adicional.permite_multiplas_unidades || false;
+/**
+ * Submit com validação automática
+ */
+const onSubmit = handleSubmit((values) => {
+	// No modo criação, adicionar grupo_id manualmente
+	if (!props.isEdicao) {
+		const dataComGrupo = {
+			...values,
+			grupo_id: grupo_id.value,
+		};
+		emit("submit", dataComGrupo as CreateAdicionalFormData);
 	} else {
-		// Reset para criação
-		form.grupo_id = props.grupoIdPadrao || "";
-		form.nome = "";
-		form.descricao = "";
-		form.preco = 0;
-		form.ativo = true;
-		form.permite_multiplas_unidades = false;
+		emit("submit", values);
 	}
-};
+});
 
-// Validar formulário
-const validarFormulario = (): boolean => {
-	// Reset erros
-	errors.grupo_id = "";
-	errors.nome = "";
-	errors.preco = "";
-
-	let isValid = true;
-
-	// Validar grupo
-	if (!form.grupo_id) {
-		errors.grupo_id = "Grupo é obrigatório";
-		isValid = false;
-	}
-
-	// Validar nome
-	if (!form.nome.trim()) {
-		errors.nome = "Nome é obrigatório";
-		isValid = false;
-	} else if (form.nome.trim().length < 2) {
-		errors.nome = "Nome deve ter pelo menos 2 caracteres";
-		isValid = false;
-	}
-
-	// Validar preço
-	if (form.preco < 0) {
-		errors.preco = "Preço não pode ser negativo";
-		isValid = false;
-	}
-
-	return isValid;
-};
-
-// Handler do submit
-const handleSubmit = (): void => {
-	if (!validarFormulario()) {
-		return;
-	}
-
-	emit("submit", { ...form });
-};
-
-// Watchers
+/**
+ * Watch para resetar form quando adicional mudar
+ */
 watch(
 	() => props.adicional,
-	() => {
-		inicializarFormulario();
-	},
-	{ immediate: true },
-);
-
-watch(
-	() => props.grupoIdPadrao,
-	(novoGrupoId) => {
-		if (novoGrupoId && !props.isEdicao) {
-			form.grupo_id = novoGrupoId;
+	(newData) => {
+		if (newData && props.isEdicao) {
+			resetForm({
+				values: {
+					nome: newData.nome || "",
+					descricao: newData.descricao || "",
+					preco: Number(newData.preco) || 0,
+					ativo: newData.ativo ?? true,
+				},
+			});
 		}
 	},
 );
 
-// Inicializar ao montar
-onMounted(() => {
-	inicializarFormulario();
-});
+/**
+ * Watch para atualizar grupo_id quando grupoIdPadrao mudar
+ */
+watch(
+	() => props.grupoIdPadrao,
+	(novoGrupoId) => {
+		if (novoGrupoId && !props.isEdicao) {
+			grupo_id.value = novoGrupoId;
+		}
+	},
+);
 
-// Expor método handleSubmit para o componente pai
+/**
+ * Expor método handleSubmit para o componente pai
+ */
 defineExpose({
-	handleSubmit,
+	handleSubmit: onSubmit,
+	isFormValid: computed(() => meta.value.valid),
 });
 </script>
 
 <template>
-	<form class="space-y-6" @submit.prevent="handleSubmit">
+	<form class="space-y-6" @submit.prevent="onSubmit">
 		<!-- Seção Básica -->
 		<div class="space-y-5">
 			<h3
@@ -169,70 +165,70 @@ defineExpose({
 			</h3>
 
 			<!-- Grupo -->
-			<div>
+			<div v-if="!isEdicao">
 				<UiSelectMenu
 					id="grupo"
-					v-model="form.grupo_id"
+					v-model="grupo_id"
 					:options="grupoOptions"
 					label="Grupo de Adicionais *"
 					placeholder="Selecione um grupo"
-					:error-message="errors.grupo_id"
 					:required="true"
-					:disabled="isEdicao"
 					searchable
 				/>
-				<p v-if="isEdicao" class="text-xs text-[var(--text-muted)] mt-1">
-					O grupo não pode ser alterado após a criação
-				</p>
+			</div>
+			<div v-else class="p-4 bg-[var(--bg-muted)] rounded-lg">
+				<p class="text-sm text-[var(--text-muted)]">O grupo não pode ser alterado após a criação</p>
 			</div>
 
 			<!-- Nome -->
-			<div>
-				<label for="nome" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Nome do Adicional *
-				</label>
+			<UiFormField
+				label="Nome do Adicional"
+				:error="errors.nome"
+				help="Nome que aparecerá no cardápio"
+				required
+			>
 				<UiInput
-					id="nome"
-					v-model="form.nome"
+					v-model="nome"
+					v-bind="nomeAttrs"
 					placeholder="Ex: Queijo Extra, Bacon, Refrigerante"
-					:error="errors.nome ? true : undefined"
-					required
+					:error="!!errors.nome"
+					maxlength="100"
 				/>
-				<p v-if="errors.nome" class="text-xs text-red-600 mt-1">{{ errors.nome }}</p>
-			</div>
+			</UiFormField>
 
 			<!-- Descrição -->
-			<div>
-				<label for="descricao" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Descrição
-				</label>
+			<UiFormField
+				label="Descrição"
+				:error="errors.descricao"
+				help="Descrição opcional do adicional"
+			>
 				<UiTextarea
-					id="descricao"
-					v-model="form.descricao"
+					:model-value="descricao ?? ''"
+					v-bind="descricaoAttrs"
 					placeholder="Descreva o adicional..."
 					:rows="3"
+					:max-length="500"
+					@update:model-value="descricao = $event"
 				/>
-			</div>
+			</UiFormField>
 
 			<!-- Preço -->
-			<div>
-				<label for="preco" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Preço
-				</label>
+			<UiFormField
+				label="Preço"
+				:error="errors.preco"
+				help="Valor adicional cobrado ao cliente (pode ser R$ 0,00)"
+				required
+			>
 				<UiInput
-					id="preco"
-					v-model.number="form.preco"
+					v-model.number="preco"
+					v-bind="precoAttrs"
 					type="number"
 					step="0.01"
 					min="0"
 					placeholder="0,00"
-					:error="errors.preco ? true : undefined"
+					:error="!!errors.preco"
 				/>
-				<p v-if="errors.preco" class="text-xs text-red-600 mt-1">{{ errors.preco }}</p>
-				<p class="text-xs text-[var(--text-muted)] mt-1">
-					Valor adicional cobrado ao cliente (pode ser R$ 0,00)
-				</p>
-			</div>
+			</UiFormField>
 		</div>
 
 		<!-- Seção Configurações -->
@@ -249,25 +245,11 @@ defineExpose({
 							</label>
 							<p class="text-xs text-[var(--text-muted)]">Disponível para seleção</p>
 						</div>
-						<UiSwitch id="ativo" v-model="form.ativo" />
-					</div>
-				</div>
-
-				<!-- Permite Múltiplas Unidades -->
-				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
-					<div class="flex items-center justify-between">
-						<div class="flex-1">
-							<label
-								for="permite_multiplas_unidades"
-								class="block text-sm font-medium text-[var(--text-primary)] mb-1"
-							>
-								Permite Múltiplas Unidades
-							</label>
-							<p class="text-xs text-[var(--text-muted)]">
-								Cliente pode escolher mais de uma unidade (ex: 2x queijo, 3x bacon)
-							</p>
-						</div>
-						<UiSwitch id="permite_multiplas_unidades" v-model="form.permite_multiplas_unidades" />
+						<UiSwitch
+							id="ativo"
+							:model-value="ativo ?? true"
+							@update:model-value="ativo = $event"
+						/>
 					</div>
 				</div>
 			</div>

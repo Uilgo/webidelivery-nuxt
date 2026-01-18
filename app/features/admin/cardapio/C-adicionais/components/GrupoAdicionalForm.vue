@@ -3,9 +3,17 @@
  * 📌 GrupoAdicionalForm
  *
  * Formulário unificado para criação e edição de grupos de adicionais.
- * Suporta configuração de min/max seleção e obrigatoriedade.
+ * Usa VeeValidate + Zod para validação tipada e consistente.
  */
 
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import {
+	createGrupoAdicionalSchema,
+	updateGrupoAdicionalSchema,
+	type CreateGrupoAdicionalFormData,
+	type UpdateGrupoAdicionalFormData,
+} from "#shared/schemas/cardapio/grupo-adicional";
 import type { GrupoAdicionalComputado } from "../../../types/adicional";
 
 // Props do componente
@@ -20,127 +28,102 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits tipados
 interface Emits {
-	submit: [data: FormData];
-}
-
-interface FormData {
-	nome: string;
-	descricao: string;
-	min_selecao: number;
-	max_selecao: number;
-	obrigatorio: boolean;
-	ativo: boolean;
+	submit: [data: CreateGrupoAdicionalFormData | UpdateGrupoAdicionalFormData];
 }
 
 const emit = defineEmits<Emits>();
 
-// Estado do formulário
-const form = reactive({
-	nome: "",
-	descricao: "",
-	min_selecao: 0,
-	max_selecao: 1,
-	obrigatorio: false,
-	ativo: true,
-});
-
-// Estado de erros
-const errors = reactive({
-	nome: "",
-	min_selecao: "",
-	max_selecao: "",
-});
-
-// Inicializar formulário com dados do grupo (edição)
-const inicializarFormulario = (): void => {
-	if (props.grupo && props.isEdicao) {
-		form.nome = props.grupo.nome;
-		form.descricao = props.grupo.descricao || "";
-		form.min_selecao = props.grupo.min_selecao;
-		form.max_selecao = props.grupo.max_selecao;
-		form.obrigatorio = props.grupo.obrigatorio;
-		form.ativo = props.grupo.ativo;
-	} else {
-		// Reset para criação
-		form.nome = "";
-		form.descricao = "";
-		form.min_selecao = 0;
-		form.max_selecao = 1;
-		form.obrigatorio = false;
-		form.ativo = true;
-	}
-};
-
-// Validar formulário
-const validarFormulario = (): boolean => {
-	// Reset erros
-	errors.nome = "";
-	errors.min_selecao = "";
-	errors.max_selecao = "";
-
-	let isValid = true;
-
-	// Validar nome
-	if (!form.nome.trim()) {
-		errors.nome = "Nome é obrigatório";
-		isValid = false;
-	} else if (form.nome.trim().length < 3) {
-		errors.nome = "Nome deve ter pelo menos 3 caracteres";
-		isValid = false;
-	}
-
-	// Validar min_selecao
-	if (form.min_selecao < 0) {
-		errors.min_selecao = "Mínimo não pode ser negativo";
-		isValid = false;
-	}
-
-	// Validar max_selecao
-	if (form.max_selecao < 1) {
-		errors.max_selecao = "Máximo deve ser pelo menos 1";
-		isValid = false;
-	}
-
-	// Validar que max >= min
-	if (form.max_selecao < form.min_selecao) {
-		errors.max_selecao = "Máximo deve ser maior ou igual ao mínimo";
-		isValid = false;
-	}
-
-	return isValid;
-};
-
-// Handler do submit
-const handleSubmit = (): void => {
-	if (!validarFormulario()) {
-		return;
-	}
-
-	emit("submit", { ...form });
-};
-
-// Watchers
-watch(
-	() => props.grupo,
-	() => {
-		inicializarFormulario();
-	},
-	{ immediate: true },
+/**
+ * Escolhe o schema baseado no modo
+ */
+const validationSchema = computed(() =>
+	props.isEdicao
+		? toTypedSchema(updateGrupoAdicionalSchema)
+		: toTypedSchema(createGrupoAdicionalSchema),
 );
 
-// Inicializar ao montar
-onMounted(() => {
-	inicializarFormulario();
+/**
+ * Valores iniciais do formulário
+ */
+const initialValues = computed(() => {
+	if (props.grupo && props.isEdicao) {
+		return {
+			nome: props.grupo.nome,
+			descricao: props.grupo.descricao || "",
+			min_selecao: props.grupo.min_selecao,
+			max_selecao: props.grupo.max_selecao,
+			obrigatorio: props.grupo.obrigatorio,
+			ativo: props.grupo.ativo,
+		};
+	}
+
+	return {
+		nome: "",
+		descricao: "",
+		min_selecao: 0,
+		max_selecao: 1,
+		obrigatorio: false,
+		ativo: true,
+	};
 });
 
-// Expor método handleSubmit para o componente pai
+/**
+ * Configura VeeValidate
+ */
+const { handleSubmit, errors, defineField, resetForm, meta } = useForm({
+	validationSchema,
+	initialValues,
+});
+
+/**
+ * Define campos com validação automática
+ */
+const [nome, nomeAttrs] = defineField("nome");
+const [descricao, descricaoAttrs] = defineField("descricao");
+const [min_selecao, minSelecaoAttrs] = defineField("min_selecao");
+const [max_selecao, maxSelecaoAttrs] = defineField("max_selecao");
+const [obrigatorio] = defineField("obrigatorio");
+const [ativo] = defineField("ativo");
+
+/**
+ * Submit com validação automática
+ */
+const onSubmit = handleSubmit((values) => {
+	emit("submit", values);
+});
+
+/**
+ * Watch para resetar form quando grupo mudar
+ */
+watch(
+	() => props.grupo,
+	(newData) => {
+		if (newData && props.isEdicao) {
+			resetForm({
+				values: {
+					nome: newData.nome,
+					descricao: newData.descricao || "",
+					min_selecao: newData.min_selecao,
+					max_selecao: newData.max_selecao,
+					obrigatorio: newData.obrigatorio,
+					ativo: newData.ativo,
+				},
+			});
+		}
+	},
+);
+
+/**
+ * Expor método handleSubmit para o componente pai
+ */
 defineExpose({
-	handleSubmit,
+	handleSubmit: onSubmit,
+	isFormValid: computed(() => meta.value.valid),
 });
 </script>
 
 <template>
-	<form class="space-y-6" @submit.prevent="handleSubmit">
+	<form class="space-y-6" @submit.prevent="onSubmit">
 		<!-- Seção Básica -->
 		<div class="space-y-5">
 			<h3
@@ -150,32 +133,31 @@ defineExpose({
 			</h3>
 
 			<!-- Nome -->
-			<div>
-				<label for="nome" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Nome do Grupo *
-				</label>
+			<UiFormField
+				label="Nome do Grupo"
+				:error="errors.nome"
+				help="Nome que aparecerá no cardápio"
+				required
+			>
 				<UiInput
-					id="nome"
-					v-model="form.nome"
+					v-model="nome"
+					v-bind="nomeAttrs"
 					placeholder="Ex: Bordas, Extras, Bebidas"
-					:error="errors.nome ? true : undefined"
-					required
+					:error="!!errors.nome"
+					maxlength="100"
 				/>
-				<p v-if="errors.nome" class="text-xs text-red-600 mt-1">{{ errors.nome }}</p>
-			</div>
+			</UiFormField>
 
 			<!-- Descrição -->
-			<div>
-				<label for="descricao" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Descrição
-				</label>
+			<UiFormField label="Descrição" :error="errors.descricao" help="Descrição opcional do grupo">
 				<UiTextarea
-					id="descricao"
-					v-model="form.descricao"
+					v-model="descricao"
+					v-bind="descricaoAttrs"
 					placeholder="Descreva o grupo de adicionais..."
 					:rows="3"
+					:max-length="500"
 				/>
-			</div>
+			</UiFormField>
 		</div>
 
 		<!-- Seção Configurações de Seleção -->
@@ -186,52 +168,36 @@ defineExpose({
 
 			<div class="space-y-4">
 				<!-- Mínimo de Seleções -->
-				<div>
-					<label
-						for="min_selecao"
-						class="block text-sm font-medium text-[var(--text-primary)] mb-2"
-					>
-						Mínimo de Seleções
-					</label>
+				<UiFormField
+					label="Mínimo de Seleções"
+					:error="errors.min_selecao"
+					help="Quantidade mínima que o cliente deve selecionar"
+				>
 					<UiInput
-						id="min_selecao"
-						v-model.number="form.min_selecao"
+						v-model.number="min_selecao"
+						v-bind="minSelecaoAttrs"
 						type="number"
 						min="0"
 						placeholder="0"
-						:error="errors.min_selecao ? true : undefined"
+						:error="!!errors.min_selecao"
 					/>
-					<p v-if="errors.min_selecao" class="text-xs text-red-600 mt-1">
-						{{ errors.min_selecao }}
-					</p>
-					<p class="text-xs text-[var(--text-muted)] mt-1">
-						Quantidade mínima que o cliente deve selecionar
-					</p>
-				</div>
+				</UiFormField>
 
 				<!-- Máximo de Seleções -->
-				<div>
-					<label
-						for="max_selecao"
-						class="block text-sm font-medium text-[var(--text-primary)] mb-2"
-					>
-						Máximo de Seleções
-					</label>
+				<UiFormField
+					label="Máximo de Seleções"
+					:error="errors.max_selecao"
+					help="Quantidade máxima que o cliente pode selecionar"
+				>
 					<UiInput
-						id="max_selecao"
-						v-model.number="form.max_selecao"
+						v-model.number="max_selecao"
+						v-bind="maxSelecaoAttrs"
 						type="number"
 						min="1"
 						placeholder="1"
-						:error="errors.max_selecao ? true : undefined"
+						:error="!!errors.max_selecao"
 					/>
-					<p v-if="errors.max_selecao" class="text-xs text-red-600 mt-1">
-						{{ errors.max_selecao }}
-					</p>
-					<p class="text-xs text-[var(--text-muted)] mt-1">
-						Quantidade máxima que o cliente pode selecionar
-					</p>
-				</div>
+				</UiFormField>
 			</div>
 		</div>
 
@@ -252,7 +218,7 @@ defineExpose({
 							</label>
 							<p class="text-xs text-[var(--text-muted)]">Cliente deve escolher</p>
 						</div>
-						<UiSwitch id="obrigatorio" v-model="form.obrigatorio" />
+						<UiSwitch id="obrigatorio" v-model="obrigatorio" />
 					</div>
 				</div>
 
@@ -265,7 +231,7 @@ defineExpose({
 							</label>
 							<p class="text-xs text-[var(--text-muted)]">Disponível para uso</p>
 						</div>
-						<UiSwitch id="ativo" v-model="form.ativo" />
+						<UiSwitch id="ativo" v-model="ativo" />
 					</div>
 				</div>
 			</div>

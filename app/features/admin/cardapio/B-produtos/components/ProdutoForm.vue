@@ -3,9 +3,18 @@
  * 📌 ProdutoForm
  *
  * Formulário unificado para criação e edição de produtos.
+ * Usa VeeValidate + Zod para validação tipada e consistente.
  * Suporta variações, grupos de adicionais e upload de imagem.
  */
 
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import {
+	createProdutoSchema,
+	updateProdutoSchema,
+	type CreateProdutoFormData,
+	type UpdateProdutoFormData,
+} from "#shared/schemas/cardapio/produto";
 import type { ProdutoComputado } from "../../../types/produto";
 import type { CategoriaComputada } from "../../../types/categoria";
 import { useCategoriasFetch } from "../../A-categorias/composables/useCategoriasFetch";
@@ -23,23 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits tipados
 interface Emits {
-	submit: [data: FormData];
-}
-
-interface FormData {
-	nome: string;
-	descricao: string;
-	categoria_id: string;
-	imagem_url: string;
-	ativo: boolean;
-	destaque: boolean;
-	em_promocao: boolean;
-	variacoes: Array<{
-		nome: string;
-		preco: number;
-		preco_promocional: number | null;
-	}>;
-	grupos_adicionais_ids: string[];
+	submit: [data: CreateProdutoFormData | UpdateProdutoFormData];
 }
 
 const emit = defineEmits<Emits>();
@@ -48,32 +41,84 @@ const emit = defineEmits<Emits>();
 const { categorias } = useCategoriasFetch();
 const { gruposAdicionais } = useGruposAdicionaisFetch();
 
-// Estado do formulário
-const form = reactive({
-	nome: "",
-	descricao: "",
-	categoria_id: "",
-	imagem_url: "",
-	ativo: true,
-	destaque: false,
-	em_promocao: false,
-	variacoes: [
-		{
-			id: undefined as string | undefined,
-			nome: "Padrão",
-			preco: 0,
-			preco_promocional: null as number | null,
-		},
-	],
-	grupos_adicionais_ids: [] as string[],
+/**
+ * Escolhe o schema baseado no modo
+ */
+const validationSchema = computed(() =>
+	props.isEdicao ? toTypedSchema(updateProdutoSchema) : toTypedSchema(createProdutoSchema),
+);
+
+/**
+ * Valores iniciais do formulário
+ */
+const getInitialValues = () => {
+	if (props.produto && props.isEdicao) {
+		return {
+			nome: props.produto.nome || "",
+			descricao: props.produto.descricao || "",
+			categoria_id: props.produto.categoria_id || "",
+			imagem_url: props.produto.imagem_url || "",
+			ativo: props.produto.ativo ?? true,
+			destaque: props.produto.destaque ?? false,
+			em_promocao: props.produto.em_promocao ?? false,
+		};
+	}
+
+	return {
+		nome: "",
+		descricao: "",
+		categoria_id: "",
+		imagem_url: "",
+		variacoes: [
+			{
+				nome: "Padrão",
+				preco: 0,
+				preco_promocional: null,
+			},
+		],
+		grupos_adicionais_ids: [],
+		ativo: true,
+		destaque: false,
+		em_promocao: false,
+	};
+};
+
+/**
+ * Configura VeeValidate
+ */
+const { handleSubmit, errors, defineField, resetForm, meta } = useForm({
+	validationSchema,
+	initialValues: getInitialValues(),
 });
 
-// Estado de erros
-const errors = reactive({
-	nome: "",
-	categoria_id: "",
-	variacoes: "",
-});
+/**
+ * Define campos com validação automática
+ */
+const [nome, nomeAttrs] = defineField("nome");
+const [descricao, descricaoAttrs] = defineField("descricao", { validateOnModelUpdate: false });
+const [categoria_id, categoriaIdAttrs] = defineField("categoria_id");
+const [imagem_url, imagemUrlAttrs] = defineField("imagem_url", { validateOnModelUpdate: false });
+const [ativo] = defineField("ativo");
+const [destaque] = defineField("destaque");
+const [em_promocao] = defineField("em_promocao");
+
+// Campos que só existem no modo criação - usar ref simples no modo edição
+const grupos_adicionais_ids = ref<string[]>([]);
+
+/**
+ * Field Array para variações (apenas no modo criação)
+ */
+const variacoes = ref<Array<{ nome: string; preco: number; preco_promocional: number | null }>>([]);
+const adicionarVariacao = (value: {
+	nome: string;
+	preco: number;
+	preco_promocional: number | null;
+}) => {
+	variacoes.value.push(value);
+};
+const removerVariacao = (index: number) => {
+	variacoes.value.splice(index, 1);
+};
 
 // Opções para o select de categorias
 const categoriaOptions = computed(() => {
@@ -83,152 +128,71 @@ const categoriaOptions = computed(() => {
 	}));
 });
 
-// Inicializar formulário com dados do produto (edição)
-const inicializarFormulario = (): void => {
-	if (props.produto && props.isEdicao) {
-		form.nome = props.produto.nome;
-		form.descricao = props.produto.descricao || "";
-		form.categoria_id = props.produto.categoria_id;
-		form.imagem_url = props.produto.imagem_url || "";
-		form.ativo = props.produto.ativo;
-		form.destaque = props.produto.destaque;
-		form.em_promocao = props.produto.em_promocao;
-
-		// Carregar variações se existirem
-		if (props.produto.variacoes && props.produto.variacoes.length > 0) {
-			form.variacoes = props.produto.variacoes.map((v) => ({
-				id: v.id, // Mantém o ID para update inteligente
-				nome: v.nome,
-				preco: Number(v.preco),
-				preco_promocional: v.preco_promocional ? Number(v.preco_promocional) : null,
-			}));
-		} else {
-			form.variacoes = [
-				{
-					id: undefined,
-					nome: "Padrão",
-					preco: 0,
-					preco_promocional: null,
-				},
-			];
-		}
-
-		// Carregar grupos de adicionais selecionados
-		if (props.produto.grupos_adicionais && props.produto.grupos_adicionais.length > 0) {
-			form.grupos_adicionais_ids = props.produto.grupos_adicionais.map((g) => g.grupo_adicional_id);
-		} else {
-			form.grupos_adicionais_ids = [];
-		}
+/**
+ * Submit com validação automática
+ */
+const onSubmit = handleSubmit((formValues) => {
+	// No modo criação, adicionar variacoes e grupos_adicionais_ids manualmente
+	if (!props.isEdicao) {
+		const variacoesValidas = variacoes.value.filter(
+			(v: { nome: string; preco: number }) => v.nome.trim() && v.preco > 0,
+		);
+		const dataComVariacoes = {
+			...formValues,
+			variacoes: variacoesValidas,
+			grupos_adicionais_ids: grupos_adicionais_ids.value,
+		};
+		emit("submit", dataComVariacoes as CreateProdutoFormData);
 	} else {
-		// Reset para criação
-		form.nome = "";
-		form.descricao = "";
-		form.categoria_id = "";
-		form.imagem_url = "";
-		form.ativo = true;
-		form.destaque = false;
-		form.em_promocao = false;
-		form.variacoes = [
-			{
-				id: undefined,
-				nome: "Padrão",
-				preco: 0,
-				preco_promocional: null,
-			},
-		];
-		form.grupos_adicionais_ids = [];
+		emit("submit", formValues);
 	}
-};
-
-// Adicionar nova variação
-const adicionarVariacao = (): void => {
-	form.variacoes.push({
-		id: undefined, // Nova variação não tem ID
-		nome: "",
-		preco: 0,
-		preco_promocional: null,
-	});
-};
-
-// Remover variação
-const removerVariacao = (index: number): void => {
-	if (form.variacoes.length > 1) {
-		form.variacoes.splice(index, 1);
-	}
-};
-
-// Validar formulário
-const validarFormulario = (): boolean => {
-	// Reset erros
-	errors.nome = "";
-	errors.categoria_id = "";
-	errors.variacoes = "";
-
-	let isValid = true;
-
-	// Validar nome
-	if (!form.nome.trim()) {
-		errors.nome = "Nome é obrigatório";
-		isValid = false;
-	} else if (form.nome.trim().length < 3) {
-		errors.nome = "Nome deve ter pelo menos 3 caracteres";
-		isValid = false;
-	}
-
-	// Validar categoria
-	if (!form.categoria_id) {
-		errors.categoria_id = "Categoria é obrigatória";
-		isValid = false;
-	}
-
-	// Validar variações
-	const variacoesValidas = form.variacoes.filter((v) => v.nome.trim() && v.preco > 0);
-
-	if (variacoesValidas.length === 0) {
-		errors.variacoes = "Pelo menos uma variação com nome e preço é obrigatória";
-		isValid = false;
-	}
-
-	return isValid;
-};
-
-// Handler do submit
-const handleSubmit = (): void => {
-	if (!validarFormulario()) {
-		return;
-	}
-
-	// Preparar dados para envio
-	const dadosParaEnvio: FormData = {
-		...form,
-		variacoes: form.variacoes.filter((v) => v.nome.trim() && v.preco > 0),
-	};
-
-	emit("submit", dadosParaEnvio);
-};
-
-// Watchers
-watch(
-	() => props.produto,
-	() => {
-		inicializarFormulario();
-	},
-	{ immediate: true },
-);
-
-// Inicializar ao montar
-onMounted(() => {
-	inicializarFormulario();
 });
 
-// Expor método handleSubmit para o componente pai
+/**
+ * Watch para resetar form quando produto mudar
+ */
+watch(
+	() => props.produto,
+	(newData) => {
+		if (newData && props.isEdicao) {
+			resetForm({
+				values: {
+					nome: newData.nome || "",
+					descricao: newData.descricao || "",
+					categoria_id: newData.categoria_id || "",
+					imagem_url: newData.imagem_url || "",
+					ativo: newData.ativo ?? true,
+					destaque: newData.destaque ?? false,
+					em_promocao: newData.em_promocao ?? false,
+				},
+			});
+		} else if (newData && !props.isEdicao) {
+			// No modo criação, atualizar variacoes e grupos manualmente
+			if (newData.variacoes && newData.variacoes.length > 0) {
+				variacoes.value = newData.variacoes.map((v) => ({
+					nome: v.nome,
+					preco: Number(v.preco),
+					preco_promocional: v.preco_promocional ? Number(v.preco_promocional) : null,
+				}));
+			}
+			if (newData.grupos_adicionais && newData.grupos_adicionais.length > 0) {
+				grupos_adicionais_ids.value = newData.grupos_adicionais.map((g) => g.grupo_adicional_id);
+			}
+		}
+	},
+);
+
+/**
+ * Expor método handleSubmit para o componente pai
+ */
 defineExpose({
-	handleSubmit,
+	handleSubmit: onSubmit,
+	isFormValid: computed(() => meta.value.valid),
 });
 </script>
 
 <template>
-	<form class="space-y-6" @submit.prevent="handleSubmit">
+	<form class="space-y-6" @submit.prevent="onSubmit">
 		<!-- Seção Básica -->
 		<div class="space-y-5">
 			<h3
@@ -238,57 +202,54 @@ defineExpose({
 			</h3>
 
 			<!-- Nome -->
-			<div>
-				<label for="nome" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Nome do Produto *
-				</label>
+			<UiFormField
+				label="Nome do Produto"
+				:error="errors.nome"
+				help="Nome que aparecerá no cardápio"
+				required
+			>
 				<UiInput
-					id="nome"
-					v-model="form.nome"
+					v-model="nome"
+					v-bind="nomeAttrs"
 					placeholder="Ex: Pizza Margherita"
-					:error="errors.nome ? true : undefined"
-					required
+					:error="!!errors.nome"
+					maxlength="100"
 				/>
-			</div>
+			</UiFormField>
 
 			<!-- Categoria -->
-			<div>
-				<UiSelectMenu
-					id="categoria"
-					v-model="form.categoria_id"
-					:options="categoriaOptions"
-					label="Categoria *"
-					placeholder="Selecione uma categoria"
-					:error-message="errors.categoria_id"
-					:required="true"
-					searchable
-				/>
-			</div>
+			<UiSelectMenu
+				v-model="categoria_id"
+				v-bind="categoriaIdAttrs"
+				:options="categoriaOptions"
+				label="Categoria *"
+				placeholder="Selecione uma categoria"
+				:error-message="errors.categoria_id"
+				:required="true"
+				searchable
+			/>
 
 			<!-- Descrição -->
-			<div>
-				<label for="descricao" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Descrição
-				</label>
+			<UiFormField label="Descrição" :error="errors.descricao">
 				<UiTextarea
-					id="descricao"
-					v-model="form.descricao"
+					:model-value="descricao ?? ''"
+					v-bind="descricaoAttrs"
 					placeholder="Descreva os ingredientes e características do produto..."
 					:rows="3"
+					:max-length="1000"
+					@update:model-value="descricao = $event"
 				/>
-			</div>
+			</UiFormField>
 
 			<!-- Upload de Imagem -->
-			<div>
-				<label class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-					Imagem do Produto
-				</label>
+			<UiFormField label="Imagem do Produto" :error="errors.imagem_url">
 				<UiPictureUpload
-					v-model="form.imagem_url"
-					:preview="form.imagem_url"
+					:model-value="imagem_url ?? ''"
+					v-bind="imagemUrlAttrs"
 					placeholder="Adicione uma imagem do produto"
+					@update:model-value="imagem_url = $event"
 				/>
-			</div>
+			</UiFormField>
 		</div>
 
 		<!-- Seção Configurações -->
@@ -303,7 +264,11 @@ defineExpose({
 					</label>
 					<div class="flex items-center justify-between">
 						<p class="text-xs text-[var(--text-muted)]">Visível no cardápio</p>
-						<UiSwitch id="ativo" v-model="form.ativo" />
+						<UiSwitch
+							id="ativo"
+							:model-value="ativo ?? true"
+							@update:model-value="ativo = $event"
+						/>
 					</div>
 				</div>
 
@@ -314,7 +279,11 @@ defineExpose({
 					</label>
 					<div class="flex items-center justify-between">
 						<p class="text-xs text-[var(--text-muted)]">Aparece em destaque</p>
-						<UiSwitch id="destaque" v-model="form.destaque" />
+						<UiSwitch
+							id="destaque"
+							:model-value="destaque ?? false"
+							@update:model-value="destaque = $event"
+						/>
 					</div>
 				</div>
 
@@ -328,17 +297,29 @@ defineExpose({
 					</label>
 					<div class="flex items-center justify-between">
 						<p class="text-xs text-[var(--text-muted)]">Preço promocional</p>
-						<UiSwitch id="em_promocao" v-model="form.em_promocao" />
+						<UiSwitch
+							id="em_promocao"
+							:model-value="em_promocao ?? false"
+							@update:model-value="em_promocao = $event"
+						/>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<!-- Seção Variações -->
-		<div class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg">
+		<!-- Seção Variações (apenas no modo criação) -->
+		<div
+			v-if="!isEdicao"
+			class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg"
+		>
 			<div class="flex items-center justify-between mb-4">
 				<h3 class="text-base font-semibold text-[var(--text-primary)]">Variações e Preços</h3>
-				<UiButton type="button" variant="outline" size="sm" @click="adicionarVariacao">
+				<UiButton
+					type="button"
+					variant="outline"
+					size="sm"
+					@click="adicionarVariacao({ nome: '', preco: 0, preco_promocional: null })"
+				>
 					<Icon name="lucide:plus" class="w-4 h-4 mr-1.5" />
 					Adicionar
 				</UiButton>
@@ -348,7 +329,7 @@ defineExpose({
 			<div class="max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
 				<div class="space-y-3">
 					<div
-						v-for="(variacao, index) in form.variacoes"
+						v-for="(variacao, index) in variacoes"
 						:key="index"
 						class="p-4 bg-[var(--bg-muted)] rounded-lg border border-[var(--border-muted)]"
 					>
@@ -381,7 +362,7 @@ defineExpose({
 							</div>
 
 							<!-- Preço Promocional -->
-							<div v-if="form.em_promocao" class="w-32">
+							<div v-if="em_promocao" class="w-32">
 								<label class="block text-xs font-medium text-[var(--text-primary)] mb-1.5">
 									Preço Promo
 								</label>
@@ -400,7 +381,7 @@ defineExpose({
 								type="button"
 								variant="ghost"
 								size="sm"
-								:disabled="form.variacoes.length === 1"
+								:disabled="variacoes.length === 1"
 								class="flex items-center justify-center h-10 w-10 flex-shrink-0"
 								@click="removerVariacao(index)"
 							>
@@ -410,10 +391,6 @@ defineExpose({
 					</div>
 				</div>
 			</div>
-
-			<p v-if="errors.variacoes" class="text-xs text-red-600 mt-2">
-				{{ errors.variacoes }}
-			</p>
 		</div>
 
 		<!-- Seção Adicionais -->
@@ -427,10 +404,11 @@ defineExpose({
 				<UiCheckbox
 					v-for="grupo in gruposAdicionais"
 					:key="grupo.id"
-					v-model="form.grupos_adicionais_ids"
+					:model-value="grupos_adicionais_ids"
 					:value="grupo.id"
 					:label="grupo.nome"
 					class="p-3.5 bg-[var(--bg-muted)] rounded-lg border border-[var(--border-muted)] hover:border-[var(--border-strong)] transition-colors duration-200"
+					@update:model-value="grupos_adicionais_ids = $event as string[]"
 				/>
 			</div>
 		</div>
