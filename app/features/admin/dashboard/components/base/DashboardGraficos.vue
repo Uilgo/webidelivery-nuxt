@@ -12,7 +12,7 @@
  */
 
 import { Chart, registerables, type TooltipItem } from "chart.js";
-import type { ChartPedidosPorHora } from "../types/dashboard";
+import type { ChartPedidosPorHora } from "../../types/dashboard";
 
 // Registra todos os componentes do Chart.js
 Chart.register(...registerables);

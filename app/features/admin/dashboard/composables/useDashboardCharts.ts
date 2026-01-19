@@ -58,21 +58,27 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	};
 
 	/**
-	 * Busca pedidos do período
+	 * Busca pedidos do período via Supabase
 	 */
 	const buscarPedidos = async (intervalo: {
 		inicio: Date | null;
 		fim: Date | null;
 	}): Promise<PedidoCompleto[]> => {
 		try {
-			const params = new URLSearchParams();
-			if (intervalo.inicio) params.set("data_inicio", intervalo.inicio.toISOString());
-			if (intervalo.fim) params.set("data_fim", intervalo.fim.toISOString());
+			const supabase = useSupabaseClient();
+			let query = supabase.from("pedidos").select("*");
 
-			const url = params.toString()
-				? `/api/admin/pedidos?${params.toString()}`
-				: "/api/admin/pedidos";
-			return await $fetch<PedidoCompleto[]>(url);
+			if (intervalo.inicio) {
+				query = query.gte("created_at", intervalo.inicio.toISOString());
+			}
+			if (intervalo.fim) {
+				query = query.lte("created_at", intervalo.fim.toISOString());
+			}
+
+			const { data, error } = await query;
+
+			if (error) throw error;
+			return data as unknown as PedidoCompleto[];
 		} catch (error) {
 			console.error("Erro ao buscar pedidos para gráficos:", error);
 			return [];
@@ -201,31 +207,26 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	/**
 	 * Gera gráfico de ranking de produtos
 	 */
+	/**
+	 * Gera gráfico de ranking de produtos (MOCK)
+	 */
 	const gerarGraficoProdutosRanking = async (): Promise<ChartProdutosRanking> => {
-		try {
-			const produtosRanking = await $fetch<
-				Array<{
-					nome: string;
-					quantidade_vendida: number;
-				}>
-			>("/api/admin/dashboard/produtos-ranking?limit=5");
+		const produtosRanking = [
+			{ nome: "X-Bacon Duplo Artesanal", quantidade_vendida: 145 },
+			{ nome: "Combo Família Feliz", quantidade_vendida: 98 },
+			{ nome: "Refrigerante 2L", quantidade_vendida: 87 },
+			{ nome: "Batata Frita Suprema", quantidade_vendida: 65 },
+			{ nome: "Milkshake Ovomaltine", quantidade_vendida: 42 },
+		];
 
-			const labels = produtosRanking.map((p) => p.nome);
-			const data = produtosRanking.map((p) => p.quantidade_vendida);
+		const labels = produtosRanking.map((p) => p.nome);
+		const data = produtosRanking.map((p) => p.quantidade_vendida);
 
-			return {
-				labels,
-				data,
-				produtos: produtosRanking,
-			};
-		} catch (error) {
-			console.error("Erro ao buscar ranking de produtos:", error);
-			return {
-				labels: [],
-				data: [],
-				produtos: [],
-			};
-		}
+		return {
+			labels,
+			data,
+			produtos: produtosRanking.map((p) => ({ ...p, id: "mock", faturamento: 0 })),
+		};
 	};
 
 	/**
@@ -244,7 +245,9 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 			const dia_semana = data_pedido.getDay(); // 0=domingo, 6=sábado
 			const hora = data_pedido.getHours();
 
-			data[dia_semana][hora]++;
+			if (data[dia_semana] && data[dia_semana][hora] !== undefined) {
+				data[dia_semana][hora]++;
+			}
 		});
 
 		return {

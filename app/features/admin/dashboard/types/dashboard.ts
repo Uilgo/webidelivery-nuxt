@@ -7,6 +7,7 @@
 
 import type { UUID, TimestampTz } from "#shared/types/database";
 import type { StatusPedido } from "@/features/public/pedido/types/pedido";
+import type { DashboardFilters } from "./filters";
 
 // ========================================
 // DASHBOARD PRINCIPAL
@@ -26,6 +27,8 @@ export interface DashboardData {
 export interface DashboardKpis {
 	pedidos_hoje: KpiPedidos;
 	faturamento: KpiFaturamento;
+	clientes: KpiClientes;
+	conversao: KpiConversao;
 	produtos: KpiProdutos;
 	performance: KpiPerformance;
 }
@@ -47,6 +50,18 @@ export interface KpiFaturamento {
 	variacao_semana: number; // percentual
 }
 
+export interface KpiClientes {
+	novos: number; // Novos Clientes
+	recorrencia: number; // taxa de recorrência (percentual)
+	variacao: number; // percentual vs periodo anterior
+}
+
+export interface KpiConversao {
+	taxa: number; // taxa de conversão (percentual)
+	visitas: number;
+	variacao: number; // percentual vs periodo anterior
+}
+
 export interface KpiProdutos {
 	total_ativos: number;
 	sem_estoque: number;
@@ -56,6 +71,8 @@ export interface KpiProdutos {
 
 export interface KpiPerformance {
 	tempo_medio_preparo: number; // minutos
+	tempo_medio_entrega: number; // minutos
+	total_cancelamentos: number; // absoluto
 	taxa_cancelamento: number; // percentual
 	satisfacao_media: number; // 1-5
 	entregas_no_prazo: number; // percentual
@@ -160,17 +177,5 @@ export interface ChartHorariosHeatmap {
 // FILTROS
 // ========================================
 
-export interface DashboardFilters {
-	periodo: DashboardPeriodo;
-	data_inicio: Date | null;
-	data_fim: Date | null;
-}
-
-export type DashboardPeriodo = "todos" | "hoje" | "ontem" | "ultimos_7_dias" | "personalizado";
-
-export interface PeriodoConfig {
-	id: DashboardPeriodo;
-	label: string;
-	descricao: string;
-	calcularIntervalo: () => { inicio: Date | null; fim: Date | null };
-}
+// Re-exporta tipos de filtros para centralização
+export type { DashboardPeriodo, DashboardFilters, PeriodoConfig } from "./filters";

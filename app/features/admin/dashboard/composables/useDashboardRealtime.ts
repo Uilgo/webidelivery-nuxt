@@ -38,13 +38,20 @@ export const useDashboardRealtime = (): UseDashboardRealtimeReturn => {
 	};
 
 	/**
-	 * Busca pedidos recentes
+	 * Busca pedidos recentes via Supabase
 	 */
 	const buscarPedidosRecentes = async (): Promise<PedidoResumo[]> => {
 		try {
-			const pedidos = await $fetch<PedidoCompleto[]>(
-				"/api/admin/pedidos?limit=10&order=created_at.desc",
-			);
+			const supabase = useSupabaseClient();
+			const { data, error } = await supabase
+				.from("pedidos")
+				.select("*")
+				.order("created_at", { ascending: false })
+				.limit(10);
+
+			if (error) throw error;
+
+			const pedidos = data as unknown as PedidoCompleto[];
 
 			return pedidos.map((pedido) => ({
 				id: pedido.id,
