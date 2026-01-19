@@ -1,16 +1,33 @@
 /**
- * 📌 API Service - CEP
+ * 📌 API Endpoint - Consulta CEP
  *
- * Service para consulta de CEP com múltiplos provedores e fallback automático.
+ * Endpoint server-side para consulta de CEP com múltiplos provedores e fallback automático.
  * Utiliza ViaCEP como principal, BrasilAPI como fallback e Postmon como backup.
+ * Evita expor APIs externas no cliente e permite rate limiting.
+ *
+ * @route GET /api/cep/:cep
+ * @example GET /api/cep/01001000
  */
 
-import { parseCEP, isValidCEP } from "../../lib/formatters/address";
+/**
+ * Valida se CEP tem formato correto (8 dígitos)
+ */
+
+const isValidCEP = (cep: string): boolean => {
+	return /^\d{8}$/.test(cep);
+};
+
+/**
+ * Remove formatação do CEP (mantém apenas números)
+ */
+const parseCEP = (cep: string): string => {
+	return cep.replace(/\D/g, "");
+};
 
 /**
  * Interface padronizada para resposta da API de CEP
  */
-export interface EnderecoViaCEP {
+interface EnderecoViaCEP {
 	cep: string;
 	logradouro: string;
 	complemento?: string;
@@ -27,16 +44,11 @@ export interface EnderecoViaCEP {
 /**
  * Resposta de erro padronizada
  */
-export interface CepError {
+interface CepError {
 	error: true;
 	message: string;
 	provider?: string;
 }
-
-/**
- * Resultado da consulta
- */
-export type CepResult = EnderecoViaCEP | CepError;
 
 /**
  * Tipos de resposta dos provedores
@@ -69,7 +81,9 @@ interface PostmonResponse {
 	logradouro?: string;
 	bairro?: string;
 	cidade?: string;
-	uf?: string;
+	estado_info?: {
+		nome?: string;
+	};
 	estado?: string;
 	ibge?: string;
 }
@@ -155,8 +169,8 @@ const CEP_PROVIDERS: CepProvider[] = [
 				complemento: undefined,
 				bairro: response.bairro || "",
 				localidade: response.cidade || "",
-				uf: response.uf || "",
-				estado: response.estado || "",
+				uf: response.estado || "",
+				estado: response.estado_info?.nome || response.estado || "",
 				regiao: undefined,
 				ibge: response.ibge || undefined,
 				ddd: undefined,
@@ -168,19 +182,8 @@ const CEP_PROVIDERS: CepProvider[] = [
 
 /**
  * Consulta CEP com fallback automático
- *
- * @param cep - CEP a ser consultado (com ou sem formatação)
- * @returns Promise com dados do endereço ou erro
- *
- * @example
- * const resultado = await consultarCEP('01001-000')
- * if ('error' in resultado) {
- *   console.error(resultado.message)
- * } else {
- *   console.log(resultado.logradouro)
- * }
  */
-export const consultarCEP = async (cep: string): Promise<CepResult> => {
+const consultarCEP = async (cep: string): Promise<EnderecoViaCEP | CepError> => {
 	// Limpar e validar CEP
 	const cepLimpo = parseCEP(cep);
 
@@ -197,7 +200,7 @@ export const consultarCEP = async (cep: string): Promise<CepResult> => {
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
 
-			const response = await fetch(provider.url(cepLimpo), {
+			const response = await $fetch(provider.url(cepLimpo), {
 				signal: controller.signal,
 				headers: {
 					Accept: "application/json",
@@ -207,15 +210,12 @@ export const consultarCEP = async (cep: string): Promise<CepResult> => {
 
 			clearTimeout(timeoutId);
 
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-
-			const data = await response.json();
-			const endereco = provider.transform(data);
-
+			const endereco = provider.transform(response);
 			return endereco;
-		} catch {
+		} catch (error) {
+			// Log do erro para debug
+			console.error(`[CEP] Erro no provedor ${provider.name}:`, error);
+
 			// Se não é o último provedor, continua tentando
 			if (provider !== CEP_PROVIDERS[CEP_PROVIDERS.length - 1]) {
 				continue;
@@ -229,3 +229,28 @@ export const consultarCEP = async (cep: string): Promise<CepResult> => {
 		message: "CEP não encontrado em nenhum provedor disponível.",
 	};
 };
+
+/**
+ * Handler do endpoint
+ */
+export default defineEventHandler(async (event) => {
+	const cep = getRouterParam(event, "cep");
+
+	if (!cep) {
+		throw createError({
+			statusCode: 400,
+			statusMessage: "CEP não informado",
+		});
+	}
+
+	const resultado = await consultarCEP(cep);
+
+	if ("error" in resultado) {
+		throw createError({
+			statusCode: 404,
+			statusMessage: resultado.message,
+		});
+	}
+
+	return resultado;
+});

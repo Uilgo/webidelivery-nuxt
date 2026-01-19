@@ -70,17 +70,17 @@ const formatCurrency = (value: number) => {
 			:secondary-value="`${kpis.clientes.recorrencia}%`"
 		/>
 
-		<!-- KPI 4: Conversão -->
+		<!-- KPI 4: Taxa de Conclusão -->
 		<DashboardStatsCard
-			title="Taxa de Conversão"
+			title="Taxa de Conclusão"
 			:value="`${kpis.conversao.taxa}%`"
 			variant="rose"
-			icon="lucide:bar-chart-2"
+			icon="lucide:check-circle-2"
 			:trend="{
 				value: kpis.conversao.variacao,
 				positive: kpis.conversao.variacao >= 0,
 			}"
-			secondary-label="Visitas:"
+			secondary-label="Total de Pedidos:"
 			:secondary-value="`${kpis.conversao.visitas}`"
 		/>
 	</div>

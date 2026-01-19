@@ -7,6 +7,7 @@
 
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
 import { useCancelarPedido } from "~/features/public/pedido/composables/useCancelarPedido";
+import { useAvaliacaoPedido } from "~/composables/ui/useAvaliacaoPedido";
 import {
 	clientePodeCancelar,
 	getAvisoCancelamento,
@@ -17,6 +18,7 @@ import {
 } from "~/features/admin/pedidos/types/pedidos-admin";
 import PedidoStatus from "~/features/public/pedido/components/PedidoStatus.vue";
 import PedidoDetalhes from "~/features/public/pedido/components/PedidoDetalhes.vue";
+import AvaliacaoPedidoModal from "~/components/shared/AvaliacaoPedidoModal.vue";
 import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
 
 /**
@@ -31,6 +33,7 @@ const pedidoId = computed(() => route.params.id as string);
  */
 const { buscarPedido } = usePedido();
 const { cancelando, cancelar } = useCancelarPedido();
+const { modalAberto, pedidoAtual, abrirModalAvaliacao, onAvaliacaoEnviada } = useAvaliacaoPedido();
 const toast = useToast();
 
 /**
@@ -138,6 +141,31 @@ const confirmarCancelamento = async () => {
 			color: "error",
 		});
 	}
+};
+
+/**
+ * Abrir modal de avaliação
+ */
+const avaliarPedido = () => {
+	if (!pedido.value) return;
+
+	abrirModalAvaliacao({
+		id: pedido.value.id,
+		numero: pedido.value.numero,
+	});
+};
+
+/**
+ * Callback quando avaliação é enviada
+ */
+const handleAvaliacaoEnviada = () => {
+	toast.add({
+		title: "Avaliação enviada!",
+		description: "Obrigado pelo seu feedback",
+		color: "success",
+	});
+
+	onAvaliacaoEnviada();
 };
 </script>
 
@@ -262,6 +290,26 @@ const confirmarCancelamento = async () => {
 					</UiButton>
 				</div>
 
+				<!-- Botão de Avaliar (quando concluído) -->
+				<div
+					v-if="pedido.status === 'concluido'"
+					class="p-6 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
+				>
+					<div class="text-center space-y-4">
+						<div>
+							<Icon name="lucide:star" class="w-12 h-12 mx-auto text-yellow-500 mb-2" />
+							<h3 class="font-bold text-lg text-[var(--text-primary)] mb-1">Pedido Concluído!</h3>
+							<p class="text-sm text-[var(--text-muted)]">
+								Como foi sua experiência? Sua opinião é muito importante para nós!
+							</p>
+						</div>
+						<UiButton color="warning" variant="solid" size="lg" @click="avaliarPedido">
+							<Icon name="lucide:star" class="w-5 h-5" />
+							Avaliar Pedido
+						</UiButton>
+					</div>
+				</div>
+
 				<!-- Botão WhatsApp -->
 				<div class="flex gap-4">
 					<button
@@ -349,4 +397,13 @@ const confirmarCancelamento = async () => {
 			</div>
 		</template>
 	</UiModal>
+
+	<!-- Modal de Avaliação -->
+	<AvaliacaoPedidoModal
+		v-if="pedidoAtual"
+		v-model="modalAberto"
+		:pedido-id="pedidoAtual.id"
+		:pedido-numero="pedidoAtual.numero"
+		@avaliado="handleAvaliacaoEnviada"
+	/>
 </template>

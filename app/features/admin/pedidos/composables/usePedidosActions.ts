@@ -34,7 +34,7 @@ export const usePedidosActions = (): UsePedidosActionsReturn => {
 	const actionError = ref<string | null>(null);
 
 	/**
-	 * Atualizar status do pedido (usa RPC v2 com histórico)
+	 * Atualizar status do pedido (usa RPC com histórico)
 	 */
 	const updateStatus = async (
 		pedidoId: string,
@@ -46,7 +46,7 @@ export const usePedidosActions = (): UsePedidosActionsReturn => {
 		actionError.value = null;
 
 		try {
-			const { data, error } = await supabase.rpc("atualizar_status_pedido_v2", {
+			const { data, error } = await supabase.rpc("fn_pedidos_atualizar_status", {
 				p_pedido_id: pedidoId,
 				p_novo_status: novoStatus,
 				p_observacao: observacao || null,

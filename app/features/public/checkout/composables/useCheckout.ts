@@ -170,7 +170,7 @@ export const useCheckout = () => {
 			/**
 			 * Chamar RPC para criar pedido
 			 */
-			const { data: pedidoId, error } = await supabase.rpc("criar_pedido", {
+			const { data: pedidoId, error } = await supabase.rpc("fn_pedidos_criar", {
 				p_estabelecimento_id: estabelecimentoId,
 				p_tipo_entrega: dados.tipo_entrega,
 				p_cliente_nome: dados.cliente.nome,

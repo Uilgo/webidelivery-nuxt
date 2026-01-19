@@ -205,28 +205,49 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	};
 
 	/**
-	 * Gera gráfico de ranking de produtos
-	 */
-	/**
-	 * Gera gráfico de ranking de produtos (MOCK)
+	 * Gera gráfico de ranking de produtos via Supabase
 	 */
 	const gerarGraficoProdutosRanking = async (): Promise<ChartProdutosRanking> => {
-		const produtosRanking = [
-			{ nome: "X-Bacon Duplo Artesanal", quantidade_vendida: 145 },
-			{ nome: "Combo Família Feliz", quantidade_vendida: 98 },
-			{ nome: "Refrigerante 2L", quantidade_vendida: 87 },
-			{ nome: "Batata Frita Suprema", quantidade_vendida: 65 },
-			{ nome: "Milkshake Ovomaltine", quantidade_vendida: 42 },
-		];
+		try {
+			const supabase = useSupabaseClient();
 
-		const labels = produtosRanking.map((p) => p.nome);
-		const data = produtosRanking.map((p) => p.quantidade_vendida);
+			// Busca top 5 produtos mais vendidos
+			const { data: produtos } = await supabase
+				.from("produtos")
+				.select("id, nome, total_vendas")
+				.eq("ativo", true)
+				.order("total_vendas", { ascending: false })
+				.limit(5);
 
-		return {
-			labels,
-			data,
-			produtos: produtosRanking.map((p) => ({ ...p, id: "mock", faturamento: 0 })),
-		};
+			if (!produtos || produtos.length === 0) {
+				return {
+					labels: [],
+					data: [],
+					produtos: [],
+				};
+			}
+
+			const labels = produtos.map((p) => p.nome);
+			const data = produtos.map((p) => p.total_vendas || 0);
+
+			return {
+				labels,
+				data,
+				produtos: produtos.map((p) => ({
+					id: p.id,
+					nome: p.nome,
+					quantidade_vendida: p.total_vendas || 0,
+					faturamento: 0, // TODO: Calcular faturamento real
+				})),
+			};
+		} catch (error) {
+			console.error("Erro ao gerar ranking de produtos:", error);
+			return {
+				labels: [],
+				data: [],
+				produtos: [],
+			};
+		}
 	};
 
 	/**
@@ -236,17 +257,27 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 		const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 		const horas = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
 
-		// Inicializa matriz de dados
-		const data: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
+		// Inicializa matriz de dados (7 dias x 24 horas) com type assertion
+		const data = Array.from({ length: 7 }, () => Array(24).fill(0)) as number[][];
 
 		// Preenche dados com pedidos
 		pedidos.forEach((pedido) => {
+			// Validação: garante que created_at existe e é válido
+			if (!pedido?.created_at) return;
+
 			const data_pedido = new Date(pedido.created_at);
+			// Validação: garante que a data é válida
+			if (isNaN(data_pedido.getTime())) return;
+
 			const dia_semana = data_pedido.getDay(); // 0=domingo, 6=sábado
 			const hora = data_pedido.getHours();
 
-			if (data[dia_semana] && data[dia_semana][hora] !== undefined) {
-				data[dia_semana][hora]++;
+			// Validação segura: garante índices válidos e acesso seguro ao array
+			if (dia_semana >= 0 && dia_semana < 7 && hora >= 0 && hora < 24) {
+				const linhaDia = data[dia_semana];
+				if (linhaDia && typeof linhaDia[hora] === "number") {
+					linhaDia[hora]++;
+				}
 			}
 		});
 

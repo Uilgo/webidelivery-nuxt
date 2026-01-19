@@ -56,9 +56,13 @@ export interface KpiClientes {
 	variacao: number; // percentual vs periodo anterior
 }
 
+/**
+ * KPI de Taxa de Conclusão (substitui Conversão)
+ * Mede quantos pedidos são concluídos vs total de pedidos
+ */
 export interface KpiConversao {
-	taxa: number; // taxa de conversão (percentual)
-	visitas: number;
+	taxa: number; // taxa de conclusão de pedidos (percentual)
+	visitas: number; // total de pedidos do período
 	variacao: number; // percentual vs periodo anterior
 }
 

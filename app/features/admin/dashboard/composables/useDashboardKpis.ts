@@ -156,55 +156,151 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 	};
 
 	/**
-	 * Calcula KPIs de produtos
+	 * Calcula KPIs de produtos via Supabase
 	 */
 	const calcularKpisProdutos = async (): Promise<KpiProdutos> => {
-		// Mock temporário para substituir API, permitindo funcionamento sem backend
-		const produtosMaisVendidos: ProdutoRanking[] = [
-			{
-				id: "1",
-				nome: "X-Bacon Duplo Artesanal",
-				quantidade_vendida: 145,
-				faturamento: 4350.0,
-			},
-			{
-				id: "2",
-				nome: "Combo Família Feliz",
-				quantidade_vendida: 98,
-				faturamento: 2940.0,
-			},
-			{
-				id: "3",
-				nome: "Refrigerante 2L",
-				quantidade_vendida: 87,
-				faturamento: 870.0,
-			},
-			{
-				id: "4",
-				nome: "Batata Frita Suprema",
-				quantidade_vendida: 65,
-				faturamento: 1300.0,
-			},
-			{
-				id: "5",
-				nome: "Milkshake Ovomaltine",
-				quantidade_vendida: 42,
-				faturamento: 630.0,
-			},
-		];
+		try {
+			const supabase = useSupabaseClient();
+
+			// Busca total de produtos ativos
+			const { count: totalAtivos } = await supabase
+				.from("produtos")
+				.select("*", { count: "exact", head: true })
+				.eq("ativo", true);
+
+			// Busca produtos sem estoque (assumindo campo estoque_atual)
+			const { count: semEstoque } = await supabase
+				.from("produtos")
+				.select("*", { count: "exact", head: true })
+				.eq("ativo", true)
+				.lte("estoque_atual", 0);
+
+			// Busca produtos mais vendidos (top 5)
+			const { data: maisVendidos } = await supabase
+				.from("produtos")
+				.select("id, nome, total_vendas")
+				.eq("ativo", true)
+				.order("total_vendas", { ascending: false })
+				.limit(5);
+
+			// Formata produtos mais vendidos
+			const produtosMaisVendidos: ProdutoRanking[] =
+				maisVendidos?.map((p) => ({
+					id: p.id,
+					nome: p.nome,
+					quantidade_vendida: p.total_vendas || 0,
+					faturamento: 0, // TODO: Calcular faturamento real
+				})) || [];
+
+			return {
+				total_ativos: totalAtivos || 0,
+				sem_estoque: semEstoque || 0,
+				mais_vendidos: produtosMaisVendidos,
+				menos_vendidos: [],
+			};
+		} catch (error) {
+			console.error("Erro ao calcular KPIs de produtos:", error);
+			return {
+				total_ativos: 0,
+				sem_estoque: 0,
+				mais_vendidos: [],
+				menos_vendidos: [],
+			};
+		}
+	};
+
+	/**
+	 * Calcula KPIs de clientes via Supabase
+	 */
+	const calcularKpisClientes = async (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}): Promise<{ novos: number; recorrencia: number; variacao: number }> => {
+		try {
+			const supabase = useSupabaseClient();
+			const hoje = new Date();
+			const ontem = subDays(hoje, 1);
+
+			// Busca novos clientes (primeiro pedido hoje)
+			const { data: novosClientes } = await supabase
+				.from("clientes")
+				.select("id")
+				.gte("primeiro_pedido_em", intervalo.inicio?.toISOString() || hoje.toISOString())
+				.lte("primeiro_pedido_em", intervalo.fim?.toISOString() || hoje.toISOString());
+
+			// Busca novos clientes ontem para comparação
+			const { data: novosClientesOntem } = await supabase
+				.from("clientes")
+				.select("id")
+				.gte("primeiro_pedido_em", ontem.toISOString())
+				.lt("primeiro_pedido_em", hoje.toISOString());
+
+			// Busca taxa de recorrência (clientes com mais de 1 pedido)
+			const { data: todosClientes } = await supabase.from("clientes").select("id, total_pedidos");
+
+			const totalClientes = todosClientes?.length || 0;
+			const clientesRecorrentes = todosClientes?.filter((c) => c.total_pedidos > 1).length || 0;
+			const taxaRecorrencia =
+				totalClientes > 0 ? Math.round((clientesRecorrentes / totalClientes) * 100) : 0;
+
+			// Calcula variação de novos clientes
+			const novosHoje = novosClientes?.length || 0;
+			const novosOntem = novosClientesOntem?.length || 0;
+			const variacao =
+				novosOntem > 0 ? Math.round(((novosHoje - novosOntem) / novosOntem) * 100) : 0;
+
+			return {
+				novos: novosHoje,
+				recorrencia: taxaRecorrencia,
+				variacao,
+			};
+		} catch (error) {
+			console.error("Erro ao calcular KPIs de clientes:", error);
+			return {
+				novos: 0,
+				recorrencia: 0,
+				variacao: 0,
+			};
+		}
+	};
+
+	/**
+	 * Calcula KPI de Taxa de Conclusão (substitui Conversão)
+	 */
+	const calcularKpisConclusao = async (
+		pedidos: PedidoCompleto[],
+	): Promise<{ taxa: number; visitas: number; variacao: number }> => {
+		const hoje = new Date();
+		const ontem = subDays(hoje, 1);
+
+		// Filtra pedidos de hoje e ontem
+		const pedidosHoje = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
+		const pedidosOntem = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+
+		// Calcula taxa de conclusão hoje
+		const totalHoje = pedidosHoje.length;
+		const concluidosHoje = pedidosHoje.filter((p) => p.status === "concluido").length;
+		const taxaHoje = totalHoje > 0 ? Math.round((concluidosHoje / totalHoje) * 100) : 0;
+
+		// Calcula taxa de conclusão ontem
+		const totalOntem = pedidosOntem.length;
+		const concluidosOntem = pedidosOntem.filter((p) => p.status === "concluido").length;
+		const taxaOntem = totalOntem > 0 ? Math.round((concluidosOntem / totalOntem) * 100) : 0;
+
+		// Calcula variação
+		const variacao = taxaOntem > 0 ? taxaHoje - taxaOntem : 0;
 
 		return {
-			total_ativos: 150, // Mock
-			sem_estoque: 3, // Mock
-			mais_vendidos: produtosMaisVendidos,
-			menos_vendidos: [],
+			taxa: taxaHoje,
+			visitas: totalHoje, // Representa total de pedidos, não visitas
+			variacao,
 		};
 	};
 
 	/**
-	 * Calcula KPIs de performance
+	 * Calcula KPIs de performance via Supabase
 	 */
-	const calcularKpisPerformance = (pedidos: PedidoCompleto[]): KpiPerformance => {
+	const calcularKpisPerformance = async (pedidos: PedidoCompleto[]): Promise<KpiPerformance> => {
 		const pedidosConcluidos = pedidos.filter((p) => p.status === "concluido");
 		const pedidosCancelados = pedidos.filter((p) => p.status === "cancelado");
 
@@ -220,18 +316,56 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 					)
 				: 0;
 
+		// Calcula tempo médio de entrega
+		const temposEntregaMinutos = pedidosConcluidos
+			.filter((p) => p.pronto_em && p.concluido_em && p.tipo_entrega === "delivery")
+			.map((p) => differenceInMinutes(new Date(p.concluido_em!), new Date(p.pronto_em!)));
+
+		const tempoMedioEntrega =
+			temposEntregaMinutos.length > 0
+				? Math.round(
+						temposEntregaMinutos.reduce((acc, t) => acc + t, 0) / temposEntregaMinutos.length,
+					)
+				: 0;
+
 		// Calcula taxa de cancelamento
 		const totalPedidos = pedidos.length;
 		const taxaCancelamento =
 			totalPedidos > 0 ? Math.round((pedidosCancelados.length / totalPedidos) * 100) : 0;
 
+		// Busca satisfação média via Supabase (avaliações)
+		let satisfacaoMedia = 0;
+		try {
+			const supabase = useSupabaseClient();
+			const { data: avaliacoes } = await supabase.from("avaliacoes").select("nota");
+
+			if (avaliacoes && avaliacoes.length > 0) {
+				const somaNotas = avaliacoes.reduce((acc, a) => acc + a.nota, 0);
+				satisfacaoMedia = Number((somaNotas / avaliacoes.length).toFixed(1));
+			}
+		} catch (error) {
+			console.error("Erro ao buscar satisfação média:", error);
+		}
+
+		// Calcula entregas no prazo (assumindo prazo de 45 minutos)
+		const PRAZO_ENTREGA_MINUTOS = 45;
+		const entregasNoPrazo = pedidosConcluidos.filter((p) => {
+			if (!p.created_at || !p.concluido_em || p.tipo_entrega !== "delivery") return false;
+			const tempoTotal = differenceInMinutes(new Date(p.concluido_em), new Date(p.created_at));
+			return tempoTotal <= PRAZO_ENTREGA_MINUTOS;
+		}).length;
+
+		const totalEntregas = pedidosConcluidos.filter((p) => p.tipo_entrega === "delivery").length;
+		const percentualNoPrazo =
+			totalEntregas > 0 ? Math.round((entregasNoPrazo / totalEntregas) * 100) : 0;
+
 		return {
 			tempo_medio_preparo: tempoMedioPreparo,
-			tempo_medio_entrega: 38, // TODO: Calcular real
+			tempo_medio_entrega: tempoMedioEntrega,
 			total_cancelamentos: pedidosCancelados.length,
 			taxa_cancelamento: taxaCancelamento,
-			satisfacao_media: 4.9, // TODO: Implementar sistema de avaliação
-			entregas_no_prazo: 95, // TODO: Implementar controle de prazo
+			satisfacao_media: satisfacaoMedia,
+			entregas_no_prazo: percentualNoPrazo,
 		};
 	};
 
@@ -255,28 +389,22 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			const pedidos = await buscarPedidos(intervalo);
 
 			// Calcula KPIs
-			const [pedidosKpi, faturamentoKpi, produtosKpi, performanceKpi] = await Promise.all([
-				calcularKpisPedidos(pedidos),
-				calcularKpisFaturamento(pedidos),
-				calcularKpisProdutos(),
-				calcularKpisPerformance(pedidos),
-			]);
+			const [pedidosKpi, faturamentoKpi, produtosKpi, performanceKpi, clientesKpi] =
+				await Promise.all([
+					calcularKpisPedidos(pedidos),
+					calcularKpisFaturamento(pedidos),
+					calcularKpisProdutos(),
+					calcularKpisPerformance(pedidos),
+					calcularKpisClientes(intervalo),
+				]);
 
 			const kpis: DashboardKpis = {
 				pedidos_hoje: pedidosKpi,
 				faturamento: faturamentoKpi,
 				produtos: produtosKpi,
 				performance: performanceKpi,
-				clientes: {
-					novos: 8,
-					recorrencia: 85,
-					variacao: 25,
-				},
-				conversao: {
-					taxa: 3.2,
-					visitas: 1200,
-					variacao: -0.5,
-				},
+				clientes: clientesKpi,
+				conversao: await calcularKpisConclusao(pedidos),
 			};
 
 			// Salva no cache

@@ -2,12 +2,27 @@
  * 📌 useCEP
  *
  * Composable reativo para consulta de CEP.
- * Utiliza o utilitário consultarCEP com estados reativos e debounce.
+ * Utiliza endpoint server-side /api/cep/:cep com estados reativos e debounce.
  */
 
-import { consultarCEP } from "../../services/api/cep";
 import { isValidCEP, parseCEP } from "../../lib/formatters/address";
-import type { EnderecoViaCEP } from "../../services/api/cep";
+
+/**
+ * Interface padronizada para resposta da API de CEP
+ */
+export interface EnderecoViaCEP {
+	cep: string;
+	logradouro: string;
+	complemento?: string;
+	bairro: string;
+	localidade: string; // cidade
+	uf: string;
+	estado: string;
+	regiao?: string;
+	ibge?: string;
+	ddd?: string;
+	siafi?: string;
+}
 
 /**
  * Composable para consulta de CEP reativa
@@ -35,17 +50,19 @@ export const useCEP = (cep: Ref<string> | string) => {
 		error.value = null;
 
 		try {
-			const resultado = await consultarCEP(cepRef.value);
+			// Chama endpoint server-side
+			const cepLimpo = parseCEP(cepRef.value);
+			const resultado = await $fetch<EnderecoViaCEP>(`/api/cep/${cepLimpo}`);
 
-			if ("error" in resultado) {
-				error.value = resultado.message;
-				data.value = null;
-			} else {
-				data.value = resultado;
-				error.value = null;
-			}
+			data.value = resultado;
+			error.value = null;
 		} catch (err) {
-			error.value = err instanceof Error ? err.message : "Erro desconhecido";
+			// Trata erros do endpoint
+			if (err && typeof err === "object" && "statusMessage" in err) {
+				error.value = (err as { statusMessage: string }).statusMessage;
+			} else {
+				error.value = err instanceof Error ? err.message : "Erro ao consultar CEP";
+			}
 			data.value = null;
 		} finally {
 			loading.value = false;

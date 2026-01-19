@@ -64,7 +64,9 @@ const variantStyles = computed(() => {
 				</p>
 				<h3 class="text-2xl font-bold mt-1">{{ value }}</h3>
 			</div>
-			<div class="p-2 bg-white/20 rounded-lg text-white group-hover:scale-110 transition-transform">
+			<div
+				class="flex items-center justify-center p-2 bg-white/20 rounded-lg text-white group-hover:scale-110 transition-transform"
+			>
 				<Icon :name="icon" class="w-5 h-5" />
 			</div>
 		</div>

@@ -19,7 +19,7 @@ export const useCancelarPedido = () => {
 	 */
 	const verificarPodeCancelar = async (pedidoId: string): Promise<boolean> => {
 		try {
-			const { data, error } = await supabase.rpc("verificar_pode_cancelar", {
+			const { data, error } = await supabase.rpc("fn_pedidos_verificar_pode_cancelar", {
 				p_pedido_id: pedidoId,
 			});
 
@@ -42,7 +42,7 @@ export const useCancelarPedido = () => {
 		cancelando.value = true;
 
 		try {
-			const { data, error } = await supabase.rpc("cancelar_pedido_cliente", {
+			const { data, error } = await supabase.rpc("fn_pedidos_cancelar_cliente", {
 				p_pedido_id: pedidoId,
 				p_motivo: motivo || null,
 			});
