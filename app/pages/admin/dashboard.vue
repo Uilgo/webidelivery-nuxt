@@ -9,20 +9,15 @@
 // Importar componente da feature
 import DashboardPage from "~/features/admin/dashboard/pages/DashboardPage.vue";
 
-// Definir layout
+// Configuração da página
 definePageMeta({
-	layout: "admin",
+	layout: "admin"
 });
 
-// Meta tags para SEO
-useHead({
+// SEO
+useSeoMeta({
 	title: "Dashboard - WebiDelivery",
-	meta: [
-		{
-			name: "description",
-			content: "Dashboard administrativo do estabelecimento",
-		},
-	],
+	description: "Painel administrativo com métricas e indicadores do seu negócio",
 });
 </script>
 

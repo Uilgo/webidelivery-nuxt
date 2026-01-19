@@ -1,0 +1,272 @@
+/**
+ * 📊 useDashboardKpis - Cálculo de KPIs do Dashboard
+ *
+ * Responsável por:
+ * - Calcular indicadores de performance
+ * - Buscar dados de pedidos e produtos
+ * - Calcular variações e comparações
+ * - Cache inteligente para performance
+ */
+
+import type {
+	DashboardKpis,
+	KpiPedidos,
+	KpiFaturamento,
+	KpiProdutos,
+	KpiPerformance,
+	ProdutoRanking,
+} from "~/features/admin/dashboard/types/dashboard";
+import type { PedidoCompleto } from "~/features/admin/pedidos/types/pedidos-admin";
+import { isSameDay, subDays, differenceInMinutes } from "date-fns";
+
+export interface UseDashboardKpisReturn {
+	carregarKpis: (intervalo: { inicio: Date | null; fim: Date | null }) => Promise<DashboardKpis>;
+	limparCache: () => void;
+}
+
+export const useDashboardKpis = (): UseDashboardKpisReturn => {
+	// Cache para evitar recálculos desnecessários
+	const cache = ref<Map<string, { data: DashboardKpis; timestamp: number }>>(new Map());
+	const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+	/**
+	 * Gera chave de cache baseada no intervalo
+	 */
+	const gerarChaveCache = (intervalo: { inicio: Date | null; fim: Date | null }): string => {
+		const inicio = intervalo.inicio?.toISOString() || "null";
+		const fim = intervalo.fim?.toISOString() || "null";
+		return `${inicio}-${fim}`;
+	};
+
+	/**
+	 * Verifica se cache é válido
+	 */
+	const isCacheValido = (timestamp: number): boolean => {
+		return Date.now() - timestamp < CACHE_TTL;
+	};
+
+	/**
+	 * Busca pedidos do período
+	 */
+	const buscarPedidos = async (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}): Promise<PedidoCompleto[]> => {
+		try {
+			let query = $fetch<PedidoCompleto[]>("/api/admin/pedidos");
+
+			// Aplica filtros de data se especificados
+			if (intervalo.inicio || intervalo.fim) {
+				const params = new URLSearchParams();
+				if (intervalo.inicio) params.set("data_inicio", intervalo.inicio.toISOString());
+				if (intervalo.fim) params.set("data_fim", intervalo.fim.toISOString());
+
+				query = $fetch<PedidoCompleto[]>(`/api/admin/pedidos?${params.toString()}`);
+			}
+
+			return await query;
+		} catch (error) {
+			console.error("Erro ao buscar pedidos:", error);
+			return [];
+		}
+	};
+
+	/**
+	 * Calcula KPIs de pedidos
+	 */
+	const calcularKpisPedidos = (pedidos: PedidoCompleto[]): KpiPedidos => {
+		const hoje = new Date();
+		const ontem = subDays(hoje, 1);
+
+		// Filtra pedidos de hoje e ontem
+		const pedidosHoje = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
+		const pedidosOntem = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+
+		// Calcula variação percentual
+		const calcularVariacao = (atual: number, anterior: number): number => {
+			if (anterior === 0) return atual > 0 ? 100 : 0;
+			return Math.round(((atual - anterior) / anterior) * 100);
+		};
+
+		return {
+			total: pedidosHoje.length,
+			pendentes: pedidosHoje.filter((p) => p.status === "pendente").length,
+			em_andamento: pedidosHoje.filter((p) =>
+				["aceito", "preparo", "pronto", "entrega"].includes(p.status),
+			).length,
+			concluidos: pedidosHoje.filter((p) => p.status === "concluido").length,
+			cancelados: pedidosHoje.filter((p) => p.status === "cancelado").length,
+			variacao_ontem: calcularVariacao(pedidosHoje.length, pedidosOntem.length),
+		};
+	};
+
+	/**
+	 * Calcula KPIs de faturamento
+	 */
+	const calcularKpisFaturamento = (pedidos: PedidoCompleto[]): KpiFaturamento => {
+		const hoje = new Date();
+		const inicioSemana = subDays(hoje, 6); // Últimos 7 dias
+		const semanaPassada = subDays(inicioSemana, 7);
+
+		// Filtra pedidos concluídos por período
+		const pedidosConcluidos = pedidos.filter((p) => p.status === "concluido");
+
+		const faturamentoHoje = pedidosConcluidos
+			.filter((p) => isSameDay(new Date(p.created_at), hoje))
+			.reduce((acc, p) => acc + p.total, 0);
+
+		const faturamentoSemana = pedidosConcluidos
+			.filter((p) => new Date(p.created_at) >= inicioSemana)
+			.reduce((acc, p) => acc + p.total, 0);
+
+		const faturamentoSemanaPassada = pedidosConcluidos
+			.filter((p) => {
+				const data = new Date(p.created_at);
+				return data >= semanaPassada && data < inicioSemana;
+			})
+			.reduce((acc, p) => acc + p.total, 0);
+
+		// Calcula ticket médio
+		const pedidosComValor = pedidosConcluidos.filter((p) => p.total > 0);
+		const ticketMedio =
+			pedidosComValor.length > 0
+				? pedidosComValor.reduce((acc, p) => acc + p.total, 0) / pedidosComValor.length
+				: 0;
+
+		// Calcula variação semanal
+		const variacaoSemana =
+			faturamentoSemanaPassada > 0
+				? Math.round(
+						((faturamentoSemana - faturamentoSemanaPassada) / faturamentoSemanaPassada) * 100,
+					)
+				: faturamentoSemana > 0
+					? 100
+					: 0;
+
+		return {
+			hoje: faturamentoHoje,
+			semana: faturamentoSemana,
+			mes: 0, // TODO: Implementar cálculo mensal
+			ticket_medio: ticketMedio,
+			variacao_semana: variacaoSemana,
+		};
+	};
+
+	/**
+	 * Calcula KPIs de produtos
+	 */
+	const calcularKpisProdutos = async (): Promise<KpiProdutos> => {
+		try {
+			// Busca produtos mais vendidos via API
+			const produtosMaisVendidos = await $fetch<ProdutoRanking[]>(
+				"/api/admin/dashboard/produtos-ranking",
+			);
+
+			return {
+				total_ativos: 0, // TODO: Buscar da API
+				sem_estoque: 0, // TODO: Implementar controle de estoque
+				mais_vendidos: produtosMaisVendidos.slice(0, 5), // Top 5
+				menos_vendidos: [], // TODO: Implementar se necessário
+			};
+		} catch (error) {
+			console.error("Erro ao buscar KPIs de produtos:", error);
+			return {
+				total_ativos: 0,
+				sem_estoque: 0,
+				mais_vendidos: [],
+				menos_vendidos: [],
+			};
+		}
+	};
+
+	/**
+	 * Calcula KPIs de performance
+	 */
+	const calcularKpisPerformance = (pedidos: PedidoCompleto[]): KpiPerformance => {
+		const pedidosConcluidos = pedidos.filter((p) => p.status === "concluido");
+		const pedidosCancelados = pedidos.filter((p) => p.status === "cancelado");
+
+		// Calcula tempo médio de preparo
+		const temposPreparoMinutos = pedidosConcluidos
+			.filter((p) => p.aceito_em && p.pronto_em)
+			.map((p) => differenceInMinutes(new Date(p.pronto_em!), new Date(p.aceito_em!)));
+
+		const tempoMedioPreparo =
+			temposPreparoMinutos.length > 0
+				? Math.round(
+						temposPreparoMinutos.reduce((acc, t) => acc + t, 0) / temposPreparoMinutos.length,
+					)
+				: 0;
+
+		// Calcula taxa de cancelamento
+		const totalPedidos = pedidos.length;
+		const taxaCancelamento =
+			totalPedidos > 0 ? Math.round((pedidosCancelados.length / totalPedidos) * 100) : 0;
+
+		return {
+			tempo_medio_preparo: tempoMedioPreparo,
+			taxa_cancelamento: taxaCancelamento,
+			satisfacao_media: 0, // TODO: Implementar sistema de avaliação
+			entregas_no_prazo: 0, // TODO: Implementar controle de prazo
+		};
+	};
+
+	/**
+	 * Carrega e calcula todos os KPIs
+	 */
+	const carregarKpis = async (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}): Promise<DashboardKpis> => {
+		const chaveCache = gerarChaveCache(intervalo);
+		const cached = cache.value.get(chaveCache);
+
+		// Retorna cache se válido
+		if (cached && isCacheValido(cached.timestamp)) {
+			return cached.data;
+		}
+
+		try {
+			// Busca dados necessários
+			const pedidos = await buscarPedidos(intervalo);
+
+			// Calcula KPIs
+			const [pedidosKpi, faturamentoKpi, produtosKpi, performanceKpi] = await Promise.all([
+				calcularKpisPedidos(pedidos),
+				calcularKpisFaturamento(pedidos),
+				calcularKpisProdutos(),
+				calcularKpisPerformance(pedidos),
+			]);
+
+			const kpis: DashboardKpis = {
+				pedidos_hoje: pedidosKpi,
+				faturamento: faturamentoKpi,
+				produtos: produtosKpi,
+				performance: performanceKpi,
+			};
+
+			// Salva no cache
+			cache.value.set(chaveCache, {
+				data: kpis,
+				timestamp: Date.now(),
+			});
+
+			return kpis;
+		} catch (error) {
+			console.error("Erro ao calcular KPIs:", error);
+			throw error;
+		}
+	};
+
+	/**
+	 * Limpa cache
+	 */
+	const limparCache = (): void => {
+		cache.value.clear();
+	};
+
+	return {
+		carregarKpis,
+		limparCache,
+	};
+};

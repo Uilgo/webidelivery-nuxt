@@ -91,40 +91,48 @@ const contentClasses = computed(() => {
 
 <template>
 	<div :class="rootClasses">
-		<!-- Tab Headers -->
-		<div
-			class="p-1 bg-[var(--bg-muted)] rounded-lg shadow-sm border border-[var(--border-default)] flex-shrink-0"
-		>
-			<nav class="flex gap-1" aria-label="Tabs">
-				<button
-					v-for="tab in tabs"
-					:key="tab.key"
-					type="button"
-					:class="[
-						'flex-1 flex items-center justify-center gap-2 px-3 rounded-md font-medium text-sm transition-all duration-200 ease-in-out h-10 focus-ring',
-						activeTab === tab.key
-							? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-default)]'
-							: 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
-					]"
-					@click="setActiveTab(tab.key)"
-				>
-					<Icon v-if="tab.icon" :name="tab.icon" class="w-4 h-4 flex-shrink-0" />
-
-					<span class="truncate">{{ tab.label }}</span>
-
-					<span
-						v-if="tab.badge !== undefined"
+		<!-- Tab Headers com slot para elementos extras -->
+		<div class="flex items-center gap-4 flex-shrink-0">
+			<!-- Tab Headers -->
+			<div
+				class="p-1 bg-[var(--bg-muted)] rounded-lg shadow-sm border border-[var(--border-default)] flex-1"
+			>
+				<nav class="flex gap-1" aria-label="Tabs">
+					<button
+						v-for="tab in tabs"
+						:key="tab.key"
+						type="button"
 						:class="[
-							'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold min-w-[18px] h-[18px] justify-center flex-shrink-0',
+							'flex-1 flex items-center justify-center gap-2 px-3 rounded-md font-medium text-sm transition-all duration-200 ease-in-out h-10 focus-ring',
 							activeTab === tab.key
-								? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-								: 'bg-[var(--bg-muted)] text-[var(--text-muted)]',
+								? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-default)]'
+								: 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
 						]"
+						@click="setActiveTab(tab.key)"
 					>
-						{{ tab.badge }}
-					</span>
-				</button>
-			</nav>
+						<Icon v-if="tab.icon" :name="tab.icon" class="w-4 h-4 flex-shrink-0" />
+
+						<span class="truncate">{{ tab.label }}</span>
+
+						<span
+							v-if="tab.badge !== undefined"
+							:class="[
+								'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold min-w-[18px] h-[18px] justify-center flex-shrink-0',
+								activeTab === tab.key
+									? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+									: 'bg-[var(--bg-muted)] text-[var(--text-muted)]',
+							]"
+						>
+							{{ tab.badge }}
+						</span>
+					</button>
+				</nav>
+			</div>
+
+			<!-- Slot para elementos extras (como filtros) -->
+			<div v-if="$slots.extra" class="flex-shrink-0">
+				<slot name="extra"></slot>
+			</div>
 		</div>
 
 		<!-- Tab Content -->

@@ -1,0 +1,323 @@
+/**
+ * 📊 useDashboardCharts - Dados para Gráficos do Dashboard
+ *
+ * Responsável por:
+ * - Preparar dados para Chart.js
+ * - Gerar gráficos de pedidos, faturamento, status, produtos e heatmap
+ * - Cache inteligente para performance
+ * - Formatação adequada para visualização
+ */
+
+import type {
+	DashboardCharts,
+	ChartPedidosPorHora,
+	ChartFaturamentoSemanal,
+	ChartStatusDistribuicao,
+	ChartProdutosRanking,
+	ChartHorariosHeatmap,
+} from "~/features/admin/dashboard/types/dashboard";
+import type { PedidoCompleto } from "~/features/admin/pedidos/types/pedidos-admin";
+import {
+	format,
+	eachHourOfInterval,
+	startOfDay,
+	endOfDay,
+	eachDayOfInterval,
+	startOfWeek,
+	endOfWeek,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+export interface UseDashboardChartsReturn {
+	carregarCharts: (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}) => Promise<DashboardCharts>;
+	limparCache: () => void;
+}
+
+export const useDashboardCharts = (): UseDashboardChartsReturn => {
+	// Cache para evitar recálculos desnecessários
+	const cache = ref<Map<string, { data: DashboardCharts; timestamp: number }>>(new Map());
+	const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+	/**
+	 * Gera chave de cache baseada no intervalo
+	 */
+	const gerarChaveCache = (intervalo: { inicio: Date | null; fim: Date | null }): string => {
+		const inicio = intervalo.inicio?.toISOString() || "null";
+		const fim = intervalo.fim?.toISOString() || "null";
+		return `charts-${inicio}-${fim}`;
+	};
+
+	/**
+	 * Verifica se cache é válido
+	 */
+	const isCacheValido = (timestamp: number): boolean => {
+		return Date.now() - timestamp < CACHE_TTL;
+	};
+
+	/**
+	 * Busca pedidos do período
+	 */
+	const buscarPedidos = async (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}): Promise<PedidoCompleto[]> => {
+		try {
+			const params = new URLSearchParams();
+			if (intervalo.inicio) params.set("data_inicio", intervalo.inicio.toISOString());
+			if (intervalo.fim) params.set("data_fim", intervalo.fim.toISOString());
+
+			const url = params.toString()
+				? `/api/admin/pedidos?${params.toString()}`
+				: "/api/admin/pedidos";
+			return await $fetch<PedidoCompleto[]>(url);
+		} catch (error) {
+			console.error("Erro ao buscar pedidos para gráficos:", error);
+			return [];
+		}
+	};
+
+	/**
+	 * Gera gráfico de pedidos por hora
+	 */
+	const gerarGraficoPedidosPorHora = (pedidos: PedidoCompleto[]): ChartPedidosPorHora => {
+		const hoje = new Date();
+		const inicioHoje = startOfDay(hoje);
+		const fimHoje = endOfDay(hoje);
+
+		// Gera array de horas do dia
+		const horas = eachHourOfInterval({ start: inicioHoje, end: fimHoje });
+		const labels = horas.map((hora) => format(hora, "HH:mm"));
+
+		// Agrupa pedidos por hora
+		const pedidosPorHora = horas.map((hora) => {
+			const horaStr = format(hora, "HH");
+			return pedidos.filter((pedido) => {
+				const pedidoHora = format(new Date(pedido.created_at), "HH");
+				return pedidoHora === horaStr;
+			}).length;
+		});
+
+		// Calcula faturamento por hora
+		const faturamentoPorHora = horas.map((hora) => {
+			const horaStr = format(hora, "HH");
+			return pedidos
+				.filter((pedido) => {
+					const pedidoHora = format(new Date(pedido.created_at), "HH");
+					return pedidoHora === horaStr && pedido.status === "concluido";
+				})
+				.reduce((acc, pedido) => acc + pedido.total, 0);
+		});
+
+		return {
+			labels,
+			datasets: {
+				pedidos: pedidosPorHora,
+				faturamento: faturamentoPorHora,
+			},
+		};
+	};
+
+	/**
+	 * Gera gráfico de faturamento semanal
+	 */
+	const gerarGraficoFaturamentoSemanal = (pedidos: PedidoCompleto[]): ChartFaturamentoSemanal => {
+		const hoje = new Date();
+		const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 }); // Segunda-feira
+		const fimSemana = endOfWeek(hoje, { weekStartsOn: 1 }); // Domingo
+
+		// Gera dias da semana
+		const dias = eachDayOfInterval({ start: inicioSemana, end: fimSemana });
+		const labels = dias.map((dia) => format(dia, "EEE", { locale: ptBR }));
+
+		// Calcula faturamento atual
+		const faturamentoAtual = dias.map((dia) => {
+			const diaStr = format(dia, "yyyy-MM-dd");
+			return pedidos
+				.filter((pedido) => {
+					const pedidoData = format(new Date(pedido.created_at), "yyyy-MM-dd");
+					return pedidoData === diaStr && pedido.status === "concluido";
+				})
+				.reduce((acc, pedido) => acc + pedido.total, 0);
+		});
+
+		// TODO: Implementar faturamento da semana anterior para comparação
+		const faturamentoAnterior = new Array(7).fill(0);
+
+		return {
+			labels,
+			datasets: {
+				atual: faturamentoAtual,
+				anterior: faturamentoAnterior,
+			},
+		};
+	};
+
+	/**
+	 * Gera gráfico de distribuição de status
+	 */
+	const gerarGraficoStatusDistribuicao = (pedidos: PedidoCompleto[]): ChartStatusDistribuicao => {
+		const statusCount = pedidos.reduce(
+			(acc, pedido) => {
+				acc[pedido.status] = (acc[pedido.status] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
+
+		const statusLabels: Record<string, string> = {
+			pendente: "Pendentes",
+			aceito: "Aceitos",
+			preparo: "Em Preparo",
+			pronto: "Prontos",
+			entrega: "Em Entrega",
+			concluido: "Concluídos",
+			cancelado: "Cancelados",
+		};
+
+		const statusCores: Record<string, string> = {
+			pendente: "#F59E0B",
+			aceito: "#06B6D4",
+			preparo: "#8B5CF6",
+			pronto: "#10B981",
+			entrega: "#3B82F6",
+			concluido: "#059669",
+			cancelado: "#EF4444",
+		};
+
+		const labels = Object.keys(statusCount).map((status) => statusLabels[status] || status);
+		const data = Object.values(statusCount);
+		const colors = Object.keys(statusCount).map((status) => statusCores[status] || "#6B7280");
+
+		return {
+			labels,
+			data,
+			colors,
+		};
+	};
+
+	/**
+	 * Gera gráfico de ranking de produtos
+	 */
+	const gerarGraficoProdutosRanking = async (): Promise<ChartProdutosRanking> => {
+		try {
+			const produtosRanking = await $fetch<
+				Array<{
+					nome: string;
+					quantidade_vendida: number;
+				}>
+			>("/api/admin/dashboard/produtos-ranking?limit=5");
+
+			const labels = produtosRanking.map((p) => p.nome);
+			const data = produtosRanking.map((p) => p.quantidade_vendida);
+
+			return {
+				labels,
+				data,
+				produtos: produtosRanking,
+			};
+		} catch (error) {
+			console.error("Erro ao buscar ranking de produtos:", error);
+			return {
+				labels: [],
+				data: [],
+				produtos: [],
+			};
+		}
+	};
+
+	/**
+	 * Gera mapa de calor de horários
+	 */
+	const gerarHeatmapHorarios = (pedidos: PedidoCompleto[]): ChartHorariosHeatmap => {
+		const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+		const horas = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
+
+		// Inicializa matriz de dados
+		const data: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
+
+		// Preenche dados com pedidos
+		pedidos.forEach((pedido) => {
+			const data_pedido = new Date(pedido.created_at);
+			const dia_semana = data_pedido.getDay(); // 0=domingo, 6=sábado
+			const hora = data_pedido.getHours();
+
+			data[dia_semana][hora]++;
+		});
+
+		return {
+			dias,
+			horas,
+			data,
+		};
+	};
+
+	/**
+	 * Carrega todos os dados dos gráficos
+	 */
+	const carregarCharts = async (intervalo: {
+		inicio: Date | null;
+		fim: Date | null;
+	}): Promise<DashboardCharts> => {
+		const chaveCache = gerarChaveCache(intervalo);
+		const cached = cache.value.get(chaveCache);
+
+		// Retorna cache se válido
+		if (cached && isCacheValido(cached.timestamp)) {
+			return cached.data;
+		}
+
+		try {
+			// Busca pedidos
+			const pedidos = await buscarPedidos(intervalo);
+
+			// Gera gráficos em paralelo
+			const [
+				pedidosPorHora,
+				faturamentoSemanal,
+				statusDistribuicao,
+				produtosRanking,
+				horariosHeatmap,
+			] = await Promise.all([
+				gerarGraficoPedidosPorHora(pedidos),
+				gerarGraficoFaturamentoSemanal(pedidos),
+				gerarGraficoStatusDistribuicao(pedidos),
+				gerarGraficoProdutosRanking(),
+				gerarHeatmapHorarios(pedidos),
+			]);
+
+			const charts: DashboardCharts = {
+				pedidos_por_hora: pedidosPorHora,
+				faturamento_semanal: faturamentoSemanal,
+				status_distribuicao: statusDistribuicao,
+				produtos_ranking: produtosRanking,
+				horarios_heatmap: horariosHeatmap,
+			};
+
+			// Salva no cache
+			cache.value.set(chaveCache, {
+				data: charts,
+				timestamp: Date.now(),
+			});
+
+			return charts;
+		} catch (error) {
+			console.error("Erro ao gerar gráficos:", error);
+			throw error;
+		}
+	};
+
+	/**
+	 * Limpa cache
+	 */
+	const limparCache = (): void => {
+		cache.value.clear();
+	};
+
+	return {
+		carregarCharts,
+		limparCache,
+	};
+};
