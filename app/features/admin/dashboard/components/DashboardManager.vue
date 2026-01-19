@@ -52,7 +52,7 @@ const handleRefresh = async () => {
  */
 const handleReport = () => {
 	// TODO: Implementar geração de relatório
-	console.warn("Gerar relatório: Funcionalidade em desenvolvimento");
+	throw new Error("Gerar relatório: Funcionalidade em desenvolvimento");
 };
 </script>
 

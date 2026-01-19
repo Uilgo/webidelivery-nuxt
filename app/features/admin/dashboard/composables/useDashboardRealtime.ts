@@ -62,8 +62,7 @@ export const useDashboardRealtime = (): UseDashboardRealtimeReturn => {
 				created_at: pedido.created_at,
 			}));
 		} catch (error) {
-			console.error("Erro ao buscar pedidos recentes:", error);
-			return [];
+			throw new Error(`Erro ao buscar pedidos recentes: ${error}`);
 		}
 	};
 
@@ -110,8 +109,7 @@ export const useDashboardRealtime = (): UseDashboardRealtimeReturn => {
 			// Mock de alertas para desenvolvimento
 			return [];
 		} catch (error) {
-			console.error("Erro ao buscar alertas:", error);
-			return [];
+			throw new Error(`Erro ao buscar alertas: ${error}`);
 		}
 	};
 
@@ -175,8 +173,7 @@ export const useDashboardRealtime = (): UseDashboardRealtimeReturn => {
 				alertas: alertas.value,
 			};
 		} catch (error) {
-			console.error("Erro ao carregar dados em tempo real:", error);
-			throw error;
+			throw new Error(`Erro ao carregar dados em tempo real: ${error}`);
 		}
 	};
 

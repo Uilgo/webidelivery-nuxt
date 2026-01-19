@@ -87,10 +87,35 @@ const periodoOptions = [
 							<DashboardGraficos
 								v-if="currentTab === 'pedidos'"
 								:data="charts.pedidos_por_hora"
+								type="line"
 								class="h-full"
 							/>
 
-							<!-- Placeholder para outros gráficos (Implementar depois com chart.js/apexcharts) -->
+							<!-- Gráfico de Faturamento -->
+							<DashboardGraficos
+								v-else-if="currentTab === 'faturamento'"
+								:data="charts.faturamento_semanal"
+								type="bar"
+								class="h-full"
+							/>
+
+							<!-- Gráfico de Status -->
+							<DashboardGraficos
+								v-else-if="currentTab === 'status'"
+								:data="charts.status_distribuicao"
+								type="doughnut"
+								class="h-full"
+							/>
+
+							<!-- Gráfico de Produtos -->
+							<DashboardGraficos
+								v-else-if="currentTab === 'produtos'"
+								:data="charts.produtos_ranking"
+								type="bar"
+								class="h-full"
+							/>
+
+							<!-- Fallback -->
 							<div
 								v-else
 								class="flex items-center justify-center h-full bg-[var(--bg-muted)] rounded-lg"
@@ -101,7 +126,7 @@ const periodoOptions = [
 										class="w-12 h-12 text-[var(--text-muted)] mx-auto mb-2"
 									/>
 									<p class="text-sm text-[var(--text-muted)]">
-										Gráfico de {{ currentTab }} em desenvolvimento
+										Gráfico de {{ currentTab }} não encontrado
 									</p>
 								</div>
 							</div>

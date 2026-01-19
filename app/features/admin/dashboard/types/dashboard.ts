@@ -68,7 +68,6 @@ export interface KpiConversao {
 
 export interface KpiProdutos {
 	total_ativos: number;
-	sem_estoque: number;
 	mais_vendidos: ProdutoRanking[];
 	menos_vendidos: ProdutoRanking[];
 }
@@ -111,7 +110,7 @@ export interface PedidoResumo {
 
 export interface DashboardNotificacao {
 	id: UUID;
-	tipo: "novo_pedido" | "pedido_cancelado" | "produto_sem_estoque" | "meta_atingida";
+	tipo: "novo_pedido" | "pedido_cancelado" | "meta_atingida";
 	titulo: string;
 	mensagem: string;
 	pedido_id?: UUID;

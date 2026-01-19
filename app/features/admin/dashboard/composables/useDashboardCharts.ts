@@ -80,8 +80,7 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 			if (error) throw error;
 			return data as unknown as PedidoCompleto[];
 		} catch (error) {
-			console.error("Erro ao buscar pedidos para gráficos:", error);
-			return [];
+			throw new Error(`Erro ao buscar pedidos para gráficos: ${error}`);
 		}
 	};
 
@@ -241,12 +240,7 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 				})),
 			};
 		} catch (error) {
-			console.error("Erro ao gerar ranking de produtos:", error);
-			return {
-				labels: [],
-				data: [],
-				produtos: [],
-			};
+			throw new Error(`Erro ao gerar ranking de produtos: ${error}`);
 		}
 	};
 
@@ -338,8 +332,7 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 
 			return charts;
 		} catch (error) {
-			console.error("Erro ao gerar gráficos:", error);
-			throw error;
+			throw new Error(`Erro ao gerar gráficos: ${error}`);
 		}
 	};
 

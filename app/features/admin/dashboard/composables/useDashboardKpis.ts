@@ -69,8 +69,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			if (error) throw error;
 			return data as unknown as PedidoCompleto[];
 		} catch (error) {
-			console.error("Erro ao buscar pedidos:", error);
-			return [];
+			throw new Error(`Erro ao buscar pedidos: ${error}`);
 		}
 	};
 
@@ -168,13 +167,6 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				.select("*", { count: "exact", head: true })
 				.eq("ativo", true);
 
-			// Busca produtos sem estoque (assumindo campo estoque_atual)
-			const { count: semEstoque } = await supabase
-				.from("produtos")
-				.select("*", { count: "exact", head: true })
-				.eq("ativo", true)
-				.lte("estoque_atual", 0);
-
 			// Busca produtos mais vendidos (top 5)
 			const { data: maisVendidos } = await supabase
 				.from("produtos")
@@ -194,15 +186,12 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 
 			return {
 				total_ativos: totalAtivos || 0,
-				sem_estoque: semEstoque || 0,
 				mais_vendidos: produtosMaisVendidos,
 				menos_vendidos: [],
 			};
-		} catch (error) {
-			console.error("Erro ao calcular KPIs de produtos:", error);
+		} catch {
 			return {
 				total_ativos: 0,
-				sem_estoque: 0,
 				mais_vendidos: [],
 				menos_vendidos: [],
 			};
@@ -254,8 +243,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				recorrencia: taxaRecorrencia,
 				variacao,
 			};
-		} catch (error) {
-			console.error("Erro ao calcular KPIs de clientes:", error);
+		} catch {
 			return {
 				novos: 0,
 				recorrencia: 0,
@@ -343,8 +331,8 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				const somaNotas = avaliacoes.reduce((acc, a) => acc + a.nota, 0);
 				satisfacaoMedia = Number((somaNotas / avaliacoes.length).toFixed(1));
 			}
-		} catch (error) {
-			console.error("Erro ao buscar satisfação média:", error);
+		} catch {
+			// Retorna 0 em caso de erro
 		}
 
 		// Calcula entregas no prazo (assumindo prazo de 45 minutos)
@@ -415,8 +403,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 
 			return kpis;
 		} catch (error) {
-			console.error("Erro ao calcular KPIs:", error);
-			throw error;
+			throw new Error(`Erro ao calcular KPIs: ${error}`);
 		}
 	};
 

@@ -117,7 +117,6 @@ export const useDashboard = (): UseDashboardReturn => {
 			realtime.value = realtimeData;
 			lastUpdate.value = new Date();
 		} catch (err) {
-			console.error("Erro ao carregar dados do dashboard:", err);
 			error.value = err instanceof Error ? err.message : "Erro desconhecido";
 		} finally {
 			loading.value = false;

@@ -148,7 +148,7 @@ export const useHorarioFuncionamento = (
 		for (let i = 1; i <= 7; i++) {
 			const diaIndex = (hoje + i) % 7;
 			const dia = DIAS_SEMANA_MAP[diaIndex];
-			if (dia) {
+			if (dia && horario.value) {
 				const config = horario.value[dia];
 				if (config?.aberto) {
 					return dia;
