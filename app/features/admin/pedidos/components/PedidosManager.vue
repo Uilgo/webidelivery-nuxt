@@ -18,6 +18,7 @@ import type {
 	StatusPedido,
 } from "~/features/admin/pedidos/types/pedidos-admin";
 import { usePedidos } from "~/features/admin/pedidos/composables/usePedidos";
+import { STATUS_PEDIDO } from "#shared/constants/pedidos";
 import PedidoTabs from "~/features/admin/pedidos/components/PedidoTabs.vue";
 import PedidoFiltros from "~/features/admin/pedidos/components/PedidoFiltros.vue";
 import PedidoCard from "~/features/admin/pedidos/components/PedidoCard.vue";
@@ -107,7 +108,7 @@ const executarAcao = async (pedido: PedidoCompleto, acao: string, motivo?: strin
 	try {
 		let sucesso = false;
 		let novoStatus: StatusPedido | null = null;
-		const eraReativacao = pedido.status === "cancelado" && acao !== "cancelar";
+		const eraReativacao = pedido.status === STATUS_PEDIDO.CANCELADO && acao !== "cancelar";
 
 		// Ações específicas
 		if (acao === "aceitar") {

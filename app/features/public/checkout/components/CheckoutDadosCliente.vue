@@ -7,6 +7,8 @@
 
 import type { DadosCliente } from "~/features/public/checkout/types/checkout";
 import { formatPhone, parsePhone } from "../../../../../lib/formatters/phone";
+import { formatCPF, parseCPF } from "../../../../../lib/formatters/document";
+import { isValidCPF } from "../../../../../lib/validators/document";
 
 interface Props {
 	dadosIniciais?: DadosCliente;
@@ -33,8 +35,13 @@ const form = reactive<DadosCliente>({
 /**
  * Validação do formulário
  */
+const cpfValido = computed(() => {
+	if (!form.cpf || form.cpf.trim().length === 0) return true; // CPF é opcional
+	return isValidCPF(form.cpf);
+});
+
 const formValido = computed(() => {
-	return form.nome.trim().length >= 3 && form.telefone.trim().length >= 10;
+	return form.nome.trim().length >= 3 && form.telefone.trim().length >= 10 && cpfValido.value;
 });
 
 /**
@@ -61,19 +68,12 @@ const formatarTelefone = (event: Event) => {
 };
 
 /**
- * Formata CPF enquanto digita
+ * Formata CPF enquanto digita usando formatter centralizado
  */
-const formatarCPF = (event: Event) => {
+const formatarCPFInput = (event: Event) => {
 	const input = event.target as HTMLInputElement;
-	let valor = input.value.replace(/\D/g, "");
-
-	if (valor.length <= 11) {
-		valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
-		valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
-		valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-	}
-
-	form.cpf = valor;
+	const apenasNumeros = parseCPF(input.value);
+	form.cpf = formatCPF(apenasNumeros);
 };
 </script>
 

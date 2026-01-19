@@ -7,7 +7,7 @@
  */
 
 import type { TipoEntrega, EnderecoEntrega } from "~/features/public/checkout/types/checkout";
-import { formatCEP, parseCEP } from "../../../../../lib/formatters/address";
+import { formatCEP, parseCEP } from "../../../../../lib/formatters/cep";
 import { useCEP } from "../../../../composables/useCEP";
 
 interface Props {

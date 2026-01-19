@@ -115,15 +115,6 @@ export type HieraquiaCargo = {
 // CONSTANTES RELACIONADAS A PERFIS
 // ========================================
 
-export const HIERARQUIA_CARGOS: HieraquiaCargo = {
-	super_admin: 6,
-	gerente_plataforma: 5,
-	admin: 4,
-	gerente: 3,
-	staff: 2,
-	entregador: 1,
-} as const;
-
 export const CARGOS_PLATAFORMA: readonly Cargo[] = ["super_admin", "gerente_plataforma"] as const;
 
 export const CARGOS_ESTABELECIMENTO: readonly Cargo[] = [

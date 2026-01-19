@@ -9,20 +9,8 @@
  * @example GET /api/cep/01001000
  */
 
-/**
- * Valida se CEP tem formato correto (8 dígitos)
- */
-
-const isValidCEP = (cep: string): boolean => {
-	return /^\d{8}$/.test(cep);
-};
-
-/**
- * Remove formatação do CEP (mantém apenas números)
- */
-const parseCEP = (cep: string): string => {
-	return cep.replace(/\D/g, "");
-};
+import { isValidCEP } from "../../../lib/validators/cep";
+import { parseCEP } from "../../../lib/formatters/cep";
 
 /**
  * Interface padronizada para resposta da API de CEP

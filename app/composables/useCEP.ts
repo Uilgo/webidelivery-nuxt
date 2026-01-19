@@ -5,7 +5,8 @@
  * Utiliza endpoint server-side /api/cep/:cep com estados reativos e debounce.
  */
 
-import { isValidCEP, parseCEP } from "../../lib/formatters/address";
+import { isValidCEP } from "../../lib/validators/cep";
+import { parseCEP } from "../../lib/formatters/cep";
 
 /**
  * Interface padronizada para resposta da API de CEP

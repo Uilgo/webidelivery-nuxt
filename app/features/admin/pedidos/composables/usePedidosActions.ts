@@ -8,6 +8,7 @@
  */
 
 import type { StatusPedido } from "~/features/admin/pedidos/types/pedidos-admin";
+import { cancelarPedidoAdminSchema } from "#shared/schemas/pedidos";
 
 export interface UsePedidosActionsReturn {
 	updating: Ref<Record<string, boolean>>;
@@ -113,6 +114,21 @@ export const usePedidosActions = (): UsePedidosActionsReturn => {
 	 * Cancelar pedido (estabelecimento)
 	 */
 	const cancel = async (pedidoId: string, motivo: string): Promise<boolean> => {
+		// Validar dados de cancelamento
+		try {
+			cancelarPedidoAdminSchema.parse({
+				pedido_id: pedidoId,
+				motivo: motivo,
+			});
+		} catch (err) {
+			if (err instanceof Error) {
+				actionError.value = err.message;
+			} else {
+				actionError.value = "Dados de cancelamento inválidos";
+			}
+			return false;
+		}
+
 		return await updateStatus(pedidoId, "cancelado", motivo);
 	};
 

@@ -16,6 +16,7 @@ import {
 	MOTIVOS_CANCELAMENTO_LABELS,
 	type MotivoCancelamentoCliente,
 } from "~/features/admin/pedidos/types/pedidos-admin";
+import { STATUS_PEDIDO } from "~/shared/constants/pedidos";
 import PedidoStatus from "~/features/public/pedido/components/PedidoStatus.vue";
 import PedidoDetalhes from "~/features/public/pedido/components/PedidoDetalhes.vue";
 import AvaliacaoPedidoModal from "~/components/shared/AvaliacaoPedidoModal.vue";
@@ -230,7 +231,7 @@ const handleAvaliacaoEnviada = () => {
 
 				<!-- Alerta PIX -->
 				<div
-					v-if="pedido.forma_pagamento === 'pix' && pedido.status === 'pendente'"
+					v-if="pedido.forma_pagamento === 'pix' && pedido.status === STATUS_PEDIDO.PENDENTE"
 					class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400"
 				>
 					<div class="flex items-start gap-3">
@@ -292,7 +293,7 @@ const handleAvaliacaoEnviada = () => {
 
 				<!-- Botão de Avaliar (quando concluído) -->
 				<div
-					v-if="pedido.status === 'concluido'"
+					v-if="pedido.status === STATUS_PEDIDO.CONCLUIDO"
 					class="p-6 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
 				>
 					<div class="text-center space-y-4">

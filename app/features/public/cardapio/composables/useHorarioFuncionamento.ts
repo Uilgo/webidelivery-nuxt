@@ -6,6 +6,7 @@
  */
 
 import type { HorarioFuncionamento, HorarioDia } from "../types/cardapio-publico";
+import { DIAS_SEMANA_LABELS } from "#shared/constants/estabelecimento";
 
 export interface UseHorarioFuncionamentoReturn {
 	estaAberto: ComputedRef<boolean>;
@@ -15,7 +16,7 @@ export interface UseHorarioFuncionamentoReturn {
 }
 
 // Mapeamento de dia da semana (0 = domingo, 1 = segunda, etc.)
-const DIAS_SEMANA: Record<number, keyof HorarioFuncionamento> = {
+const DIAS_SEMANA_MAP: Record<number, keyof HorarioFuncionamento> = {
 	0: "domingo",
 	1: "segunda",
 	2: "terca",
@@ -25,23 +26,13 @@ const DIAS_SEMANA: Record<number, keyof HorarioFuncionamento> = {
 	6: "sabado",
 };
 
-const DIAS_SEMANA_LABEL: Record<keyof HorarioFuncionamento, string> = {
-	domingo: "Domingo",
-	segunda: "Segunda-feira",
-	terca: "Terça-feira",
-	quarta: "Quarta-feira",
-	quinta: "Quinta-feira",
-	sexta: "Sexta-feira",
-	sabado: "Sábado",
-};
-
 export const useHorarioFuncionamento = (
 	horario: Ref<HorarioFuncionamento | null>,
 ): UseHorarioFuncionamentoReturn => {
 	// Dia atual da semana
 	const diaAtual = computed(() => {
 		const hoje = new Date().getDay();
-		return DIAS_SEMANA[hoje] || "segunda";
+		return DIAS_SEMANA_MAP[hoje] || "segunda";
 	});
 
 	// Horário configurado para hoje
@@ -103,7 +94,7 @@ export const useHorarioFuncionamento = (
 			// Buscar próximo dia aberto
 			const proximoDia = encontrarProximoDiaAberto();
 			if (proximoDia) {
-				return `Abre ${DIAS_SEMANA_LABEL[proximoDia]}`;
+				return `Abre ${DIAS_SEMANA_LABELS[proximoDia]}`;
 			}
 			return "Fechado";
 		}
@@ -126,7 +117,7 @@ export const useHorarioFuncionamento = (
 		if (minutosAgora >= fechamento) {
 			const proximoDia = encontrarProximoDiaAberto();
 			if (proximoDia) {
-				return `Abre ${DIAS_SEMANA_LABEL[proximoDia]}`;
+				return `Abre ${DIAS_SEMANA_LABELS[proximoDia]}`;
 			}
 			return "Fechado";
 		}
@@ -156,7 +147,7 @@ export const useHorarioFuncionamento = (
 		// Verifica os próximos 7 dias
 		for (let i = 1; i <= 7; i++) {
 			const diaIndex = (hoje + i) % 7;
-			const dia = DIAS_SEMANA[diaIndex];
+			const dia = DIAS_SEMANA_MAP[diaIndex];
 			if (dia) {
 				const config = horario.value[dia];
 				if (config?.aberto) {

@@ -15,6 +15,12 @@ import type {
 } from "~/features/public/checkout/types/checkout";
 import { useCheckoutStorage } from "~/features/public/checkout/composables/useCheckoutStorage";
 import type { ItemCarrinho } from "~/features/public/cardapio/types/cardapio-publico";
+import {
+	dadosClienteSchema,
+	enderecoEntregaSchema,
+	dadosPagamentoSchema,
+	checkoutDataComValidacaoSchema,
+} from "../../../../../shared/schemas/checkout";
 
 export const useCheckout = () => {
 	const { salvarDadosCliente, carregarDadosCliente, salvarEndereco, carregarEndereco } =
@@ -75,8 +81,16 @@ export const useCheckout = () => {
 	 * Salva dados do cliente (Etapa 1)
 	 */
 	const salvarCliente = (dados: DadosCliente): void => {
-		state.value.dados.cliente = dados;
-		salvarDadosCliente(dados);
+		// Valida dados do cliente
+		const validacao = dadosClienteSchema.safeParse(dados);
+
+		if (!validacao.success) {
+			const primeiroErro = validacao.error.issues[0];
+			throw new Error(primeiroErro?.message || "Dados do cliente inválidos");
+		}
+
+		state.value.dados.cliente = validacao.data;
+		salvarDadosCliente(validacao.data);
 		proximaEtapa();
 	};
 
@@ -87,8 +101,16 @@ export const useCheckout = () => {
 		state.value.dados.tipo_entrega = tipo;
 
 		if (tipo === "delivery" && endereco) {
-			state.value.dados.endereco = endereco;
-			salvarEndereco(endereco);
+			// Valida endereço de entrega
+			const validacao = enderecoEntregaSchema.safeParse(endereco);
+
+			if (!validacao.success) {
+				const primeiroErro = validacao.error.issues[0];
+				throw new Error(primeiroErro?.message || "Endereço de entrega inválido");
+			}
+
+			state.value.dados.endereco = validacao.data;
+			salvarEndereco(validacao.data);
 		} else {
 			state.value.dados.endereco = undefined;
 		}
@@ -100,7 +122,15 @@ export const useCheckout = () => {
 	 * Salva forma de pagamento (Etapa 3)
 	 */
 	const salvarPagamento = (dados: DadosPagamento): void => {
-		state.value.dados.pagamento = dados;
+		// Valida dados de pagamento
+		const validacao = dadosPagamentoSchema.safeParse(dados);
+
+		if (!validacao.success) {
+			const primeiroErro = validacao.error.issues[0];
+			throw new Error(primeiroErro?.message || "Dados de pagamento inválidos");
+		}
+
+		state.value.dados.pagamento = validacao.data;
 		proximaEtapa();
 	};
 
@@ -125,9 +155,15 @@ export const useCheckout = () => {
 			const supabase = useSupabaseClient();
 			const { dados } = state.value;
 
-			if (!dados.cliente || !dados.tipo_entrega || !dados.pagamento) {
-				throw new Error("Dados incompletos para finalizar o pedido");
+			// Valida dados completos do checkout
+			const validacao = checkoutDataComValidacaoSchema.safeParse(dados);
+
+			if (!validacao.success) {
+				const primeiroErro = validacao.error.issues[0];
+				throw new Error(primeiroErro?.message || "Dados do checkout inválidos");
 			}
+
+			const dadosValidados = validacao.data;
 
 			/**
 			 * Formatar itens para a RPC
@@ -154,16 +190,16 @@ export const useCheckout = () => {
 			 * Formatar endereço (apenas para delivery)
 			 */
 			const endereco =
-				dados.tipo_entrega === "delivery" && dados.endereco
+				dadosValidados.tipo_entrega === "delivery" && dadosValidados.endereco
 					? {
-							rua: dados.endereco.rua,
-							numero: dados.endereco.numero,
-							complemento: dados.endereco.complemento || null,
-							bairro: dados.endereco.bairro,
-							cidade: dados.endereco.cidade,
-							estado: dados.endereco.estado,
-							cep: dados.endereco.cep,
-							referencia: dados.endereco.referencia || null,
+							rua: dadosValidados.endereco.rua,
+							numero: dadosValidados.endereco.numero,
+							complemento: dadosValidados.endereco.complemento || null,
+							bairro: dadosValidados.endereco.bairro,
+							cidade: dadosValidados.endereco.cidade,
+							estado: dadosValidados.endereco.estado,
+							cep: dadosValidados.endereco.cep,
+							referencia: dadosValidados.endereco.referencia || null,
 						}
 					: {};
 
@@ -172,14 +208,14 @@ export const useCheckout = () => {
 			 */
 			const { data: pedidoId, error } = await supabase.rpc("fn_pedidos_criar", {
 				p_estabelecimento_id: estabelecimentoId,
-				p_tipo_entrega: dados.tipo_entrega,
-				p_cliente_nome: dados.cliente.nome,
-				p_cliente_telefone: dados.cliente.telefone,
-				p_cliente_email: dados.cliente.email || null,
+				p_tipo_entrega: dadosValidados.tipo_entrega,
+				p_cliente_nome: dadosValidados.cliente.nome,
+				p_cliente_telefone: dadosValidados.cliente.telefone,
+				p_cliente_email: dadosValidados.cliente.email || null,
 				p_endereco: endereco,
-				p_forma_pagamento: dados.pagamento.forma_pagamento,
-				p_troco_para: dados.pagamento.troco_para || null,
-				p_observacoes: dados.observacoes || null,
+				p_forma_pagamento: dadosValidados.pagamento.forma_pagamento,
+				p_troco_para: dadosValidados.pagamento.troco_para || null,
+				p_observacoes: dadosValidados.observacoes || null,
 				p_itens: itensFormatados,
 			});
 

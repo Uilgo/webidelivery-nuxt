@@ -1,55 +1,11 @@
 /**
  * 📌 Formatadores de Endereço
  *
- * Funções para formatação de CEP e endereços.
+ * Funções para formatação de endereços completos.
+ * Para formatação de CEP, use lib/formatters/cep.ts
  */
 
-/**
- * Formata CEP brasileiro
- *
- * @param cep - CEP (apenas dígitos)
- * @returns String formatada (ex: "12345-678")
- *
- * @example
- * formatCEP("12345678") // "12345-678"
- */
-export const formatCEP = (cep: string): string => {
-	const cleaned = cep.replace(/\D/g, "");
-
-	if (cleaned.length !== 8) {
-		return cep;
-	}
-
-	return cleaned.replace(/(\d{5})(\d{3})/, "$1-$2");
-};
-
-/**
- * Remove formatação do CEP
- *
- * @param cep - CEP formatado
- * @returns Apenas dígitos
- *
- * @example
- * parseCEP("12345-678") // "12345678"
- */
-export const parseCEP = (cep: string): string => {
-	return cep.replace(/\D/g, "");
-};
-
-/**
- * Valida CEP brasileiro
- *
- * @param cep - CEP a ser validado
- * @returns true se válido
- *
- * @example
- * isValidCEP("12345-678") // true
- * isValidCEP("123") // false
- */
-export const isValidCEP = (cep: string): boolean => {
-	const cleaned = parseCEP(cep);
-	return cleaned.length === 8;
-};
+import { formatCEP } from "./cep";
 
 /**
  * Formata endereço completo

@@ -15,6 +15,7 @@ import {
 } from "~/features/admin/pedidos/utils/pedido-formatters";
 import { usePedidoHistorico } from "~/features/admin/pedidos/composables/usePedidoHistorico";
 import { requerObservacao } from "~/features/admin/pedidos/utils/status-transitions";
+import { STATUS_PEDIDO } from "#shared/constants/pedidos";
 
 interface Props {
 	modelValue: boolean;
@@ -40,7 +41,7 @@ const { historico, loading: loadingHistorico } = usePedidoHistorico(
  * Verificar se pode reativar pedido cancelado
  */
 const podeReativar = computed(() => {
-	return props.pedido?.status === "cancelado";
+	return props.pedido?.status === STATUS_PEDIDO.CANCELADO;
 });
 
 /**
@@ -51,7 +52,7 @@ const statusAnteriorCancelamento = computed(() => {
 
 	// Buscar no histórico o status anterior ao cancelamento
 	const historicoCancelamento = historico.value.find(
-		(h) => h.status_novo === "cancelado" && h.pedido_id === props.pedido?.id,
+		(h) => h.status_novo === STATUS_PEDIDO.CANCELADO && h.pedido_id === props.pedido?.id,
 	);
 
 	// Se encontrou, retornar o status anterior
@@ -423,7 +424,7 @@ const getStatusIcon = (status: StatusPedido): string => {
 
 			<!-- Motivo Cancelamento -->
 			<UiCard
-				v-if="pedido.status === 'cancelado' && pedido.motivo_cancelamento"
+				v-if="pedido.status === STATUS_PEDIDO.CANCELADO && pedido.motivo_cancelamento"
 				variant="outlined"
 				size="sm"
 			>
@@ -557,13 +558,15 @@ const getStatusIcon = (status: StatusPedido): string => {
 	<!-- Modal de Mudança de Status -->
 	<UiModal
 		v-model="mostrarModalMudarStatus"
-		:title="pedido?.status === 'cancelado' ? 'Reativar Pedido' : 'Confirmar Mudança de Status'"
+		:title="
+			pedido?.status === STATUS_PEDIDO.CANCELADO ? 'Reativar Pedido' : 'Confirmar Mudança de Status'
+		"
 		size="sm"
 		@update:model-value="(val) => !val && cancelarModalMudanca()"
 	>
 		<div class="space-y-4">
 			<!-- Mensagem para reativação -->
-			<p v-if="pedido?.status === 'cancelado'" class="text-sm text-[var(--text-muted)]">
+			<p v-if="pedido?.status === STATUS_PEDIDO.CANCELADO" class="text-sm text-[var(--text-muted)]">
 				Você está prestes a <strong class="text-[var(--success)]">reativar</strong> o pedido
 				cancelado.
 				<br />
