@@ -55,6 +55,9 @@ const calendarRef = ref<HTMLDivElement>();
 const currentMonth = ref(new Date());
 const selectedDate = ref<Date | null>(null);
 
+// Posição do calendário (calculada dinamicamente)
+const calendarPosition = ref<Record<string, string>>({});
+
 // Gerar ID único
 const generatedId = useId();
 
@@ -248,9 +251,36 @@ const selecionarData = (date: Date): void => {
 	isOpen.value = false;
 };
 
+// Calcular posição do calendário
+const calcularPosicaoCalendario = (): void => {
+	if (!triggerRef.value) return;
+
+	const rect = triggerRef.value.getBoundingClientRect();
+	const spaceBelow = window.innerHeight - rect.bottom;
+	const spaceAbove = rect.top;
+	const calendarHeight = 360; // Altura reduzida do calendário
+
+	// Decide se abre para baixo ou para cima
+	const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+
+	calendarPosition.value = {
+		left: `${rect.left}px`,
+		top: openUpward ? `${rect.top - calendarHeight - 8}px` : `${rect.bottom + 8}px`,
+		width: "280px", // Largura fixa do calendário
+	};
+};
+
 // Toggle calendário
 const toggleCalendario = (): void => {
 	if (props.disabled) return;
+
+	if (!isOpen.value) {
+		// Abrindo: calcula posição
+		nextTick(() => {
+			calcularPosicaoCalendario();
+		});
+	}
+
 	isOpen.value = !isOpen.value;
 };
 
@@ -348,99 +378,102 @@ const containerClasses = computed(() => {
 			<input type="hidden" :name="id || generatedId" :value="modelValue" />
 		</div>
 
-		<!-- Calendário Dropdown -->
-		<Transition
-			enter-active-class="transition duration-200 ease-out"
-			enter-from-class="opacity-0 scale-95"
-			enter-to-class="opacity-100 scale-100"
-			leave-active-class="transition duration-150 ease-in"
-			leave-from-class="opacity-100 scale-100"
-			leave-to-class="opacity-0 scale-95"
-		>
-			<div
-				v-if="isOpen"
-				ref="calendarRef"
-				class="absolute z-50 mt-2 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-lg min-w-[320px] right-0"
+		<!-- Calendário Dropdown com Teleport para escapar do modal -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-200 ease-out"
+				enter-from-class="opacity-0 scale-95"
+				enter-to-class="opacity-100 scale-100"
+				leave-active-class="transition duration-150 ease-in"
+				leave-from-class="opacity-100 scale-100"
+				leave-to-class="opacity-0 scale-95"
 			>
-				<!-- Header: Navegação de mês -->
-				<div class="flex items-center justify-between mb-4">
-					<button
-						type="button"
-						class="p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-						@click="mesAnterior"
-					>
-						<Icon name="lucide:chevron-left" class="w-5 h-5" />
-					</button>
+				<div
+					v-if="isOpen"
+					ref="calendarRef"
+					:style="calendarPosition"
+					class="fixed z-[9999] p-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-lg"
+				>
+					<!-- Header: Navegação de mês -->
+					<div class="flex items-center justify-between mb-3">
+						<button
+							type="button"
+							class="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+							@click="mesAnterior"
+						>
+							<Icon name="lucide:chevron-left" class="w-4 h-4" />
+						</button>
 
-					<span class="text-sm font-semibold text-[var(--text-primary)]">{{ mesAnoAtual }}</span>
+						<span class="text-sm font-semibold text-[var(--text-primary)]">{{ mesAnoAtual }}</span>
 
-					<button
-						type="button"
-						class="p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-						@click="proximoMes"
-					>
-						<Icon name="lucide:chevron-right" class="w-5 h-5" />
-					</button>
-				</div>
+						<button
+							type="button"
+							class="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+							@click="proximoMes"
+						>
+							<Icon name="lucide:chevron-right" class="w-4 h-4" />
+						</button>
+					</div>
 
-				<!-- Dias da semana -->
-				<div class="grid grid-cols-7 gap-1 mb-2">
+					<!-- Dias da semana -->
+					<div class="grid grid-cols-7 gap-1 mb-2">
+						<div
+							v-for="dia in diasSemanaPtBR"
+							:key="dia"
+							class="text-center text-xs font-medium text-[var(--text-muted)] py-1"
+						>
+							{{ dia }}
+						</div>
+					</div>
+
+					<!-- Grade de dias -->
+					<div class="grid grid-cols-7 gap-1">
+						<button
+							v-for="(item, index) in diasCalendario"
+							:key="index"
+							type="button"
+							:disabled="item.isDesabilitado"
+							:class="[
+								'h-8 w-full flex items-center justify-center rounded-md text-sm transition-colors',
+								item.mes === 'atual'
+									? 'text-[var(--text-primary)]'
+									: 'text-[var(--text-muted)] opacity-50',
+								item.isHoje && !item.isSelecionado
+									? 'border-2 border-[var(--primary)] font-semibold'
+									: '',
+								item.isSelecionado
+									? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
+									: 'hover:bg-[var(--bg-hover)]',
+								item.isDesabilitado ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+							]"
+							@click="selecionarData(item.data)"
+						>
+							{{ item.dia }}
+						</button>
+					</div>
+
+					<!-- Footer: Ações -->
 					<div
-						v-for="dia in diasSemanaPtBR"
-						:key="dia"
-						class="text-center text-xs font-medium text-[var(--text-muted)] py-2"
+						class="flex items-center justify-between mt-3 pt-2 border-t border-[var(--border-muted)]"
 					>
-						{{ dia }}
+						<button
+							type="button"
+							class="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
+							@click="limpar"
+						>
+							Limpar
+						</button>
+
+						<button
+							type="button"
+							class="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
+							@click="irParaHoje"
+						>
+							Hoje
+						</button>
 					</div>
 				</div>
-
-				<!-- Grade de dias -->
-				<div class="grid grid-cols-7 gap-1">
-					<button
-						v-for="(item, index) in diasCalendario"
-						:key="index"
-						type="button"
-						:disabled="item.isDesabilitado"
-						:class="[
-							'aspect-square flex items-center justify-center rounded-md text-sm transition-colors',
-							item.mes === 'atual'
-								? 'text-[var(--text-primary)]'
-								: 'text-[var(--text-muted)] opacity-50',
-							item.isHoje && !item.isSelecionado
-								? 'border-2 border-[var(--primary)] font-semibold'
-								: '',
-							item.isSelecionado
-								? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
-								: 'hover:bg-[var(--bg-hover)]',
-							item.isDesabilitado ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
-						]"
-						@click="selecionarData(item.data)"
-					>
-						{{ item.dia }}
-					</button>
-				</div>
-
-				<!-- Footer: Ações -->
-				<div
-					class="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border-muted)]"
-				>
-					<button
-						type="button"
-						class="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
-						@click="limpar"
-					>
-						Limpar
-					</button>
-
-					<button
-						type="button"
-						class="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
-						@click="irParaHoje"
-					>
-						Hoje
-					</button>
-				</div>
-			</div>
-		</Transition>
+			</Transition>
+		</Teleport>
 	</div>
 </template>

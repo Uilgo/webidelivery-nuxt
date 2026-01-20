@@ -278,7 +278,7 @@ defineExpose({
 </script>
 
 <template>
-	<div :class="['w-full', { 'opacity-75': disabled }]">
+	<div :class="[{ 'opacity-75': disabled }]">
 		<!-- Label -->
 		<label
 			v-if="label"

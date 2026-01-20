@@ -43,11 +43,19 @@ export interface KpiPedidos {
 }
 
 export interface KpiFaturamento {
+	/** Faturamento do período selecionado (soma de pedidos concluídos) */
+	periodo: number;
+	/** Faturamento do período anterior (para comparação) */
+	periodo_anterior: number;
+	/** Ticket médio do período selecionado */
+	ticket_medio: number;
+	/** Variação percentual vs período anterior */
+	variacao: number;
+	// Campos legados mantidos para compatibilidade
 	hoje: number;
 	semana: number;
 	mes: number;
-	ticket_medio: number;
-	variacao_semana: number; // percentual
+	variacao_semana: number;
 }
 
 export interface KpiClientes {

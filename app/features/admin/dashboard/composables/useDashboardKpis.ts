@@ -57,11 +57,14 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			let query = supabase.from("pedidos").select("*");
 
 			// Aplica filtros de data se especificados
+			// Para pegar todos os pedidos de hoje, usa o final do dia (23:59:59) em vez da hora atual
 			if (intervalo.inicio) {
-				query = query.gte("created_at", intervalo.inicio.toISOString());
+				const dataInicio = intervalo.inicio.toISOString().split("T")[0];
+				query = query.gte("created_at", `${dataInicio}T00:00:00-03:00`);
 			}
 			if (intervalo.fim) {
-				query = query.lte("created_at", intervalo.fim.toISOString());
+				const dataFim = intervalo.fim.toISOString().split("T")[0];
+				query = query.lte("created_at", `${dataFim}T23:59:59.999-03:00`);
 			}
 
 			const { data, error } = await query;
@@ -69,87 +72,184 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			if (error) throw error;
 			return data as unknown as PedidoCompleto[];
 		} catch (error) {
+			console.error("[KPIs] Erro ao buscar pedidos:", error);
 			throw new Error(`Erro ao buscar pedidos: ${error}`);
 		}
 	};
 
 	/**
-	 * Calcula KPIs de pedidos
+	 * Calcula KPIs de pedidos baseados no período selecionado
+	 * Respeita o filtro de período e calcula variação vs período anterior equivalente
 	 */
-	const calcularKpisPedidos = (pedidos: PedidoCompleto[]): KpiPedidos => {
+	const calcularKpisPedidos = (
+		pedidos: PedidoCompleto[],
+		intervalo: { inicio: Date | null; fim: Date | null },
+	): KpiPedidos => {
 		const hoje = new Date();
-		const ontem = subDays(hoje, 1);
 
-		// Filtra pedidos de hoje e ontem
-		const pedidosHoje = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
-		const pedidosOntem = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+		// === CÁLCULO DO PERÍODO SELECIONADO ===
+		let pedidosPeriodo: PedidoCompleto[];
+		let pedidosPeriodoAnterior: PedidoCompleto[];
 
-		// Calcula variação percentual
-		const calcularVariacao = (atual: number, anterior: number): number => {
-			if (anterior === 0) return atual > 0 ? 100 : 0;
-			return Math.round(((atual - anterior) / anterior) * 100);
-		};
+		if (intervalo.inicio && intervalo.fim) {
+			// Calcula duração do período em milissegundos
+			const duracaoPeriodo = intervalo.fim.getTime() - intervalo.inicio.getTime();
+
+			// Filtra pedidos do período selecionado
+			pedidosPeriodo = pedidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= intervalo.inicio! && dataPedido <= intervalo.fim!;
+			});
+
+			// Calcula período anterior equivalente
+			const fimAnterior = new Date(intervalo.inicio.getTime() - 1); // 1ms antes do início
+			const inicioAnterior = new Date(fimAnterior.getTime() - duracaoPeriodo);
+
+			pedidosPeriodoAnterior = pedidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= inicioAnterior && dataPedido <= fimAnterior;
+			});
+		} else {
+			// Default: hoje vs ontem
+			pedidosPeriodo = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
+			const ontem = subDays(hoje, 1);
+			pedidosPeriodoAnterior = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+		}
+
+		// Calcula variação vs período anterior
+		const totalPeriodo = pedidosPeriodo.length;
+		const totalAnterior = pedidosPeriodoAnterior.length;
+
+		let variacao = 0;
+		if (totalPeriodo === 0 && totalAnterior === 0) {
+			variacao = 0;
+		} else if (totalAnterior === 0) {
+			variacao = totalPeriodo > 0 ? 100 : 0;
+		} else {
+			variacao = Math.round(((totalPeriodo - totalAnterior) / totalAnterior) * 100);
+		}
 
 		return {
-			total: pedidosHoje.length,
-			pendentes: pedidosHoje.filter((p) => p.status === "pendente").length,
-			em_andamento: pedidosHoje.filter((p) =>
+			total: pedidosPeriodo.length,
+			pendentes: pedidosPeriodo.filter((p) => p.status === "pendente").length,
+			em_andamento: pedidosPeriodo.filter((p) =>
 				["aceito", "preparo", "pronto", "entrega"].includes(p.status),
 			).length,
-			concluidos: pedidosHoje.filter((p) => p.status === "concluido").length,
-			cancelados: pedidosHoje.filter((p) => p.status === "cancelado").length,
-			variacao_ontem: calcularVariacao(pedidosHoje.length, pedidosOntem.length),
+			concluidos: pedidosPeriodo.filter((p) => p.status === "concluido").length,
+			cancelados: pedidosPeriodo.filter((p) => p.status === "cancelado").length,
+			variacao_ontem: variacao,
 		};
 	};
 
 	/**
-	 * Calcula KPIs de faturamento
+	 * Calcula KPIs de faturamento baseados no período selecionado
+	 * Respeita o filtro de período e calcula variação vs período anterior equivalente
 	 */
-	const calcularKpisFaturamento = (pedidos: PedidoCompleto[]): KpiFaturamento => {
+	const calcularKpisFaturamento = (
+		pedidos: PedidoCompleto[],
+		intervalo: { inicio: Date | null; fim: Date | null },
+	): KpiFaturamento => {
 		const hoje = new Date();
 		const inicioSemana = subDays(hoje, 6); // Últimos 7 dias
 		const semanaPassada = subDays(inicioSemana, 7);
 
-		// Filtra pedidos concluídos por período
-		const pedidosConcluidos = pedidos.filter((p) => p.status === "concluido");
+		// Filtra todos os pedidos concluídos
+		const todosPedidosConcluidos = pedidos.filter((p) => p.status === "concluido");
 
-		const faturamentoHoje = pedidosConcluidos
+		// === CÁLCULO DO PERÍODO SELECIONADO ===
+		let pedidosPeriodo: PedidoCompleto[];
+		let pedidosPeriodoAnterior: PedidoCompleto[];
+
+		if (intervalo.inicio && intervalo.fim) {
+			// Calcula duração do período em milissegundos
+			const duracaoPeriodo = intervalo.fim.getTime() - intervalo.inicio.getTime();
+
+			// Filtra pedidos do período selecionado
+			pedidosPeriodo = todosPedidosConcluidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= intervalo.inicio! && dataPedido <= intervalo.fim!;
+			});
+
+			// Calcula período anterior equivalente
+			const fimAnterior = new Date(intervalo.inicio.getTime() - 1); // 1ms antes do início
+			const inicioAnterior = new Date(fimAnterior.getTime() - duracaoPeriodo);
+
+			pedidosPeriodoAnterior = todosPedidosConcluidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= inicioAnterior && dataPedido <= fimAnterior;
+			});
+		} else {
+			// Default: hoje
+			pedidosPeriodo = todosPedidosConcluidos.filter((p) =>
+				isSameDay(new Date(p.created_at), hoje),
+			);
+			const ontem = subDays(hoje, 1);
+			pedidosPeriodoAnterior = todosPedidosConcluidos.filter((p) =>
+				isSameDay(new Date(p.created_at), ontem),
+			);
+		}
+
+		// Calcula faturamento do período e período anterior
+		const faturamentoPeriodo = pedidosPeriodo.reduce((acc, p) => acc + p.total, 0);
+		const faturamentoPeriodoAnterior = pedidosPeriodoAnterior.reduce((acc, p) => acc + p.total, 0);
+
+		// Calcula ticket médio do período selecionado
+		const pedidosComValor = pedidosPeriodo.filter((p) => p.total > 0);
+		const ticketMedio =
+			pedidosComValor.length > 0
+				? pedidosComValor.reduce((acc, p) => acc + p.total, 0) / pedidosComValor.length
+				: 0;
+
+		// Calcula variação vs período anterior
+		const variacao =
+			faturamentoPeriodo === 0 && faturamentoPeriodoAnterior === 0
+				? 0
+				: faturamentoPeriodoAnterior === 0
+					? faturamentoPeriodo > 0
+						? 100
+						: 0
+					: Math.round(
+							((faturamentoPeriodo - faturamentoPeriodoAnterior) / faturamentoPeriodoAnterior) *
+								100,
+						);
+
+		// === CÁLCULOS LEGADOS (mantidos para compatibilidade) ===
+		const faturamentoHoje = todosPedidosConcluidos
 			.filter((p) => isSameDay(new Date(p.created_at), hoje))
 			.reduce((acc, p) => acc + p.total, 0);
 
-		const faturamentoSemana = pedidosConcluidos
+		const faturamentoSemana = todosPedidosConcluidos
 			.filter((p) => new Date(p.created_at) >= inicioSemana)
 			.reduce((acc, p) => acc + p.total, 0);
 
-		const faturamentoSemanaPassada = pedidosConcluidos
+		const faturamentoSemanaPassada = todosPedidosConcluidos
 			.filter((p) => {
 				const data = new Date(p.created_at);
 				return data >= semanaPassada && data < inicioSemana;
 			})
 			.reduce((acc, p) => acc + p.total, 0);
 
-		// Calcula ticket médio
-		const pedidosComValor = pedidosConcluidos.filter((p) => p.total > 0);
-		const ticketMedio =
-			pedidosComValor.length > 0
-				? pedidosComValor.reduce((acc, p) => acc + p.total, 0) / pedidosComValor.length
-				: 0;
-
-		// Calcula variação semanal
 		const variacaoSemana =
-			faturamentoSemanaPassada > 0
-				? Math.round(
-						((faturamentoSemana - faturamentoSemanaPassada) / faturamentoSemanaPassada) * 100,
-					)
-				: faturamentoSemana > 0
-					? 100
-					: 0;
+			faturamentoSemana === 0 && faturamentoSemanaPassada === 0
+				? 0
+				: faturamentoSemanaPassada === 0
+					? faturamentoSemana > 0
+						? 100
+						: 0
+					: Math.round(
+							((faturamentoSemana - faturamentoSemanaPassada) / faturamentoSemanaPassada) * 100,
+						);
 
 		return {
+			// Novos campos que respeitam o período
+			periodo: faturamentoPeriodo,
+			periodo_anterior: faturamentoPeriodoAnterior,
+			ticket_medio: ticketMedio,
+			variacao,
+			// Campos legados
 			hoje: faturamentoHoje,
 			semana: faturamentoSemana,
-			mes: 0, // TODO: Implementar cálculo mensal
-			ticket_medio: ticketMedio,
+			mes: 0,
 			variacao_semana: variacaoSemana,
 		};
 	};
@@ -167,22 +267,23 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				.select("*", { count: "exact", head: true })
 				.eq("ativo", true);
 
-			// Busca produtos mais vendidos (top 5)
-			const { data: maisVendidos } = await supabase
-				.from("produtos")
-				.select("id, nome, total_vendas")
-				.eq("ativo", true)
-				.order("total_vendas", { ascending: false })
-				.limit(5);
+			// Busca produtos mais vendidos com faturamento via RPC
+			const { data: maisVendidos, error } = await supabase.rpc("fn_buscar_produtos_mais_vendidos", {
+				p_limit: 10,
+			});
+
+			if (error) throw error;
 
 			// Formata produtos mais vendidos
 			const produtosMaisVendidos: ProdutoRanking[] =
-				maisVendidos?.map((p) => ({
-					id: p.id,
-					nome: p.nome,
-					quantidade_vendida: p.total_vendas || 0,
-					faturamento: 0, // TODO: Calcular faturamento real
-				})) || [];
+				maisVendidos?.map(
+					(p: { id: string; nome: string; total_vendas: number; faturamento_total: number }) => ({
+						id: p.id,
+						nome: p.nome,
+						quantidade_vendida: p.total_vendas || 0,
+						faturamento: p.faturamento_total || 0,
+					}),
+				) || [];
 
 			return {
 				total_ativos: totalAtivos || 0,
@@ -200,6 +301,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 
 	/**
 	 * Calcula KPIs de clientes via Supabase
+	 * Respeita o filtro de período e calcula variação vs período anterior equivalente
 	 */
 	const calcularKpisClientes = async (intervalo: {
 		inicio: Date | null;
@@ -208,38 +310,88 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 		try {
 			const supabase = useSupabaseClient();
 			const hoje = new Date();
-			const ontem = subDays(hoje, 1);
+			hoje.setHours(23, 59, 59, 999); // Final do dia para garantir que pegue todos
 
-			// Busca novos clientes (primeiro pedido hoje)
+			// Calcula período anterior equivalente
+			let dataInicio: Date;
+			let dataFim: Date;
+			let dataInicioAnterior: Date;
+			let dataFimAnterior: Date;
+
+			if (intervalo.inicio && intervalo.fim) {
+				dataInicio = intervalo.inicio;
+				dataFim = intervalo.fim;
+
+				// Calcula duração do período
+				const duracaoPeriodo = dataFim.getTime() - dataInicio.getTime();
+
+				// Período anterior equivalente
+				dataFimAnterior = new Date(dataInicio.getTime() - 1);
+				dataInicioAnterior = new Date(dataFimAnterior.getTime() - duracaoPeriodo);
+			} else {
+				// Default: hoje vs ontem
+				const inicioHoje = new Date();
+				inicioHoje.setHours(0, 0, 0, 0);
+				dataInicio = inicioHoje;
+				dataFim = hoje;
+
+				const ontem = subDays(inicioHoje, 1);
+				dataInicioAnterior = ontem;
+				dataFimAnterior = new Date(ontem);
+				dataFimAnterior.setHours(23, 59, 59, 999);
+			}
+
+			// Busca novos clientes no período selecionado
 			const { data: novosClientes } = await supabase
 				.from("clientes")
 				.select("id")
-				.gte("primeiro_pedido_em", intervalo.inicio?.toISOString() || hoje.toISOString())
-				.lte("primeiro_pedido_em", intervalo.fim?.toISOString() || hoje.toISOString());
+				.gte("primeiro_pedido_em", dataInicio.toISOString())
+				.lte("primeiro_pedido_em", dataFim.toISOString());
 
-			// Busca novos clientes ontem para comparação
-			const { data: novosClientesOntem } = await supabase
+			// Busca novos clientes no período anterior para comparação
+			const { data: novosClientesAnterior } = await supabase
 				.from("clientes")
 				.select("id")
-				.gte("primeiro_pedido_em", ontem.toISOString())
-				.lt("primeiro_pedido_em", hoje.toISOString());
+				.gte("primeiro_pedido_em", dataInicioAnterior.toISOString())
+				.lte("primeiro_pedido_em", dataFimAnterior.toISOString());
+
+			// Calcula variação
+			const novosPeriodo = novosClientes?.length || 0;
+			const novosAnterior = novosClientesAnterior?.length || 0;
+
+			let variacao = 0;
+			if (novosPeriodo === 0 && novosAnterior === 0) {
+				variacao = 0;
+			} else if (novosAnterior === 0) {
+				variacao = novosPeriodo > 0 ? 100 : 0;
+			} else {
+				variacao = Math.round(((novosPeriodo - novosAnterior) / novosAnterior) * 100);
+			}
 
 			// Busca taxa de recorrência (clientes com mais de 1 pedido)
-			const { data: todosClientes } = await supabase.from("clientes").select("id, total_pedidos");
+			// Conta pedidos por cliente diretamente da tabela de pedidos (mais preciso)
+			const { data: pedidosPorCliente } = await supabase
+				.from("pedidos")
+				.select("cliente_id")
+				.not("cliente_id", "is", null);
 
-			const totalClientes = todosClientes?.length || 0;
-			const clientesRecorrentes = todosClientes?.filter((c) => c.total_pedidos > 1).length || 0;
+			// Agrupa pedidos por cliente_id e conta
+			const contagemPorCliente: Record<string, number> = {};
+			pedidosPorCliente?.forEach((p) => {
+				if (p.cliente_id) {
+					contagemPorCliente[p.cliente_id] = (contagemPorCliente[p.cliente_id] || 0) + 1;
+				}
+			});
+
+			const clientesUnicos = Object.keys(contagemPorCliente).length;
+			const clientesRecorrentes = Object.values(contagemPorCliente).filter(
+				(count) => count > 1,
+			).length;
 			const taxaRecorrencia =
-				totalClientes > 0 ? Math.round((clientesRecorrentes / totalClientes) * 100) : 0;
-
-			// Calcula variação de novos clientes
-			const novosHoje = novosClientes?.length || 0;
-			const novosOntem = novosClientesOntem?.length || 0;
-			const variacao =
-				novosOntem > 0 ? Math.round(((novosHoje - novosOntem) / novosOntem) * 100) : 0;
+				clientesUnicos > 0 ? Math.round((clientesRecorrentes / clientesUnicos) * 100) : 0;
 
 			return {
-				novos: novosHoje,
+				novos: novosPeriodo,
 				recorrencia: taxaRecorrencia,
 				variacao,
 			};
@@ -254,33 +406,62 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 
 	/**
 	 * Calcula KPI de Taxa de Conclusão (substitui Conversão)
+	 * Respeita o filtro de período e calcula variação vs período anterior equivalente
 	 */
 	const calcularKpisConclusao = async (
 		pedidos: PedidoCompleto[],
+		intervalo: { inicio: Date | null; fim: Date | null },
 	): Promise<{ taxa: number; visitas: number; variacao: number }> => {
 		const hoje = new Date();
-		const ontem = subDays(hoje, 1);
 
-		// Filtra pedidos de hoje e ontem
-		const pedidosHoje = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
-		const pedidosOntem = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+		// === CÁLCULO DO PERÍODO SELECIONADO ===
+		let pedidosPeriodo: PedidoCompleto[];
+		let pedidosPeriodoAnterior: PedidoCompleto[];
 
-		// Calcula taxa de conclusão hoje
-		const totalHoje = pedidosHoje.length;
-		const concluidosHoje = pedidosHoje.filter((p) => p.status === "concluido").length;
-		const taxaHoje = totalHoje > 0 ? Math.round((concluidosHoje / totalHoje) * 100) : 0;
+		const inter = {
+			inicio: intervalo.inicio,
+			fim: intervalo.fim,
+		};
 
-		// Calcula taxa de conclusão ontem
-		const totalOntem = pedidosOntem.length;
-		const concluidosOntem = pedidosOntem.filter((p) => p.status === "concluido").length;
-		const taxaOntem = totalOntem > 0 ? Math.round((concluidosOntem / totalOntem) * 100) : 0;
+		if (inter.inicio && inter.fim) {
+			const duracaoPeriodo = inter.fim.getTime() - inter.inicio.getTime();
 
-		// Calcula variação
-		const variacao = taxaOntem > 0 ? taxaHoje - taxaOntem : 0;
+			pedidosPeriodo = pedidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= inter.inicio! && dataPedido <= inter.fim!;
+			});
+
+			const fimAnterior = new Date(inter.inicio.getTime() - 1);
+			const inicioAnterior = new Date(fimAnterior.getTime() - duracaoPeriodo);
+
+			pedidosPeriodoAnterior = pedidos.filter((p) => {
+				const dataPedido = new Date(p.created_at);
+				return dataPedido >= inicioAnterior && dataPedido <= fimAnterior;
+			});
+		} else {
+			pedidosPeriodo = pedidos.filter((p) => isSameDay(new Date(p.created_at), hoje));
+			const ontem = subDays(hoje, 1);
+			pedidosPeriodoAnterior = pedidos.filter((p) => isSameDay(new Date(p.created_at), ontem));
+		}
+
+		// Calcula taxas
+		const totalPeriodo = pedidosPeriodo.length;
+		const concluidosPeriodo = pedidosPeriodo.filter((p) => p.status === "concluido").length;
+		const taxaPeriodo = totalPeriodo > 0 ? Math.round((concluidosPeriodo / totalPeriodo) * 100) : 0;
+
+		const totalAnterior = pedidosPeriodoAnterior.length;
+		const concluidosAnterior = pedidosPeriodoAnterior.filter(
+			(p) => p.status === "concluido",
+		).length;
+		const taxaAnterior =
+			totalAnterior > 0 ? Math.round((concluidosAnterior / totalAnterior) * 100) : 0;
+
+		// Diferença em pontos percentuais
+		const variacao = taxaPeriodo - taxaAnterior;
 
 		return {
-			taxa: taxaHoje,
-			visitas: totalHoje, // Representa total de pedidos, não visitas
+			taxa: taxaPeriodo,
+			visitas: totalPeriodo, // "Visitas" aqui representa o total de pedidos iniciados
 			variacao,
 		};
 	};
@@ -335,12 +516,12 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			// Retorna 0 em caso de erro
 		}
 
-		// Calcula entregas no prazo (assumindo prazo de 45 minutos)
+		// Calcula entregas no prazo (do pronto_em até concluido_em, prazo de 45 minutos)
 		const PRAZO_ENTREGA_MINUTOS = 45;
 		const entregasNoPrazo = pedidosConcluidos.filter((p) => {
-			if (!p.created_at || !p.concluido_em || p.tipo_entrega !== "delivery") return false;
-			const tempoTotal = differenceInMinutes(new Date(p.concluido_em), new Date(p.created_at));
-			return tempoTotal <= PRAZO_ENTREGA_MINUTOS;
+			if (!p.pronto_em || !p.concluido_em || p.tipo_entrega !== "delivery") return false;
+			const tempoEntrega = differenceInMinutes(new Date(p.concluido_em), new Date(p.pronto_em));
+			return tempoEntrega <= PRAZO_ENTREGA_MINUTOS;
 		}).length;
 
 		const totalEntregas = pedidosConcluidos.filter((p) => p.tipo_entrega === "delivery").length;
@@ -367,7 +548,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 		const chaveCache = gerarChaveCache(intervalo);
 		const cached = cache.value.get(chaveCache);
 
-		// Retorna cache se válido
+		// Retorna cache se válido (TTL de 5 minutos)
 		if (cached && isCacheValido(cached.timestamp)) {
 			return cached.data;
 		}
@@ -376,11 +557,11 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 			// Busca dados necessários
 			const pedidos = await buscarPedidos(intervalo);
 
-			// Calcula KPIs
+			// Calcula KPIs em paralelo
 			const [pedidosKpi, faturamentoKpi, produtosKpi, performanceKpi, clientesKpi] =
 				await Promise.all([
-					calcularKpisPedidos(pedidos),
-					calcularKpisFaturamento(pedidos),
+					calcularKpisPedidos(pedidos, intervalo),
+					calcularKpisFaturamento(pedidos, intervalo),
 					calcularKpisProdutos(),
 					calcularKpisPerformance(pedidos),
 					calcularKpisClientes(intervalo),
@@ -392,10 +573,10 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				produtos: produtosKpi,
 				performance: performanceKpi,
 				clientes: clientesKpi,
-				conversao: await calcularKpisConclusao(pedidos),
+				conversao: await calcularKpisConclusao(pedidos, intervalo),
 			};
 
-			// Salva no cache
+			// Salva no cache (TTL de 5 minutos)
 			cache.value.set(chaveCache, {
 				data: kpis,
 				timestamp: Date.now(),
@@ -403,6 +584,7 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 
 			return kpis;
 		} catch (error) {
+			console.error("[KPIs] Erro ao calcular KPIs:", error);
 			throw new Error(`Erro ao calcular KPIs: ${error}`);
 		}
 	};

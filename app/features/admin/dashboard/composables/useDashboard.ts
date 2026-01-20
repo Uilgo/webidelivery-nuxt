@@ -29,23 +29,33 @@ export interface UseDashboardReturn {
 
 	// === ESTADOS ===
 	loading: Ref<boolean>;
+	loadingKpis: Ref<boolean>;
+	loadingCharts: Ref<boolean>;
 	error: Ref<string | null>;
 	lastUpdate: Ref<Date | null>;
 
 	// === FILTROS ===
-	periodo: Ref<DashboardPeriodo>;
+	periodoKpis: Ref<DashboardPeriodo>;
+	periodoCharts: Ref<DashboardPeriodo>;
 	isPersonalizado: ComputedRef<boolean>;
 	dataInicio: Ref<Date | null>;
 	dataFim: Ref<Date | null>;
+	dataInicioKpis: Ref<Date | null>;
+	dataFimKpis: Ref<Date | null>;
 
 	// === MÉTODOS PRINCIPAIS ===
 	carregarDados: () => Promise<void>;
+	carregarKpis: () => Promise<void>;
+	carregarCharts: () => Promise<void>;
 	recarregarTudo: () => Promise<void>;
 
 	// === MÉTODOS DE FILTROS ===
-	setPeriodo: (periodo: DashboardPeriodo) => void;
+	setPeriodoKpis: (periodo: DashboardPeriodo) => void;
+	setPeriodoCharts: (periodo: DashboardPeriodo) => void;
 	setDataInicio: (data: Date | null) => void;
 	setDataFim: (data: Date | null) => void;
+	setDataInicioKpis: (data: Date | null) => void;
+	setDataFimKpis: (data: Date | null) => void;
 	clearFilters: () => void;
 
 	// === MÉTODOS DE CONTROLE ===
@@ -60,63 +70,134 @@ export interface UseDashboardReturn {
 
 export const useDashboard = (): UseDashboardReturn => {
 	// === COMPOSABLES ESPECIALIZADOS ===
-	const filtersComposable = useDashboardFilters();
+	const filtersComposableKpis = useDashboardFilters("admin-dashboard-filtros-kpis");
+	const filtersComposableCharts = useDashboardFilters("admin-dashboard-filtros-charts");
 	const kpisComposable = useDashboardKpis();
 	const chartsComposable = useDashboardCharts();
 	const realtimeComposable = useDashboardRealtime();
 
-	// === ESTADOS PRINCIPAIS ===
-	const kpis = ref<DashboardKpis | null>(null);
-	const charts = ref<DashboardCharts | null>(null);
+	// === ESTADOS PRINCIPAIS (COMPARTILHADOS COM O PLUGIN) ===
+	const kpis = useState<DashboardKpis | null>("admin-dashboard-kpis", () => null);
+	const charts = useState<DashboardCharts | null>("admin-dashboard-charts", () => null);
 	const realtime = ref<DashboardRealtime | null>(null);
-	const loading = ref(false);
+	const loading = useState<boolean>("admin-dashboard-loading", () => false);
+	const loadingKpis = ref(false);
+	const loadingCharts = ref(false);
 	const error = ref<string | null>(null);
 	const lastUpdate = ref<Date | null>(null);
 
-	// === FILTROS (PROXY DOS COMPOSABLES) ===
-	const periodo = computed({
-		get: () => filtersComposable.filters.value.periodo,
-		set: (value: DashboardPeriodo) => filtersComposable.setPeriodo(value),
+	// === FILTROS (SEPARADOS PARA KPIs E GRÁFICOS) ===
+	const periodoKpis = computed({
+		get: () => filtersComposableKpis.filters.value.periodo,
+		set: (value: DashboardPeriodo) => filtersComposableKpis.setPeriodo(value),
 	});
 
-	const isPersonalizado = computed(() => filtersComposable.isPersonalizado.value);
+	const periodoCharts = computed({
+		get: () => filtersComposableCharts.filters.value.periodo,
+		set: (value: DashboardPeriodo) => filtersComposableCharts.setPeriodo(value),
+	});
+
+	const isPersonalizado = computed(() => filtersComposableCharts.isPersonalizado.value);
 
 	const dataInicio = computed({
-		get: () => filtersComposable.filters.value.data_inicio,
-		set: (value: Date | null) => filtersComposable.setDataInicio(value),
+		get: () => filtersComposableCharts.filters.value.data_inicio,
+		set: (value: Date | null) => filtersComposableCharts.setDataInicio(value),
 	});
 
 	const dataFim = computed({
-		get: () => filtersComposable.filters.value.data_fim,
-		set: (value: Date | null) => filtersComposable.setDataFim(value),
+		get: () => filtersComposableCharts.filters.value.data_fim,
+		set: (value: Date | null) => filtersComposableCharts.setDataFim(value),
+	});
+
+	const dataInicioKpis = computed({
+		get: () => filtersComposableKpis.filters.value.data_inicio,
+		set: (value: Date | null) => filtersComposableKpis.setDataInicio(value),
+	});
+
+	const dataFimKpis = computed({
+		get: () => filtersComposableKpis.filters.value.data_fim,
+		set: (value: Date | null) => filtersComposableKpis.setDataFim(value),
 	});
 
 	// === MÉTODOS PRINCIPAIS ===
 
 	/**
+	 * Carrega apenas os KPIs
+	 */
+	const carregarKpis = async (): Promise<void> => {
+		try {
+			loadingKpis.value = true;
+			error.value = null;
+
+			// Aplica filtro dos KPIs
+			const intervaloKpis = filtersComposableKpis.aplicarFiltro();
+
+			// Carrega KPIs (o cache é gerenciado internamente pelo composable)
+			const kpisData = await kpisComposable.carregarKpis(intervaloKpis);
+
+			// Atualiza estado
+			kpis.value = kpisData;
+			lastUpdate.value = new Date();
+		} catch (err) {
+			console.error("[Dashboard] Erro ao carregar KPIs:", err);
+			error.value = err instanceof Error ? err.message : "Erro ao carregar KPIs";
+		} finally {
+			loadingKpis.value = false;
+		}
+	};
+
+	/**
+	 * Carrega apenas os gráficos
+	 */
+	const carregarCharts = async (): Promise<void> => {
+		try {
+			loadingCharts.value = true;
+			error.value = null;
+
+			// Aplica filtro dos gráficos
+			const intervaloCharts = filtersComposableCharts.aplicarFiltro();
+
+			// Carrega gráficos
+			const chartsData = await chartsComposable.carregarCharts(intervaloCharts);
+
+			// Atualiza estado
+			charts.value = chartsData;
+			lastUpdate.value = new Date();
+		} catch (err) {
+			error.value = err instanceof Error ? err.message : "Erro ao carregar gráficos";
+		} finally {
+			loadingCharts.value = false;
+		}
+	};
+
+	/**
 	 * Carrega todos os dados do dashboard
+	 * NOTA: Cache individual é gerenciado pelos composables especializados (TTL 5min)
 	 */
 	const carregarDados = async (): Promise<void> => {
 		try {
 			loading.value = true;
 			error.value = null;
 
-			// Aplica filtros atuais
-			const intervalo = filtersComposable.aplicarFiltro();
+			// Aplica filtros separados
+			const intervaloKpis = filtersComposableKpis.aplicarFiltro();
+			const intervaloCharts = filtersComposableCharts.aplicarFiltro();
 
 			// Carrega dados em paralelo para melhor performance
+			// O cache é gerenciado internamente por cada composable (TTL de 5 minutos)
 			const [kpisData, chartsData, realtimeData] = await Promise.all([
-				kpisComposable.carregarKpis(intervalo),
-				chartsComposable.carregarCharts(intervalo),
+				kpisComposable.carregarKpis(intervaloKpis),
+				chartsComposable.carregarCharts(intervaloCharts),
 				realtimeComposable.carregarRealtime(),
 			]);
 
-			// Atualiza estados
+			// Atualiza estados - sempre atualiza com os dados retornados
 			kpis.value = kpisData;
 			charts.value = chartsData;
 			realtime.value = realtimeData;
 			lastUpdate.value = new Date();
 		} catch (err) {
+			console.error("[Dashboard] Erro ao carregar dados:", err);
 			error.value = err instanceof Error ? err.message : "Erro desconhecido";
 		} finally {
 			loading.value = false;
@@ -156,31 +237,53 @@ export const useDashboard = (): UseDashboardReturn => {
 	// === MÉTODOS DE FILTROS (PROXY) ===
 
 	/**
-	 * Define o período selecionado
+	 * Define o período dos KPIs
 	 */
-	const setPeriodo = (novoPeriodo: DashboardPeriodo): void => {
-		filtersComposable.setPeriodo(novoPeriodo);
+	const setPeriodoKpis = (novoPeriodo: DashboardPeriodo): void => {
+		filtersComposableKpis.setPeriodo(novoPeriodo);
+	};
+
+	/**
+	 * Define o período dos gráficos
+	 */
+	const setPeriodoCharts = (novoPeriodo: DashboardPeriodo): void => {
+		filtersComposableCharts.setPeriodo(novoPeriodo);
 	};
 
 	/**
 	 * Define data de início
 	 */
 	const setDataInicio = (data: Date | null): void => {
-		filtersComposable.setDataInicio(data);
+		filtersComposableCharts.setDataInicio(data);
 	};
 
 	/**
 	 * Define data fim
 	 */
 	const setDataFim = (data: Date | null): void => {
-		filtersComposable.setDataFim(data);
+		filtersComposableCharts.setDataFim(data);
+	};
+
+	/**
+	 * Define data de início dos KPIs
+	 */
+	const setDataInicioKpis = (data: Date | null): void => {
+		filtersComposableKpis.setDataInicio(data);
+	};
+
+	/**
+	 * Define data fim dos KPIs
+	 */
+	const setDataFimKpis = (data: Date | null): void => {
+		filtersComposableKpis.setDataFim(data);
 	};
 
 	/**
 	 * Limpa todos os filtros
 	 */
 	const clearFilters = (): void => {
-		filtersComposable.clearFilters();
+		filtersComposableKpis.clearFilters();
+		filtersComposableCharts.clearFilters();
 	};
 
 	// === MÉTODOS DE NOTIFICAÇÕES (PROXY) ===
@@ -210,11 +313,20 @@ export const useDashboard = (): UseDashboardReturn => {
 
 	// === WATCHERS ===
 
-	// Recarrega dados quando filtros mudam
+	// Recarrega KPIs quando filtro dos KPIs muda
 	watch(
-		() => filtersComposable.filters.value,
+		() => filtersComposableKpis.filters.value,
 		async () => {
-			await carregarDados();
+			await carregarKpis();
+		},
+		{ deep: true },
+	);
+
+	// Recarrega gráficos quando filtro dos gráficos muda
+	watch(
+		() => filtersComposableCharts.filters.value,
+		async () => {
+			await carregarCharts();
 		},
 		{ deep: true },
 	);
@@ -241,23 +353,33 @@ export const useDashboard = (): UseDashboardReturn => {
 
 		// Estados
 		loading,
+		loadingKpis,
+		loadingCharts,
 		error,
 		lastUpdate,
 
 		// Filtros
-		periodo,
+		periodoKpis,
+		periodoCharts,
 		isPersonalizado,
 		dataInicio,
 		dataFim,
+		dataInicioKpis,
+		dataFimKpis,
 
 		// Métodos principais
 		carregarDados,
+		carregarKpis,
+		carregarCharts,
 		recarregarTudo,
 
 		// Métodos de filtros
-		setPeriodo,
+		setPeriodoKpis,
+		setPeriodoCharts,
 		setDataInicio,
 		setDataFim,
+		setDataInicioKpis,
+		setDataFimKpis,
 		clearFilters,
 
 		// Métodos de controle

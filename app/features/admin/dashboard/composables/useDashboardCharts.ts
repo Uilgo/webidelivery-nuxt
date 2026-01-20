@@ -204,21 +204,16 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	};
 
 	/**
-	 * Gera gráfico de ranking de produtos via Supabase
+	 * Gera gráfico de ranking de produtos baseado nos pedidos do período
 	 */
-	const gerarGraficoProdutosRanking = async (): Promise<ChartProdutosRanking> => {
+	const gerarGraficoProdutosRanking = async (
+		pedidos: PedidoCompleto[],
+	): Promise<ChartProdutosRanking> => {
 		try {
 			const supabase = useSupabaseClient();
 
-			// Busca top 5 produtos mais vendidos
-			const { data: produtos } = await supabase
-				.from("produtos")
-				.select("id, nome, total_vendas")
-				.eq("ativo", true)
-				.order("total_vendas", { ascending: false })
-				.limit(5);
-
-			if (!produtos || produtos.length === 0) {
+			// Se não há pedidos no período, retorna vazio
+			if (pedidos.length === 0) {
 				return {
 					labels: [],
 					data: [],
@@ -226,16 +221,69 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 				};
 			}
 
-			const labels = produtos.map((p) => p.nome);
-			const data = produtos.map((p) => p.total_vendas || 0);
+			// Busca os itens dos pedidos do período
+			const pedidoIds = pedidos.map((p) => p.id);
+
+			const { data: itens, error } = await supabase
+				.from("pedido_itens")
+				.select("produto_id, produto_nome, quantidade")
+				.in("pedido_id", pedidoIds);
+
+			if (error) throw error;
+
+			if (!itens || itens.length === 0) {
+				return {
+					labels: [],
+					data: [],
+					produtos: [],
+				};
+			}
+
+			// Agrupa por produto e soma quantidades
+			const produtosMap = itens.reduce(
+				(acc, item) => {
+					const key = item.produto_id;
+					if (!acc[key]) {
+						acc[key] = {
+							id: item.produto_id,
+							nome: item.produto_nome,
+							quantidade: 0,
+						};
+					}
+					// Validação TypeScript: garante que acc[key] existe
+					const produto = acc[key];
+					if (produto) {
+						produto.quantidade += item.quantidade;
+					}
+					return acc;
+				},
+				{} as Record<
+					string,
+					{
+						id: string;
+						nome: string;
+						quantidade: number;
+					}
+				>,
+			);
+
+			// Ordena por quantidade e pega top 5 - tipagem explícita para evitar 'unknown'
+			const produtosArray: Array<{ id: string; nome: string; quantidade: number }> =
+				Object.values(produtosMap);
+			const produtosOrdenados = produtosArray
+				.sort((a, b) => b.quantidade - a.quantidade)
+				.slice(0, 5);
+
+			const labels = produtosOrdenados.map((p) => p.nome);
+			const data = produtosOrdenados.map((p) => p.quantidade);
 
 			return {
 				labels,
 				data,
-				produtos: produtos.map((p) => ({
+				produtos: produtosOrdenados.map((p) => ({
 					id: p.id,
 					nome: p.nome,
-					quantidade_vendida: p.total_vendas || 0,
+					quantidade_vendida: p.quantidade,
 					faturamento: 0, // TODO: Calcular faturamento real
 				})),
 			};
@@ -312,7 +360,7 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 				gerarGraficoPedidosPorHora(pedidos),
 				gerarGraficoFaturamentoSemanal(pedidos),
 				gerarGraficoStatusDistribuicao(pedidos),
-				gerarGraficoProdutosRanking(),
+				gerarGraficoProdutosRanking(pedidos), // Agora recebe pedidos como parâmetro
 				gerarHeatmapHorarios(pedidos),
 			]);
 

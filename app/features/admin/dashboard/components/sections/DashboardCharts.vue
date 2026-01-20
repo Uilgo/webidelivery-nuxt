@@ -23,11 +23,71 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
+// Estados
+const showCustomDateModal = ref(false);
+const customDateStart = ref("");
+const customDateEnd = ref("");
+
 // Proxy para o v-model do período
 const localPeriodo = computed({
 	get: () => props.periodo,
-	set: (val) => emit("update:periodo", val),
+	set: (val) => {
+		// Se selecionar "personalizado", abre o modal
+		if (val === "personalizado") {
+			showCustomDateModal.value = true;
+			return;
+		}
+		emit("update:periodo", val);
+	},
 });
+
+// Texto descritivo do período selecionado
+const periodoTexto = computed(() => {
+	const hoje = new Date();
+	const opcoes: Record<string, string> = {
+		hoje: `Hoje - ${hoje.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`,
+		ontem: (() => {
+			const ontem = new Date(hoje);
+			ontem.setDate(ontem.getDate() - 1);
+			return `Ontem - ${ontem.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`;
+		})(),
+		ultimos_7_dias: (() => {
+			const inicio = new Date(hoje);
+			inicio.setDate(inicio.getDate() - 6);
+			return `${inicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${hoje.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`;
+		})(),
+		este_mes: `${hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`,
+		personalizado: (() => {
+			if (customDateStart.value && customDateEnd.value) {
+				const inicio = new Date(customDateStart.value + "T00:00:00");
+				const fim = new Date(customDateEnd.value + "T00:00:00");
+				return `${inicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${fim.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`;
+			}
+			return "Período personalizado";
+		})(),
+	};
+
+	return opcoes[props.periodo] || "Período não definido";
+});
+
+// Aplicar período personalizado
+const aplicarPeriodoPersonalizado = () => {
+	if (!customDateStart.value || !customDateEnd.value) {
+		// TODO: Mostrar erro
+		return;
+	}
+
+	// Emite o período personalizado (você precisará ajustar o tipo DashboardPeriodo)
+	emit("update:periodo", "personalizado");
+	showCustomDateModal.value = false;
+};
+
+// Cancelar período personalizado
+const cancelarPeriodoPersonalizado = () => {
+	showCustomDateModal.value = false;
+	customDateStart.value = "";
+	customDateEnd.value = "";
+};
 
 // Opções do filtro de período
 const periodoOptions = [
@@ -41,8 +101,9 @@ const periodoOptions = [
 
 <template>
 	<UiCard class="lg:col-span-2">
-		<div class="mb-4">
+		<div class="mb-4 flex items-center justify-between">
 			<h3 class="text-lg font-semibold text-[var(--text-primary)]">Análises</h3>
+			<p class="text-sm text-[var(--text-muted)]">{{ periodoTexto }}</p>
 		</div>
 
 		<!-- Tabs de Navegação -->
@@ -63,7 +124,7 @@ const periodoOptions = [
 						:options="periodoOptions"
 						size="md"
 						placeholder="Selecionar período"
-						class="min-w-[140px] dashboard-select"
+						class="w-[160px] dashboard-select"
 					/>
 				</template>
 
@@ -81,11 +142,11 @@ const periodoOptions = [
 							</div>
 						</div>
 
-						<!-- Gráficos -->
-						<div v-else-if="charts" class="h-full">
+						<!-- Gráficos com KeepAlive - mantém componentes vivos -->
+						<div v-if="charts" class="h-full">
 							<!-- Gráfico de Pedidos -->
 							<DashboardGraficos
-								v-if="currentTab === 'pedidos'"
+								v-show="currentTab === 'pedidos'"
 								:data="charts.pedidos_por_hora"
 								type="line"
 								class="h-full"
@@ -93,7 +154,7 @@ const periodoOptions = [
 
 							<!-- Gráfico de Faturamento -->
 							<DashboardGraficos
-								v-else-if="currentTab === 'faturamento'"
+								v-show="currentTab === 'faturamento'"
 								:data="charts.faturamento_semanal"
 								type="bar"
 								class="h-full"
@@ -101,15 +162,15 @@ const periodoOptions = [
 
 							<!-- Gráfico de Status -->
 							<DashboardGraficos
-								v-else-if="currentTab === 'status'"
+								v-show="currentTab === 'status'"
 								:data="charts.status_distribuicao"
-								type="doughnut"
+								type="pie"
 								class="h-full"
 							/>
 
 							<!-- Gráfico de Produtos -->
 							<DashboardGraficos
-								v-else-if="currentTab === 'produtos'"
+								v-show="currentTab === 'produtos'"
 								:data="charts.produtos_ranking"
 								type="bar"
 								class="h-full"
@@ -117,7 +178,12 @@ const periodoOptions = [
 
 							<!-- Fallback -->
 							<div
-								v-else
+								v-if="
+									currentTab !== 'pedidos' &&
+									currentTab !== 'faturamento' &&
+									currentTab !== 'status' &&
+									currentTab !== 'produtos'
+								"
 								class="flex items-center justify-center h-full bg-[var(--bg-muted)] rounded-lg"
 							>
 								<div class="text-center">
@@ -135,6 +201,50 @@ const periodoOptions = [
 				</template>
 			</UiTabs>
 		</div>
+
+		<!-- Modal de Período Personalizado -->
+		<UiModal v-model="showCustomDateModal" title="Período Personalizado" size="lg">
+			<div class="space-y-6 pb-4">
+				<!-- Data Início -->
+				<div>
+					<label class="block text-sm font-medium text-[var(--text-primary)] mb-2">
+						Data Início
+					</label>
+					<UiDatePicker
+						v-model="customDateStart"
+						placeholder="Selecione a data inicial"
+						:max-date="customDateEnd || undefined"
+					/>
+				</div>
+
+				<!-- Data Fim -->
+				<div>
+					<label class="block text-sm font-medium text-[var(--text-primary)] mb-2">
+						Data Fim
+					</label>
+					<UiDatePicker
+						v-model="customDateEnd"
+						placeholder="Selecione a data final"
+						:min-date="customDateStart || undefined"
+					/>
+				</div>
+
+				<!-- Botões de Ação -->
+				<div class="flex items-center justify-end gap-3 pt-6 border-t border-[var(--border-muted)]">
+					<UiButton variant="ghost" size="md" @click="cancelarPeriodoPersonalizado">
+						Cancelar
+					</UiButton>
+					<UiButton
+						variant="solid"
+						size="md"
+						:disabled="!customDateStart || !customDateEnd"
+						@click="aplicarPeriodoPersonalizado"
+					>
+						Aplicar
+					</UiButton>
+				</div>
+			</div>
+		</UiModal>
 	</UiCard>
 </template>
 

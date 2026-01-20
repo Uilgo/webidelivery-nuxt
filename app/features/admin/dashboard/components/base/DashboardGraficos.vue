@@ -22,6 +22,30 @@ import type {
 // Registra todos os componentes do Chart.js
 Chart.register(...registerables);
 
+// Plugin customizado para forçar cor da legenda
+const legendColorPlugin = {
+	id: "legendColorPlugin",
+	beforeInit(chart: Chart) {
+		const originalGenerateLabels = chart.options.plugins?.legend?.labels?.generateLabels;
+		if (chart.options.plugins?.legend?.labels) {
+			chart.options.plugins.legend.labels.generateLabels = function (chart) {
+				const labels = originalGenerateLabels ? originalGenerateLabels(chart) : [];
+				// Força a cor em cada label
+				return labels.map((label) => ({
+					...label,
+					fontColor: "#F1F5F9",
+				}));
+			};
+		}
+	},
+};
+
+Chart.register(legendColorPlugin);
+
+// Configuração global de cores padrão para Chart.js
+Chart.defaults.color = "#F1F5F9"; // Cor clara para textos
+Chart.defaults.borderColor = "rgba(148, 163, 184, 0.1)"; // Cor para bordas
+
 interface Props {
 	data:
 		| ChartPedidosPorHora
@@ -117,6 +141,15 @@ const getChartConfig = (
 							display: true,
 							text: "Horário",
 						},
+						grid: {
+							display: true,
+							color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
+							drawOnChartArea: true,
+							drawTicks: true,
+						},
+						ticks: {
+							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+						},
 					},
 					y: {
 						type: "linear" as const,
@@ -125,6 +158,14 @@ const getChartConfig = (
 						title: {
 							display: true,
 							text: "Quantidade de Pedidos",
+						},
+						grid: {
+							display: true,
+							color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
+							drawOnChartArea: true,
+						},
+						ticks: {
+							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
 						},
 					},
 					y1: {
@@ -136,7 +177,10 @@ const getChartConfig = (
 							text: "Faturamento (R$)",
 						},
 						grid: {
-							drawOnChartArea: false,
+							drawOnChartArea: false, // Não desenha grid para não duplicar
+						},
+						ticks: {
+							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
 						},
 					},
 				},
@@ -198,16 +242,34 @@ const getChartConfig = (
 								display: true,
 								text: "Dias da Semana",
 							},
+							grid: {
+								display: true,
+								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
+								drawOnChartArea: true,
+								drawTicks: true,
+							},
+							ticks: {
+								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+							},
 						},
 						y: {
 							title: {
 								display: true,
 								text: "Faturamento (R$)",
 							},
+							grid: {
+								display: true,
+								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
+								drawOnChartArea: true,
+							},
 							ticks: {
+								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
 								callback: function (value: string | number) {
+									// Garante que value é um número válido
 									const numValue = typeof value === "string" ? parseFloat(value) : value;
-									if (isNaN(numValue)) return "R$ 0,00";
+									if (typeof numValue !== "number" || isNaN(numValue)) {
+										return "R$ 0,00";
+									}
 									return new Intl.NumberFormat("pt-BR", {
 										style: "currency",
 										currency: "BRL",
@@ -263,11 +325,25 @@ const getChartConfig = (
 								display: true,
 								text: "Quantidade Vendida",
 							},
+							grid: {
+								display: true,
+								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
+								drawOnChartArea: true,
+							},
+							ticks: {
+								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+							},
 						},
 						y: {
 							title: {
 								display: true,
 								text: "Produtos",
+							},
+							grid: {
+								display: false, // Não precisa grid horizontal em barras horizontais
+							},
+							ticks: {
+								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
 							},
 						},
 					},
@@ -306,6 +382,13 @@ const getChartConfig = (
 				plugins: {
 					legend: {
 						position: "right" as const,
+						labels: {
+							color: "rgba(148, 163, 184, 0.9)", // Labels mais visíveis
+							padding: 12,
+							font: {
+								size: 12,
+							},
+						},
 					},
 					tooltip: {
 						callbacks: {
@@ -317,6 +400,98 @@ const getChartConfig = (
 								}
 								const percentage = ((value / total) * 100).toFixed(1);
 								return `${context.label}: ${value} (${percentage}%)`;
+							},
+						},
+					},
+				},
+			},
+		};
+	}
+
+	// Configuração para gráfico de pizza (Status)
+	if (props.type === "pie" && "data" in data) {
+		const pieData = data as ChartStatusDistribuicao;
+
+		return {
+			type: "pie" as const,
+			data: {
+				labels: pieData.labels,
+				datasets: [
+					{
+						data: pieData.data,
+						backgroundColor: pieData.colors || [
+							"#F59E0B",
+							"#06B6D4",
+							"#8B5CF6",
+							"#10B981",
+							"#3B82F6",
+							"#059669",
+							"#EF4444",
+						],
+						borderWidth: 2,
+						borderColor: "#FFFFFF",
+					},
+				],
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				// Reduz o tamanho da pizza
+				layout: {
+					padding: {
+						top: 20,
+						bottom: 20,
+						left: 20,
+						right: 20,
+					},
+				},
+				plugins: {
+					legend: {
+						position: "right" as const,
+						labels: {
+							color: "#F1F5F9", // Cor bem clara (quase branco)
+							padding: 12,
+							font: {
+								size: 13,
+								weight: 500, // Número em vez de string
+							},
+							// Adiciona quantidade e percentual na legenda
+							generateLabels: function (chart: Chart) {
+								const data = chart.data;
+								if (data.labels && data.labels.length && data.datasets.length) {
+									const dataset = data.datasets[0];
+									if (!dataset) return [];
+
+									const total = (dataset.data as number[]).reduce((a, b) => a + b, 0);
+
+									return data.labels.map((label: unknown, i: number) => {
+										const value = (dataset.data as number[])[i];
+										const percentage = value ? ((value / total) * 100).toFixed(1) : "0.0";
+
+										return {
+											text: `${label}: ${value} (${percentage}%)`,
+											fillStyle: (dataset.backgroundColor as string[])[i],
+											strokeStyle: "#FFFFFF",
+											lineWidth: 0,
+											hidden: false,
+											index: i,
+										};
+									});
+								}
+								return [];
+							},
+						},
+					},
+					tooltip: {
+						callbacks: {
+							label: function (context: TooltipItem<"pie">) {
+								const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+								const value = context.parsed;
+								if (value === null || value === undefined) {
+									return `${context.label}: 0 (0.0%)`;
+								}
+								const percentage = ((value / total) * 100).toFixed(1);
+								return `${context.label}: ${value} pedidos (${percentage}%)`;
 							},
 						},
 					},
@@ -340,23 +515,54 @@ const getChartConfig = (
 };
 
 /**
- * Cria ou atualiza o gráfico
+ * Cria ou atualiza o gráfico (SEM destruir desnecessariamente)
  */
 const updateChart = () => {
-	if (!chartCanvas.value || !props.data) return;
-
-	// Destrói gráfico anterior se existir
-	if (chartInstance.value) {
-		chartInstance.value.destroy();
+	// Verifica se tem dados e canvas disponível
+	if (!props.data || !chartCanvas.value) {
+		return;
 	}
 
-	// Cria novo gráfico
-	const config = getChartConfig(props.data);
-	chartInstance.value = new Chart(chartCanvas.value, config);
+	// Se já existe gráfico, apenas atualiza os dados (MUITO mais rápido)
+	if (chartInstance.value) {
+		try {
+			const config = getChartConfig(props.data);
+			chartInstance.value.data = config.data;
+			chartInstance.value.update("none"); // Update sem animação
+			return;
+		} catch {
+			// Se falhar, destrói e recria
+			chartInstance.value.destroy();
+			chartInstance.value = undefined;
+		}
+	}
+
+	// Cria novo gráfico apenas se não existir
+	try {
+		const config = getChartConfig(props.data);
+
+		// Desabilita animações
+		if (config.options) {
+			// @ts-expect-error - animation existe mas não está nos tipos
+			config.options.animation = false;
+		}
+
+		chartInstance.value = new Chart(chartCanvas.value, config);
+	} catch {
+		// Ignora erros
+	}
 };
 
-// Observa mudanças nos dados
-watch(() => props.data, updateChart, { deep: true });
+// Observa mudanças nos dados (NÃO destrói o gráfico, apenas atualiza)
+watch(
+	() => props.data,
+	() => {
+		nextTick(() => {
+			updateChart();
+		});
+	},
+	{ deep: true },
+);
 
 // Inicializa o gráfico quando o componente é montado
 onMounted(() => {
@@ -366,15 +572,22 @@ onMounted(() => {
 });
 
 // Limpa o gráfico quando o componente é desmontado
-onUnmounted(() => {
+onBeforeUnmount(() => {
+	// Usa onBeforeUnmount para destruir antes do DOM ser removido
 	if (chartInstance.value) {
-		chartInstance.value.destroy();
+		try {
+			chartInstance.value.destroy();
+		} catch {
+			// Ignora erros de destruição
+		}
+		chartInstance.value = undefined;
 	}
 });
 </script>
 
 <template>
-	<div class="w-full h-full">
+	<div class="w-full h-full chart-container">
+		<!-- Canvas renderizado apenas quando há dados -->
 		<canvas v-if="data" ref="chartCanvas" class="w-full h-full"></canvas>
 
 		<!-- Estado vazio -->
@@ -386,3 +599,29 @@ onUnmounted(() => {
 		</div>
 	</div>
 </template>
+
+<style scoped>
+/* Força a cor do texto da legenda do Chart.js */
+.chart-container :deep(canvas) {
+	color: #f1f5f9 !important;
+}
+
+/* Força a cor de todos os textos dentro do container do gráfico */
+.chart-container :deep(*) {
+	color: #f1f5f9 !important;
+}
+
+/* Ataca diretamente os elementos de legenda do Chart.js */
+.chart-container :deep(.chartjs-legend),
+.chart-container :deep(.chartjs-legend *),
+.chart-container :deep([class*="legend"]),
+.chart-container :deep([class*="legend"] *) {
+	color: #f1f5f9 !important;
+}
+
+/* Força cor nos spans e divs da legenda */
+.chart-container :deep(span),
+.chart-container :deep(div) {
+	color: #f1f5f9 !important;
+}
+</style>

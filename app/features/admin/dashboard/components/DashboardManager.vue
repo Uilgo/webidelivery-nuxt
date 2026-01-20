@@ -10,6 +10,7 @@
  */
 
 import { useDashboard } from "~/features/admin/dashboard/composables/useDashboard";
+import type { DashboardPeriodo } from "~/features/admin/dashboard/types/filters";
 
 // Componentes de Seções
 import DashboardHeader from "./sections/DashboardHeader.vue";
@@ -30,14 +31,17 @@ const {
 
 	// Estados
 	loading,
+	loadingKpis,
 	error,
 
 	// Filtros
-	periodo,
+	periodoKpis,
+	periodoCharts,
 
 	// Métodos
 	recarregarTudo,
-	setPeriodo,
+	setPeriodoKpis,
+	setPeriodoCharts,
 } = useDashboard();
 
 /**
@@ -48,18 +52,23 @@ const handleRefresh = async () => {
 };
 
 /**
- * Handler para ações de relatório
+ * Handler para mudança de período dos KPIs
  */
-const handleReport = () => {
-	// TODO: Implementar geração de relatório
-	throw new Error("Gerar relatório: Funcionalidade em desenvolvimento");
+const handlePeriodoKpisChange = async (novoPeriodo: DashboardPeriodo) => {
+	setPeriodoKpis(novoPeriodo);
+	// O watcher do useDashboard já vai recarregar automaticamente
 };
 </script>
 
 <template>
 	<div class="space-y-6">
 		<!-- Cabeçalho -->
-		<DashboardHeader :loading="loading" @refresh="handleRefresh" @report="handleReport" />
+		<DashboardHeader
+			:loading="loading"
+			:periodo="periodoKpis"
+			@refresh="handleRefresh"
+			@update:periodo="handlePeriodoKpisChange"
+		/>
 
 		<!-- Estado de Erro -->
 		<UiCard
@@ -101,15 +110,20 @@ const handleReport = () => {
 		<!-- Conteúdo Principal -->
 		<div v-else-if="kpis" class="space-y-6 animate-in fade-in duration-500">
 			<!-- Grid de KPIs (Top Cards) -->
-			<DashboardCardsKpi :kpis="kpis" :loading="loading" />
+			<DashboardCardsKpi
+				:kpis="kpis"
+				:loading="loadingKpis"
+				:periodo="periodoKpis"
+				@update:periodo="setPeriodoKpis"
+			/>
 
 			<!-- Linha 1: Gráficos (2/3) + Ranking (1/3) -->
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<DashboardCharts
 					:charts="charts"
-					:periodo="periodo"
+					:periodo="periodoCharts"
 					:loading="loading"
-					@update:periodo="setPeriodo"
+					@update:periodo="setPeriodoCharts"
 				/>
 
 				<DashboardRankingList :items="kpis.produtos.mais_vendidos" :loading="loading" />

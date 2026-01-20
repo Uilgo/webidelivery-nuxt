@@ -26,9 +26,11 @@ export interface UseDashboardFiltersReturn {
 	isPersonalizado: ComputedRef<boolean>;
 }
 
-export const useDashboardFilters = (): UseDashboardFiltersReturn => {
+export const useDashboardFilters = (
+	stateKey = "admin-dashboard-filtros",
+): UseDashboardFiltersReturn => {
 	// Estado dos filtros com cache (mesmo padrão de pedidos)
-	const filters = useState<DashboardFilters>("admin-dashboard-filtros", () => ({
+	const filters = useState<DashboardFilters>(stateKey, () => ({
 		periodo: "hoje", // Padrão: hoje
 		data_inicio: null,
 		data_fim: null,
