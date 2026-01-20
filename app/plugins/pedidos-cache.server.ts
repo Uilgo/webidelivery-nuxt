@@ -13,6 +13,10 @@ export default defineNuxtPlugin(async () => {
 	// Só executar no server-side
 	if (!import.meta.server) return;
 
+	// Só carregar dados de pedidos na rota de pedidos
+	const route = useRoute();
+	if (!route.path.includes("/admin/pedidos")) return;
+
 	const user = useSupabaseUser();
 	const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
 

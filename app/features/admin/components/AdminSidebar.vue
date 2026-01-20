@@ -68,51 +68,44 @@ const userInitials = computed(() => {
 // Dados do estabelecimento
 const estabelecimentoNome = computed(() => estabelecimentoAtual.value?.nome || "Estabelecimento");
 
-// Menu de navegação baseado no PRD
-const menuItems = computed(() => [
+// Menu de navegação baseado no PRD (otimizado)
+const menuItems = [
 	{
 		label: "Dashboard",
 		icon: "lucide:layout-dashboard",
 		route: "/admin/dashboard",
-		active: route.path === "/admin/dashboard",
 	},
 	{
 		label: "Pedidos",
 		icon: "lucide:shopping-bag",
 		route: "/admin/pedidos",
-		active: route.path === "/admin/pedidos",
 	},
 	{
 		label: "Cardápio",
 		icon: "lucide:book-open",
 		route: "/admin/cardapio",
-		active: route.path === "/admin/cardapio",
 	},
 	{
 		label: "Marketing",
 		icon: "lucide:megaphone",
 		route: "/admin/marketing",
-		active: route.path === "/admin/marketing",
 	},
 	{
 		label: "Equipe",
 		icon: "lucide:users",
 		route: "/admin/equipe",
-		active: route.path === "/admin/equipe",
 	},
 	{
 		label: "Relatórios",
 		icon: "lucide:bar-chart-3",
 		route: "/admin/relatorios",
-		active: route.path === "/admin/relatorios",
 	},
 	{
 		label: "Configurações",
 		icon: "lucide:settings",
 		route: "/admin/configuracoes",
-		active: route.path === "/admin/configuracoes",
 	},
-]);
+];
 
 // Opções do dropdown do usuário
 const userDropdownItems = [
@@ -140,12 +133,17 @@ async function handleLogout(): Promise<void> {
 }
 
 /**
- * Handler para navegação
+ * Handler para navegação otimizada
  */
-const handleNavigation = (route: string): void => {
-	navigateTo(route);
-	// Fechar sidebar no mobile após navegação
+const handleNavigation = async (route: string): Promise<void> => {
+	// Fechar sidebar no mobile antes da navegação
 	emit("close");
+
+	// Navegação otimizada - não esperar se já estamos na rota
+	if (useRoute().path === route) return;
+
+	// Usar navigateTo com replace para evitar adicionar ao histórico desnecessariamente
+	await navigateTo(route, { replace: false });
 };
 
 /**
@@ -211,10 +209,11 @@ const handleCloseSidebar = (): void => {
 				<button
 					v-for="item in menuItems"
 					:key="item.route"
+					v-memo="[route.path, isCollapsed]"
 					type="button"
 					class="w-full flex items-center gap-4 px-4 py-3 text-left rounded-lg transition-colors duration-200"
 					:class="[
-						item.active
+						route.path === item.route
 							? 'bg-[var(--primary-light)] text-[var(--primary)] font-medium'
 							: 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
 						isCollapsed ? 'justify-center' : '',

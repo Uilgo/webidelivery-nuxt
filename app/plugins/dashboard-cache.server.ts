@@ -53,6 +53,10 @@ export default defineNuxtPlugin({
 		// Só executar no server-side
 		if (!import.meta.server) return;
 
+		// Só carregar dados de dashboard na rota de dashboard
+		const route = useRoute();
+		if (!route.path.includes("/admin/dashboard")) return;
+
 		const user = useSupabaseUser();
 		const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
 

@@ -16,6 +16,10 @@ export default defineNuxtPlugin(async () => {
 	// Só executar no server-side
 	if (!import.meta.server) return;
 
+	// Só carregar dados de cardápio na rota de cardápio
+	const route = useRoute();
+	if (!route.path.includes("/admin/cardapio")) return;
+
 	const user = useSupabaseUser();
 	const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
 
