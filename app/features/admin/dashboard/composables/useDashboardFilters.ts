@@ -58,21 +58,17 @@ export const useDashboardFilters = (
 	};
 
 	/**
-	 * Define data de início (apenas para período personalizado)
+	 * Define data de início
 	 */
 	const setDataInicio = (data: Date | null): void => {
-		if (filters.value.periodo === "personalizado") {
-			filters.value.data_inicio = data;
-		}
+		filters.value.data_inicio = data;
 	};
 
 	/**
-	 * Define data fim (apenas para período personalizado)
+	 * Define data fim
 	 */
 	const setDataFim = (data: Date | null): void => {
-		if (filters.value.periodo === "personalizado") {
-			filters.value.data_fim = data;
-		}
+		filters.value.data_fim = data;
 	};
 
 	/**

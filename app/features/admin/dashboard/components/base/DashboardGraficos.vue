@@ -2,16 +2,11 @@
 /**
  * 📊 DashboardGraficos - Container de Gráficos Dinâmicos
  *
- * Componente que renderiza diferentes tipos de gráficos baseado na tab ativa:
- * - Pedidos: Gráfico de linha dupla (pedidos + faturamento por hora)
- * - Faturamento: Gráfico de linha comparativa semanal
- * - Status: Gráfico de pizza com distribuição de status
- * - Produtos: Gráfico de barras com ranking de produtos
- *
- * Usa Chart.js para renderização e suporte a temas dark/light.
+ * Componente que renderiza diferentes tipos de gráficos baseado na tab ativa.
+ * Usa Chart.js destruindo e recriando para evitar problemas de reatividade.
  */
 
-import { Chart, registerables, type TooltipItem } from "chart.js";
+import { Chart, registerables } from "chart.js";
 import type {
 	ChartPedidosPorHora,
 	ChartFaturamentoSemanal,
@@ -22,29 +17,14 @@ import type {
 // Registra todos os componentes do Chart.js
 Chart.register(...registerables);
 
-// Plugin customizado para forçar cor da legenda
-const legendColorPlugin = {
-	id: "legendColorPlugin",
-	beforeInit(chart: Chart) {
-		const originalGenerateLabels = chart.options.plugins?.legend?.labels?.generateLabels;
-		if (chart.options.plugins?.legend?.labels) {
-			chart.options.plugins.legend.labels.generateLabels = function (chart) {
-				const labels = originalGenerateLabels ? originalGenerateLabels(chart) : [];
-				// Força a cor em cada label
-				return labels.map((label) => ({
-					...label,
-					fontColor: "#F1F5F9",
-				}));
-			};
-		}
-	},
+// Configuração global - cor padrão para TODOS os textos
+Chart.defaults.color = "#FFFFFF";
+Chart.defaults.font = {
+	family: "'Inter', sans-serif",
+	size: 13,
+	weight: "normal",
 };
-
-Chart.register(legendColorPlugin);
-
-// Configuração global de cores padrão para Chart.js
-Chart.defaults.color = "#F1F5F9"; // Cor clara para textos
-Chart.defaults.borderColor = "rgba(148, 163, 184, 0.1)"; // Cor para bordas
+Chart.defaults.borderColor = "rgba(148, 163, 184, 0.1)";
 
 interface Props {
 	data:
@@ -60,25 +40,39 @@ const props = withDefaults(defineProps<Props>(), {
 	type: "line",
 });
 
-// Referência para o canvas
 const chartCanvas = ref<HTMLCanvasElement>();
 const chartInstance = ref<Chart>();
+const isReady = ref(false);
+
+/**
+ * Verifica se os dados estão vazios (apenas para pizza/doughnut)
+ */
+const isEmpty = computed(() => {
+	if (!props.data) return false;
+
+	if ((props.type === "pie" || props.type === "doughnut") && "data" in props.data) {
+		const data = props.data as ChartStatusDistribuicao;
+		const total = data.data.reduce((acc, val) => acc + val, 0);
+		return total === 0;
+	}
+
+	return false;
+});
 
 /**
  * Configuração do gráfico baseado no tipo
  */
-const getChartConfig = (
-	data:
-		| ChartPedidosPorHora
-		| ChartFaturamentoSemanal
-		| ChartStatusDistribuicao
-		| ChartProdutosRanking,
-) => {
-	// Configuração para gráfico de linha (Pedidos por Hora)
-	if (props.type === "line" && "datasets" in data && "pedidos" in data.datasets) {
-		const lineData = data as ChartPedidosPorHora;
+const getChartConfig = (data: typeof props.data) => {
+	if (!data) return null;
+
+	// Remove TODA reatividade
+	const rawData = JSON.parse(JSON.stringify(toRaw(data)));
+
+	// Linha
+	if (props.type === "line" && "datasets" in rawData && "pedidos" in rawData.datasets) {
+		const lineData = rawData as ChartPedidosPorHora;
 		return {
-			type: "line" as const,
+			type: "line",
 			data: {
 				labels: lineData.labels,
 				datasets: [
@@ -104,83 +98,50 @@ const getChartConfig = (
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
-				interaction: {
-					mode: "index" as const,
-					intersect: false,
-				},
 				plugins: {
 					legend: {
-						position: "top" as const,
-					},
-					tooltip: {
-						callbacks: {
-							label: function (context: TooltipItem<"line">) {
-								const label = context.dataset.label || "";
-								const value = context.parsed.y;
-
-								if (value === null || value === undefined) {
-									return `${label}: --`;
-								}
-
-								if (label.includes("Faturamento")) {
-									return `${label}: ${new Intl.NumberFormat("pt-BR", {
-										style: "currency",
-										currency: "BRL",
-									}).format(value)}`;
-								}
-
-								return `${label}: ${value}`;
+						labels: {
+							color: "#FFFFFF",
+							font: {
+								size: 13,
+								weight: 500,
 							},
 						},
 					},
 				},
 				scales: {
 					x: {
-						display: true,
-						title: {
-							display: true,
-							text: "Horário",
+						ticks: {
+							color: "#FFFFFF",
+							font: {
+								size: 12,
+							},
 						},
 						grid: {
-							display: true,
-							color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
-							drawOnChartArea: true,
-							drawTicks: true,
-						},
-						ticks: {
-							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+							color: "rgba(148, 163, 184, 0.1)",
 						},
 					},
 					y: {
-						type: "linear" as const,
-						display: true,
-						position: "left" as const,
-						title: {
-							display: true,
-							text: "Quantidade de Pedidos",
+						ticks: {
+							color: "#FFFFFF",
+							font: {
+								size: 12,
+							},
 						},
 						grid: {
-							display: true,
-							color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
-							drawOnChartArea: true,
-						},
-						ticks: {
-							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+							color: "rgba(148, 163, 184, 0.1)",
 						},
 					},
 					y1: {
-						type: "linear" as const,
-						display: true,
-						position: "right" as const,
-						title: {
-							display: true,
-							text: "Faturamento (R$)",
+						position: "right",
+						ticks: {
+							color: "#FFFFFF",
+							font: {
+								size: 12,
+							},
 						},
 						grid: {
-							drawOnChartArea: false, // Não desenha grid para não duplicar
-						},
-						ticks: {
-							color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+							display: false,
 						},
 					},
 				},
@@ -188,13 +149,12 @@ const getChartConfig = (
 		};
 	}
 
-	// Configuração para gráfico de barras (Faturamento Semanal ou Produtos)
+	// Barras
 	if (props.type === "bar") {
-		// Faturamento Semanal
-		if ("datasets" in data && "atual" in (data as ChartFaturamentoSemanal).datasets) {
-			const barData = data as ChartFaturamentoSemanal;
+		if ("datasets" in rawData && "atual" in rawData.datasets) {
+			const barData = rawData as ChartFaturamentoSemanal;
 			return {
-				type: "bar" as const,
+				type: "bar",
 				data: {
 					labels: barData.labels,
 					datasets: [
@@ -202,15 +162,11 @@ const getChartConfig = (
 							label: "Esta Semana",
 							data: barData.datasets.atual,
 							backgroundColor: "#3B82F6",
-							borderColor: "#2563EB",
-							borderWidth: 1,
 						},
 						{
 							label: "Semana Anterior",
 							data: barData.datasets.anterior,
 							backgroundColor: "#94A3B8",
-							borderColor: "#64748B",
-							borderWidth: 1,
 						},
 					],
 				},
@@ -219,62 +175,36 @@ const getChartConfig = (
 					maintainAspectRatio: false,
 					plugins: {
 						legend: {
-							position: "top" as const,
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context: TooltipItem<"bar">) {
-									const value = context.parsed.y;
-									if (value === null || value === undefined) {
-										return `${context.dataset.label}: R$ 0,00`;
-									}
-									return `${context.dataset.label}: ${new Intl.NumberFormat("pt-BR", {
-										style: "currency",
-										currency: "BRL",
-									}).format(value)}`;
+							labels: {
+								color: "#FFFFFF",
+								font: {
+									size: 13,
+									weight: 500,
 								},
 							},
 						},
 					},
 					scales: {
 						x: {
-							title: {
-								display: true,
-								text: "Dias da Semana",
+							ticks: {
+								color: "#FFFFFF",
+								font: {
+									size: 12,
+								},
 							},
 							grid: {
-								display: true,
-								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
-								drawOnChartArea: true,
-								drawTicks: true,
-							},
-							ticks: {
-								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+								color: "rgba(148, 163, 184, 0.1)",
 							},
 						},
 						y: {
-							title: {
-								display: true,
-								text: "Faturamento (R$)",
+							ticks: {
+								color: "#FFFFFF",
+								font: {
+									size: 12,
+								},
 							},
 							grid: {
-								display: true,
-								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
-								drawOnChartArea: true,
-							},
-							ticks: {
-								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
-								callback: function (value: string | number) {
-									// Garante que value é um número válido
-									const numValue = typeof value === "string" ? parseFloat(value) : value;
-									if (typeof numValue !== "number" || isNaN(numValue)) {
-										return "R$ 0,00";
-									}
-									return new Intl.NumberFormat("pt-BR", {
-										style: "currency",
-										currency: "BRL",
-									}).format(numValue);
-								},
+								color: "rgba(148, 163, 184, 0.1)",
 							},
 						},
 					},
@@ -282,11 +212,10 @@ const getChartConfig = (
 			};
 		}
 
-		// Produtos Ranking
-		if ("data" in data && Array.isArray((data as ChartProdutosRanking).data)) {
-			const produtoData = data as ChartProdutosRanking;
+		if ("data" in rawData && Array.isArray(rawData.data)) {
+			const produtoData = rawData as ChartProdutosRanking;
 			return {
-				type: "bar" as const,
+				type: "bar",
 				data: {
 					labels: produtoData.labels,
 					datasets: [
@@ -294,56 +223,45 @@ const getChartConfig = (
 							label: "Quantidade Vendida",
 							data: produtoData.data,
 							backgroundColor: "#10B981",
-							borderColor: "#059669",
-							borderWidth: 1,
 						},
 					],
 				},
 				options: {
 					responsive: true,
 					maintainAspectRatio: false,
-					indexAxis: "y" as const,
+					indexAxis: "y",
 					plugins: {
 						legend: {
-							display: false,
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context: TooltipItem<"bar">) {
-									const value = context.parsed.x;
-									if (value === null || value === undefined) {
-										return "Vendidos: 0";
-									}
-									return `Vendidos: ${value}`;
+							labels: {
+								color: "#FFFFFF",
+								font: {
+									size: 13,
+									weight: 500,
 								},
 							},
 						},
 					},
 					scales: {
 						x: {
-							title: {
-								display: true,
-								text: "Quantidade Vendida",
+							ticks: {
+								color: "#FFFFFF",
+								font: {
+									size: 12,
+								},
 							},
 							grid: {
-								display: true,
-								color: "rgba(148, 163, 184, 0.1)", // Grid mais visível
-								drawOnChartArea: true,
-							},
-							ticks: {
-								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+								color: "rgba(148, 163, 184, 0.1)",
 							},
 						},
 						y: {
-							title: {
-								display: true,
-								text: "Produtos",
+							ticks: {
+								color: "#FFFFFF",
+								font: {
+									size: 12,
+								},
 							},
 							grid: {
-								display: false, // Não precisa grid horizontal em barras horizontais
-							},
-							ticks: {
-								color: "rgba(148, 163, 184, 0.8)", // Labels mais visíveis
+								color: "rgba(148, 163, 184, 0.1)",
 							},
 						},
 					},
@@ -352,68 +270,11 @@ const getChartConfig = (
 		}
 	}
 
-	// Configuração para gráfico de rosca (Status)
-	if (props.type === "doughnut" && "data" in data) {
-		const doughnutData = data as ChartStatusDistribuicao;
+	// Pizza/Doughnut
+	if ((props.type === "pie" || props.type === "doughnut") && "data" in rawData) {
+		const pieData = rawData as ChartStatusDistribuicao;
 		return {
-			type: "doughnut" as const,
-			data: {
-				labels: doughnutData.labels,
-				datasets: [
-					{
-						data: doughnutData.data,
-						backgroundColor: doughnutData.colors || [
-							"#F59E0B",
-							"#06B6D4",
-							"#8B5CF6",
-							"#10B981",
-							"#3B82F6",
-							"#059669",
-							"#EF4444",
-						],
-						borderWidth: 2,
-						borderColor: "#FFFFFF",
-					},
-				],
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: {
-					legend: {
-						position: "right" as const,
-						labels: {
-							color: "rgba(148, 163, 184, 0.9)", // Labels mais visíveis
-							padding: 12,
-							font: {
-								size: 12,
-							},
-						},
-					},
-					tooltip: {
-						callbacks: {
-							label: function (context: TooltipItem<"doughnut">) {
-								const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-								const value = context.parsed;
-								if (value === null || value === undefined) {
-									return `${context.label}: 0 (0.0%)`;
-								}
-								const percentage = ((value / total) * 100).toFixed(1);
-								return `${context.label}: ${value} (${percentage}%)`;
-							},
-						},
-					},
-				},
-			},
-		};
-	}
-
-	// Configuração para gráfico de pizza (Status)
-	if (props.type === "pie" && "data" in data) {
-		const pieData = data as ChartStatusDistribuicao;
-
-		return {
-			type: "pie" as const,
+			type: props.type,
 			data: {
 				labels: pieData.labels,
 				datasets: [
@@ -436,7 +297,6 @@ const getChartConfig = (
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
-				// Reduz o tamanho da pizza
 				layout: {
 					padding: {
 						top: 20,
@@ -447,15 +307,14 @@ const getChartConfig = (
 				},
 				plugins: {
 					legend: {
-						position: "right" as const,
+						position: "right",
 						labels: {
-							color: "#F1F5F9", // Cor bem clara (quase branco)
+							color: "#FFFFFF",
 							padding: 12,
 							font: {
 								size: 13,
-								weight: 500, // Número em vez de string
+								weight: 500,
 							},
-							// Adiciona quantidade e percentual na legenda
 							generateLabels: function (chart: Chart) {
 								const data = chart.data;
 								if (data.labels && data.labels.length && data.datasets.length) {
@@ -475,6 +334,7 @@ const getChartConfig = (
 											lineWidth: 0,
 											hidden: false,
 											index: i,
+											fontColor: "#FFFFFF",
 										};
 									});
 								}
@@ -484,7 +344,11 @@ const getChartConfig = (
 					},
 					tooltip: {
 						callbacks: {
-							label: function (context: TooltipItem<"pie">) {
+							label: function (context: {
+								dataset: { data: number[] };
+								parsed: number;
+								label: string;
+							}) {
 								const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
 								const value = context.parsed;
 								if (value === null || value === undefined) {
@@ -500,128 +364,123 @@ const getChartConfig = (
 		};
 	}
 
-	// Fallback para configuração básica
-	return {
-		type: props.type,
-		data: {
-			labels: [],
-			datasets: [],
-		},
-		options: {
-			responsive: true,
-			maintainAspectRatio: false,
-		},
-	};
+	return null;
 };
 
+let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+
 /**
- * Cria ou atualiza o gráfico (SEM destruir desnecessariamente)
+ * Cria o gráfico
  */
-const updateChart = () => {
-	// Verifica se tem dados e canvas disponível
-	if (!props.data || !chartCanvas.value) {
+const createChart = () => {
+	if (!props.data || isEmpty.value || !chartCanvas.value) {
+		isReady.value = false;
 		return;
 	}
 
-	// Se já existe gráfico, apenas atualiza os dados (MUITO mais rápido)
-	if (chartInstance.value) {
-		try {
-			const config = getChartConfig(props.data);
-			chartInstance.value.data = config.data;
-			chartInstance.value.update("none"); // Update sem animação
-			return;
-		} catch {
-			// Se falhar, destrói e recria
-			chartInstance.value.destroy();
-			chartInstance.value = undefined;
-		}
-	}
+	const config = getChartConfig(props.data);
+	if (!config) return;
 
-	// Cria novo gráfico apenas se não existir
 	try {
-		const config = getChartConfig(props.data);
-
-		// Desabilita animações
-		if (config.options) {
-			// @ts-expect-error - animation existe mas não está nos tipos
-			config.options.animation = false;
-		}
-
+		// @ts-expect-error - Chart.js aceita configurações dinâmicas
 		chartInstance.value = new Chart(chartCanvas.value, config);
-	} catch {
-		// Ignora erros
+		isReady.value = true;
+	} catch (err) {
+		console.error("[Chart] Erro:", err);
+		isReady.value = false;
 	}
 };
 
-// Observa mudanças nos dados (NÃO destrói o gráfico, apenas atualiza)
-watch(
-	() => props.data,
-	() => {
-		nextTick(() => {
-			updateChart();
-		});
-	},
-	{ deep: true },
-);
-
-// Inicializa o gráfico quando o componente é montado
-onMounted(() => {
-	nextTick(() => {
-		updateChart();
-	});
-});
-
-// Limpa o gráfico quando o componente é desmontado
-onBeforeUnmount(() => {
-	// Usa onBeforeUnmount para destruir antes do DOM ser removido
+/**
+ * Destroi o gráfico de forma segura
+ */
+const destroyChart = () => {
 	if (chartInstance.value) {
 		try {
 			chartInstance.value.destroy();
 		} catch {
-			// Ignora erros de destruição
+			// Ignora erro
 		}
 		chartInstance.value = undefined;
 	}
+};
+
+/**
+ * Recria o gráfico
+ */
+const recreateChart = () => {
+	// Limpa timeout anterior
+	if (updateTimeout) {
+		clearTimeout(updateTimeout);
+	}
+
+	// Destroi gráfico atual
+	destroyChart();
+	isReady.value = false;
+
+	// Aguarda um pouco e recria
+	updateTimeout = setTimeout(() => {
+		if (chartCanvas.value) {
+			createChart();
+		}
+	}, 50);
+};
+
+// Watch para mudanças nos dados
+watch(() => props.data, recreateChart, { deep: false });
+
+// Inicializa
+onMounted(() => {
+	nextTick(createChart);
+});
+
+// Limpa
+onBeforeUnmount(() => {
+	if (updateTimeout) {
+		clearTimeout(updateTimeout);
+	}
+	destroyChart();
 });
 </script>
 
 <template>
-	<div class="w-full h-full chart-container">
-		<!-- Canvas renderizado apenas quando há dados -->
-		<canvas v-if="data" ref="chartCanvas" class="w-full h-full"></canvas>
+	<div class="w-full h-full chart-container relative overflow-hidden">
+		<!-- EmptyState -->
+		<div v-if="isEmpty" class="absolute inset-0 flex items-center justify-center">
+			<UiEmptyState
+				icon="lucide:calendar-x"
+				title="Ops! Nada por aqui ainda"
+				description="Parece que não há dados para o período selecionado. Tente ajustar o filtro de datas ou aguarde novos pedidos chegarem. Seus gráficos vão aparecer assim que houver movimento! 📊"
+				size="sm"
+			/>
+		</div>
 
-		<!-- Estado vazio -->
-		<div v-else class="flex items-center justify-center h-full">
-			<div class="text-center">
-				<Icon name="lucide:line-chart" class="w-12 h-12 text-[var(--text-muted)] mx-auto mb-2" />
-				<p class="text-sm text-[var(--text-muted)]">Nenhum dado disponível</p>
+		<!-- Skeleton -->
+		<div v-else-if="!isReady" class="absolute inset-0 flex flex-col gap-3 p-4">
+			<UiSkeleton class="h-4 w-32" />
+			<div class="flex-1 flex items-end gap-2">
+				<UiSkeleton class="w-full" style="height: 60%" />
+				<UiSkeleton class="w-full" style="height: 80%" />
+				<UiSkeleton class="w-full" style="height: 45%" />
+				<UiSkeleton class="w-full" style="height: 90%" />
+				<UiSkeleton class="w-full" style="height: 70%" />
+			</div>
+			<div class="flex gap-2 justify-between">
+				<UiSkeleton class="h-3 w-12" />
+				<UiSkeleton class="h-3 w-12" />
+				<UiSkeleton class="h-3 w-12" />
 			</div>
 		</div>
+
+		<!-- Canvas -->
+		<canvas
+			ref="chartCanvas"
+			class="w-full h-full transition-opacity duration-300"
+			:class="{ 'opacity-0': !isReady || isEmpty, 'opacity-100': isReady && !isEmpty }"
+		></canvas>
 	</div>
 </template>
 
 <style scoped>
-/* Força a cor do texto da legenda do Chart.js */
-.chart-container :deep(canvas) {
-	color: #f1f5f9 !important;
-}
-
-/* Força a cor de todos os textos dentro do container do gráfico */
-.chart-container :deep(*) {
-	color: #f1f5f9 !important;
-}
-
-/* Ataca diretamente os elementos de legenda do Chart.js */
-.chart-container :deep(.chartjs-legend),
-.chart-container :deep(.chartjs-legend *),
-.chart-container :deep([class*="legend"]),
-.chart-container :deep([class*="legend"] *) {
-	color: #f1f5f9 !important;
-}
-
-/* Força cor nos spans e divs da legenda */
-.chart-container :deep(span),
-.chart-container :deep(div) {
-	color: #f1f5f9 !important;
-}
+/* Estilos do container apenas */
 </style>

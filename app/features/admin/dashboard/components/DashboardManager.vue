@@ -52,11 +52,17 @@ const handleRefresh = async () => {
 };
 
 /**
- * Handler para mudança de período dos KPIs
+ * Handler para mudança de período dos KPIs (via cabeçalho)
  */
 const handlePeriodoKpisChange = async (novoPeriodo: DashboardPeriodo) => {
 	setPeriodoKpis(novoPeriodo);
-	// O watcher do useDashboard já vai recarregar automaticamente
+};
+
+/**
+ * Handler para mudança de período dos Gráficos
+ */
+const handlePeriodoChartsChange = async (novoPeriodo: DashboardPeriodo) => {
+	setPeriodoCharts(novoPeriodo);
 };
 </script>
 
@@ -89,32 +95,14 @@ const handlePeriodoKpisChange = async (novoPeriodo: DashboardPeriodo) => {
 			</div>
 		</UiCard>
 
-		<!-- Loading State Inicial (Skeleton Global) -->
-		<div v-if="loading && !kpis" class="space-y-6">
-			<!-- KPIs Skeleton -->
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				<UiSkeleton v-for="i in 4" :key="i" class="h-32 rounded-xl" />
-			</div>
-			<!-- Charts + Ranking Skeleton -->
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				<UiSkeleton class="h-96 lg:col-span-2 rounded-xl" />
-				<UiSkeleton class="h-96 rounded-xl" />
-			</div>
-			<!-- Feed + Efficiency Skeleton -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<UiSkeleton class="h-80 rounded-xl" />
-				<UiSkeleton class="h-80 rounded-xl" />
-			</div>
-		</div>
-
-		<!-- Conteúdo Principal -->
-		<div v-else-if="kpis" class="space-y-6 animate-in fade-in duration-500">
+		<!-- Conteúdo Principal - Mostra imediatamente se houver dados (SSR) -->
+		<div v-if="kpis" class="space-y-6">
 			<!-- Grid de KPIs (Top Cards) -->
 			<DashboardCardsKpi
 				:kpis="kpis"
 				:loading="loadingKpis"
 				:periodo="periodoKpis"
-				@update:periodo="setPeriodoKpis"
+				@update:periodo="handlePeriodoKpisChange"
 			/>
 
 			<!-- Linha 1: Gráficos (2/3) + Ranking (1/3) -->
@@ -122,18 +110,24 @@ const handlePeriodoKpisChange = async (novoPeriodo: DashboardPeriodo) => {
 				<DashboardCharts
 					:charts="charts"
 					:periodo="periodoCharts"
-					:loading="loading"
-					@update:periodo="setPeriodoCharts"
+					:loading="!charts"
+					@update:periodo="handlePeriodoChartsChange"
 				/>
 
-				<DashboardRankingList :items="kpis.produtos.mais_vendidos" :loading="loading" />
+				<DashboardRankingList
+					:items="kpis.produtos.mais_vendidos"
+					:loading="!kpis.produtos.mais_vendidos.length"
+				/>
 			</div>
 
 			<!-- Linha 2: Feed e Eficiência -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-				<DashboardLiveFeed :orders="realtime?.pedidos_recentes ?? []" :loading="loading" />
+				<DashboardLiveFeed
+					:orders="realtime?.pedidos_recentes ?? []"
+					:loading="!realtime?.pedidos_recentes?.length"
+				/>
 
-				<DashboardEfficiency :performance="kpis.performance" :loading="loading" />
+				<DashboardEfficiency :performance="kpis.performance" :loading="!kpis.performance" />
 			</div>
 		</div>
 	</div>

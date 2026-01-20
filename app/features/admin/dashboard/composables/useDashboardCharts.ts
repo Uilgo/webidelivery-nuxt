@@ -69,10 +69,12 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 			let query = supabase.from("pedidos").select("*");
 
 			if (intervalo.inicio) {
-				query = query.gte("created_at", intervalo.inicio.toISOString());
+				const dataInicio = intervalo.inicio.toISOString().split("T")[0];
+				query = query.gte("created_at", `${dataInicio}T00:00:00-03:00`);
 			}
 			if (intervalo.fim) {
-				query = query.lte("created_at", intervalo.fim.toISOString());
+				const dataFim = intervalo.fim.toISOString().split("T")[0];
+				query = query.lte("created_at", `${dataFim}T23:59:59.999-03:00`);
 			}
 
 			const { data, error } = await query;
@@ -85,15 +87,19 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	};
 
 	/**
-	 * Gera gráfico de pedidos por hora
+	 * Gera gráfico de pedidos por hora para o dia especificado
 	 */
-	const gerarGraficoPedidosPorHora = (pedidos: PedidoCompleto[]): ChartPedidosPorHora => {
-		const hoje = new Date();
-		const inicioHoje = startOfDay(hoje);
-		const fimHoje = endOfDay(hoje);
+	const gerarGraficoPedidosPorHora = (
+		pedidos: PedidoCompleto[],
+		intervalo: { inicio: Date | null; fim: Date | null },
+	): ChartPedidosPorHora => {
+		// Usa o início do intervalo ou hoje
+		const dataReferencia = intervalo.inicio || new Date();
+		const inicioDia = startOfDay(dataReferencia);
+		const fimDia = endOfDay(dataReferencia);
 
 		// Gera array de horas do dia
-		const horas = eachHourOfInterval({ start: inicioHoje, end: fimHoje });
+		const horas = eachHourOfInterval({ start: inicioDia, end: fimDia });
 		const labels = horas.map((hora) => format(hora, "HH:mm"));
 
 		// Agrupa pedidos por hora
@@ -126,16 +132,24 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	};
 
 	/**
-	 * Gera gráfico de faturamento semanal
+	 * Gera gráfico de faturamento para o intervalo especificado
+	 * Se for últimos 7 dias ou semana, mostra dia a dia.
+	 * Se for mês, poderia mostrar semana a semana, mas por enquanto vamos manter os dias do intervalo.
 	 */
-	const gerarGraficoFaturamentoSemanal = (pedidos: PedidoCompleto[]): ChartFaturamentoSemanal => {
+	const gerarGraficoFaturamentoSemanal = (
+		pedidos: PedidoCompleto[],
+		intervalo: { inicio: Date | null; fim: Date | null },
+	): ChartFaturamentoSemanal => {
 		const hoje = new Date();
-		const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 }); // Segunda-feira
-		const fimSemana = endOfWeek(hoje, { weekStartsOn: 1 }); // Domingo
+		const inicio = intervalo.inicio || startOfWeek(hoje, { weekStartsOn: 1 });
+		const fim = intervalo.fim || endOfWeek(hoje, { weekStartsOn: 1 });
 
-		// Gera dias da semana
-		const dias = eachDayOfInterval({ start: inicioSemana, end: fimSemana });
-		const labels = dias.map((dia) => format(dia, "EEE", { locale: ptBR }));
+		// Gera dias do intervalo
+		const dias = eachDayOfInterval({ start: inicio, end: fim });
+
+		// Se o período for maior que 7 dias, usa data (20/01), senão usa dia da semana (Seg)
+		const usarData = dias.length > 7;
+		const labels = dias.map((dia) => format(dia, usarData ? "dd/MM" : "EEE", { locale: ptBR }));
 
 		// Calcula faturamento atual
 		const faturamentoAtual = dias.map((dia) => {
@@ -148,8 +162,8 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 				.reduce((acc, pedido) => acc + pedido.total, 0);
 		});
 
-		// TODO: Implementar faturamento da semana anterior para comparação
-		const faturamentoAnterior = new Array(7).fill(0);
+		// TODO: Implementar faturamento do período anterior para comparação
+		const faturamentoAnterior = new Array(dias.length).fill(0);
 
 		return {
 			labels,
@@ -211,7 +225,6 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	): Promise<ChartProdutosRanking> => {
 		try {
 			const supabase = useSupabaseClient();
-
 			// Se não há pedidos no período, retorna vazio
 			if (pedidos.length === 0) {
 				return {
@@ -357,8 +370,8 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 				produtosRanking,
 				horariosHeatmap,
 			] = await Promise.all([
-				gerarGraficoPedidosPorHora(pedidos),
-				gerarGraficoFaturamentoSemanal(pedidos),
+				gerarGraficoPedidosPorHora(pedidos, intervalo),
+				gerarGraficoFaturamentoSemanal(pedidos, intervalo),
 				gerarGraficoStatusDistribuicao(pedidos),
 				gerarGraficoProdutosRanking(pedidos), // Agora recebe pedidos como parâmetro
 				gerarHeatmapHorarios(pedidos),

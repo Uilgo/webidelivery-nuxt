@@ -9,6 +9,7 @@
 import DashboardGraficos from "../base/DashboardGraficos.vue";
 import type { DashboardCharts } from "../../types/dashboard";
 import type { DashboardPeriodo } from "../../types/filters";
+import { useDashboard } from "../../composables/useDashboard";
 
 interface Props {
 	charts: DashboardCharts | null;
@@ -22,6 +23,8 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+const dashboard = useDashboard();
 
 // Estados
 const showCustomDateModal = ref(false);
@@ -44,6 +47,7 @@ const localPeriodo = computed({
 // Texto descritivo do período selecionado
 const periodoTexto = computed(() => {
 	const hoje = new Date();
+
 	const opcoes: Record<string, string> = {
 		hoje: `Hoje - ${hoje.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`,
 		ontem: (() => {
@@ -58,9 +62,14 @@ const periodoTexto = computed(() => {
 		})(),
 		este_mes: `${hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`,
 		personalizado: (() => {
-			if (customDateStart.value && customDateEnd.value) {
-				const inicio = new Date(customDateStart.value + "T00:00:00");
-				const fim = new Date(customDateEnd.value + "T00:00:00");
+			let inicio = dashboard.dataInicio.value;
+			let fim = dashboard.dataFim.value;
+
+			// Garante que são objetos Date (caso venham como string do estado persistido)
+			if (inicio && !(inicio instanceof Date)) inicio = new Date(inicio);
+			if (fim && !(fim instanceof Date)) fim = new Date(fim);
+
+			if (inicio && fim && !isNaN(inicio.getTime()) && !isNaN(fim.getTime())) {
 				return `${inicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${fim.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`;
 			}
 			return "Período personalizado";
@@ -73,12 +82,21 @@ const periodoTexto = computed(() => {
 // Aplicar período personalizado
 const aplicarPeriodoPersonalizado = () => {
 	if (!customDateStart.value || !customDateEnd.value) {
-		// TODO: Mostrar erro
 		return;
 	}
 
-	// Emite o período personalizado (você precisará ajustar o tipo DashboardPeriodo)
+	// 1. Primeiro avisa que o período mudou para personalizado
 	emit("update:periodo", "personalizado");
+
+	// 2. Converte strings para objetos Date
+	// Usamos o timezone local para evitar shifts de data
+	const inicio = new Date(customDateStart.value + "T00:00:00");
+	const fim = new Date(customDateEnd.value + "T23:59:59");
+
+	// 3. Salva as datas no dashboard (o composable agora aceita sem travas)
+	dashboard.setDataInicio(inicio);
+	dashboard.setDataFim(fim);
+
 	showCustomDateModal.value = false;
 };
 
@@ -131,22 +149,23 @@ const periodoOptions = [
 				<!-- Conteúdo dos gráficos -->
 				<template #default="{ activeTab: currentTab }">
 					<div class="h-72 relative">
-						<!-- Loading State -->
+						<!-- Loading State (apenas quando não há dados) -->
 						<div
-							v-if="loading"
-							class="absolute inset-0 flex items-center justify-center bg-[var(--bg-default)]/50 rounded-lg z-10"
+							v-if="!charts"
+							class="absolute inset-0 flex items-center justify-center bg-[var(--bg-default)] rounded-lg"
 						>
 							<div class="flex items-center space-x-2">
 								<Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-primary" />
-								<span class="text-sm text-[var(--text-muted)]">Carregando...</span>
+								<span class="text-sm text-[var(--text-muted)]">Carregando gráficos...</span>
 							</div>
 						</div>
 
-						<!-- Gráficos com KeepAlive - mantém componentes vivos -->
-						<div v-if="charts" class="h-full">
+						<!-- Gráficos - renderiza sempre que charts existir -->
+						<div v-else class="h-full">
 							<!-- Gráfico de Pedidos -->
 							<DashboardGraficos
 								v-show="currentTab === 'pedidos'"
+								:active="currentTab === 'pedidos'"
 								:data="charts.pedidos_por_hora"
 								type="line"
 								class="h-full"
@@ -155,6 +174,7 @@ const periodoOptions = [
 							<!-- Gráfico de Faturamento -->
 							<DashboardGraficos
 								v-show="currentTab === 'faturamento'"
+								:active="currentTab === 'faturamento'"
 								:data="charts.faturamento_semanal"
 								type="bar"
 								class="h-full"
@@ -163,6 +183,7 @@ const periodoOptions = [
 							<!-- Gráfico de Status -->
 							<DashboardGraficos
 								v-show="currentTab === 'status'"
+								:active="currentTab === 'status'"
 								:data="charts.status_distribuicao"
 								type="pie"
 								class="h-full"
@@ -171,6 +192,7 @@ const periodoOptions = [
 							<!-- Gráfico de Produtos -->
 							<DashboardGraficos
 								v-show="currentTab === 'produtos'"
+								:active="currentTab === 'produtos'"
 								:data="charts.produtos_ranking"
 								type="bar"
 								class="h-full"

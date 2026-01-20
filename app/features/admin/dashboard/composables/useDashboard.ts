@@ -6,9 +6,14 @@
  * - Fornecer interface única para componentes
  * - Gerenciar estado global do dashboard
  * - Coordenar atualizações e filtros
+ *
+ * NOTA: Auto-refresh temporal removido intencionalmente.
+ * Dados são atualizados apenas:
+ * 1. No carregamento inicial da página
+ * 2. Quando filtros mudam (watch automático)
+ * 3. Quando usuário clica no botão refresh manual
  */
 
-import { useIntervalFn } from "@vueuse/core";
 import type {
 	DashboardKpis,
 	DashboardCharts,
@@ -58,10 +63,6 @@ export interface UseDashboardReturn {
 	setDataFimKpis: (data: Date | null) => void;
 	clearFilters: () => void;
 
-	// === MÉTODOS DE CONTROLE ===
-	pauseAutoRefresh: () => void;
-	resumeAutoRefresh: () => void;
-
 	// === MÉTODOS DE NOTIFICAÇÕES ===
 	adicionarNotificacao: (notificacao: Omit<DashboardNotificacao, "id" | "created_at">) => void;
 	marcarNotificacaoLida: (id: string) => void;
@@ -79,7 +80,7 @@ export const useDashboard = (): UseDashboardReturn => {
 	// === ESTADOS PRINCIPAIS (COMPARTILHADOS COM O PLUGIN) ===
 	const kpis = useState<DashboardKpis | null>("admin-dashboard-kpis", () => null);
 	const charts = useState<DashboardCharts | null>("admin-dashboard-charts", () => null);
-	const realtime = ref<DashboardRealtime | null>(null);
+	const realtime = useState<DashboardRealtime | null>("admin-dashboard-realtime", () => null);
 	const loading = useState<boolean>("admin-dashboard-loading", () => false);
 	const loadingKpis = ref(false);
 	const loadingCharts = ref(false);
@@ -196,6 +197,7 @@ export const useDashboard = (): UseDashboardReturn => {
 			charts.value = chartsData;
 			realtime.value = realtimeData;
 			lastUpdate.value = new Date();
+			dashboardCacheLoaded.value = true;
 		} catch (err) {
 			console.error("[Dashboard] Erro ao carregar dados:", err);
 			error.value = err instanceof Error ? err.message : "Erro desconhecido";
@@ -217,51 +219,20 @@ export const useDashboard = (): UseDashboardReturn => {
 		await carregarDados();
 	};
 
-	// === AUTO-REFRESH ===
-	const { pause, resume } = useIntervalFn(carregarDados, 30000, { immediate: false });
-
-	/**
-	 * Pausa auto-refresh
-	 */
-	const pauseAutoRefresh = (): void => {
-		pause();
-	};
-
-	/**
-	 * Resume auto-refresh
-	 */
-	const resumeAutoRefresh = (): void => {
-		resume();
-	};
-
 	// === MÉTODOS DE FILTROS (PROXY) ===
 
 	/**
-	 * Define o período dos KPIs
+	 * Define o período dos KPIs (Afeta APENAS os cards de cima)
 	 */
 	const setPeriodoKpis = (novoPeriodo: DashboardPeriodo): void => {
 		filtersComposableKpis.setPeriodo(novoPeriodo);
 	};
 
 	/**
-	 * Define o período dos gráficos
+	 * Define o período dos gráficos (Afeta APENAS a seção de análises)
 	 */
 	const setPeriodoCharts = (novoPeriodo: DashboardPeriodo): void => {
 		filtersComposableCharts.setPeriodo(novoPeriodo);
-	};
-
-	/**
-	 * Define data de início
-	 */
-	const setDataInicio = (data: Date | null): void => {
-		filtersComposableCharts.setDataInicio(data);
-	};
-
-	/**
-	 * Define data fim
-	 */
-	const setDataFim = (data: Date | null): void => {
-		filtersComposableCharts.setDataFim(data);
 	};
 
 	/**
@@ -276,6 +247,20 @@ export const useDashboard = (): UseDashboardReturn => {
 	 */
 	const setDataFimKpis = (data: Date | null): void => {
 		filtersComposableKpis.setDataFim(data);
+	};
+
+	/**
+	 * Define data de início dos Gráficos
+	 */
+	const setDataInicio = (data: Date | null): void => {
+		filtersComposableCharts.setDataInicio(data);
+	};
+
+	/**
+	 * Define data fim dos Gráficos
+	 */
+	const setDataFim = (data: Date | null): void => {
+		filtersComposableCharts.setDataFim(data);
 	};
 
 	/**
@@ -311,38 +296,44 @@ export const useDashboard = (): UseDashboardReturn => {
 		realtimeComposable.limparNotificacoes();
 	};
 
-	// === WATCHERS ===
+	// === WATCHERS E LIFECYCLE (REGISTRAR APENAS UMA VEZ) ===
+	// Usamos um estado compartilhado para garantir que side-effects rodem apenas uma vez
+	const isInitialized = useState("admin-dashboard-initialized", () => false);
+	const dashboardCacheLoaded = useState<boolean>("admin-dashboard-cache-loaded", () => false);
 
-	// Recarrega KPIs quando filtro dos KPIs muda
-	watch(
-		() => filtersComposableKpis.filters.value,
-		async () => {
-			await carregarKpis();
-		},
-		{ deep: true },
-	);
+	if (!isInitialized.value) {
+		// Só roda no lado do cliente
+		if (import.meta.client) {
+			isInitialized.value = true;
 
-	// Recarrega gráficos quando filtro dos gráficos muda
-	watch(
-		() => filtersComposableCharts.filters.value,
-		async () => {
-			await carregarCharts();
-		},
-		{ deep: true },
-	);
+			// Carrega dados iniciais APENAS se não vieram do servidor
+			onMounted(async () => {
+				// Se os dados já existem (vieram do SSR), não faz nada
+				if (kpis.value && charts.value && dashboardCacheLoaded.value) {
+					return;
+				}
+				// Caso contrário (SPA puro), carrega
+				await carregarDados();
+			});
 
-	// === LIFECYCLE ===
+			// Watchers globais para filtros - recarrega quando filtros mudam
+			watch(
+				() => filtersComposableKpis.filters.value,
+				async () => {
+					await carregarKpis();
+				},
+				{ deep: true },
+			);
 
-	// Carrega dados iniciais
-	onMounted(async () => {
-		await carregarDados();
-		resume(); // Inicia auto-refresh
-	});
-
-	// Pausa auto-refresh quando componente é desmontado
-	onUnmounted(() => {
-		pauseAutoRefresh();
-	});
+			watch(
+				() => filtersComposableCharts.filters.value,
+				async () => {
+					await carregarCharts();
+				},
+				{ deep: true },
+			);
+		}
+	}
 
 	// === RETORNO UNIFICADO ===
 	return {
@@ -381,10 +372,6 @@ export const useDashboard = (): UseDashboardReturn => {
 		setDataInicioKpis,
 		setDataFimKpis,
 		clearFilters,
-
-		// Métodos de controle
-		pauseAutoRefresh,
-		resumeAutoRefresh,
 
 		// Métodos de notificações
 		adicionarNotificacao,
