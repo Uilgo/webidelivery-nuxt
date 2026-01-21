@@ -7,6 +7,7 @@
  */
 
 import { useAuth } from "~/composables/core/useAuth";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 interface Props {
 	/** Controla se o sidebar está aberto/expandido */
@@ -32,13 +33,31 @@ const emit = defineEmits<Emits>();
 // Composables
 const { logout } = useAuth();
 const route = useRoute();
+const estabelecimentoStore = useEstabelecimentoStore();
+
+// Verificar se onboarding foi concluído
+const onboardingConcluido = computed(() => {
+	return estabelecimentoStore.estabelecimento?.onboarding === true;
+});
 
 // Dados centralizados do layout (evita duplicação)
 const estabelecimentoAtual = inject<
-	ComputedRef<{ id: string; nome: string; slug?: string; logo_url?: string | null }>
+	ComputedRef<{
+		id: string;
+		nome: string;
+		slug?: string;
+		logo_url?: string | null;
+		onboarding?: boolean;
+	}>
 >(
 	"estabelecimentoAtual",
-	computed(() => ({ id: "", nome: "Estabelecimento", slug: "", logo_url: null })),
+	computed(() => ({
+		id: "",
+		nome: "Estabelecimento",
+		slug: "",
+		logo_url: null,
+		onboarding: false,
+	})),
 );
 const userProfile = inject<
 	ComputedRef<{ nome?: string; sobrenome?: string; email?: string; avatar_url?: string | null }>
@@ -69,7 +88,7 @@ const userInitials = computed(() => {
 const estabelecimentoNome = computed(() => estabelecimentoAtual.value?.nome || "Estabelecimento");
 
 // Menu de navegação baseado no PRD (otimizado)
-const menuItems = [
+const menuItemsCompleto = [
 	{
 		label: "Dashboard",
 		icon: "lucide:layout-dashboard",
@@ -107,6 +126,20 @@ const menuItems = [
 	},
 ];
 
+// Menu apenas com Onboarding (quando onboarding não concluído)
+const menuItemsOnboarding = [
+	{
+		label: "Onboarding",
+		icon: "lucide:rocket",
+		route: "/admin/onboarding",
+	},
+];
+
+// Menu exibido baseado no status do onboarding
+const menuItems = computed(() => {
+	return onboardingConcluido.value ? menuItemsCompleto : menuItemsOnboarding;
+});
+
 // Opções do dropdown do usuário
 const userDropdownItems = [
 	{
@@ -135,15 +168,16 @@ async function handleLogout(): Promise<void> {
 /**
  * Handler para navegação otimizada
  */
-const handleNavigation = async (route: string): Promise<void> => {
+const handleNavigation = async (targetRoute: string): Promise<void> => {
 	// Fechar sidebar no mobile antes da navegação
 	emit("close");
 
 	// Navegação otimizada - não esperar se já estamos na rota
-	if (useRoute().path === route) return;
+	const currentPath = route.path;
+	if (currentPath === targetRoute) return;
 
 	// Usar navigateTo com replace para evitar adicionar ao histórico desnecessariamente
-	await navigateTo(route, { replace: false });
+	await navigateTo(targetRoute, { replace: false });
 };
 
 /**

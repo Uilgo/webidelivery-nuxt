@@ -53,11 +53,16 @@ const cepSchema = z
 	.transform((cep) => cep.replace(/\D/g, ""));
 
 /**
- * Schema para estado (UF)
+ * Schema para estado (UF) - permite vazio inicialmente
  */
-const estadoSchema = z.enum(ESTADOS_BRASIL, {
-	message: "Estado inválido",
-});
+const estadoSchema = z
+	.string()
+	.refine((val) => val === "" || ESTADOS_BRASIL.includes(val as (typeof ESTADOS_BRASIL)[number]), {
+		message: "Estado inválido",
+	})
+	.refine((val) => val !== "", {
+		message: "Estado é obrigatório",
+	});
 
 // ========================================
 // ONBOARDING - ETAPA 1: INFORMAÇÕES BÁSICAS

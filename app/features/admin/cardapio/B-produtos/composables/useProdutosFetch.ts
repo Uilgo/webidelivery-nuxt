@@ -64,6 +64,14 @@ export const useProdutosFetch = (): UseProdutosFetchReturn => {
 		error.value = null;
 
 		try {
+			// Buscar estabelecimento_id do usuário logado
+			const estabelecimentoStore = useEstabelecimentoStore();
+			const estabelecimentoId = estabelecimentoStore.estabelecimento?.id;
+
+			if (!estabelecimentoId) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
 			const { data, error: fetchError } = await supabase
 				.from("produtos")
 				.select(
@@ -74,6 +82,7 @@ export const useProdutosFetch = (): UseProdutosFetchReturn => {
 					grupos_adicionais:produto_grupos_adicionais(grupo_adicional_id)
 				`,
 				)
+				.eq("estabelecimento_id", estabelecimentoId) // 🔒 FILTRO CRÍTICO DE SEGURANÇA
 				.order("created_at", { ascending: false });
 
 			if (fetchError) {
@@ -91,6 +100,11 @@ export const useProdutosFetch = (): UseProdutosFetchReturn => {
 			produtos.value = newData;
 			saveToStorage(newData);
 			cacheLoaded.value = true;
+
+			// Se não há produtos, garantir que loading seja false imediatamente
+			if (newData.length === 0) {
+				loading.value = false;
+			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao buscar produtos";
 			error.value = message;
@@ -105,29 +119,72 @@ export const useProdutosFetch = (): UseProdutosFetchReturn => {
 	};
 
 	const init = async (): Promise<void> => {
-		// Se já tem dados (do plugin de servidor), não faz nada
-		if (produtos.value.length > 0) {
+		// Buscar estabelecimento_id do usuário logado
+		const estabelecimentoStore = useEstabelecimentoStore();
+		const estabelecimentoId = estabelecimentoStore.estabelecimento?.id;
+
+		if (!estabelecimentoId) {
+			console.warn("[useProdutosFetch] Estabelecimento não encontrado");
+			produtos.value = [];
 			loading.value = false;
-			cacheLoaded.value = true;
-			// Salva no localStorage para backup
-			if (import.meta.client) {
-				saveToStorage(produtos.value);
+			cacheLoaded.value = true; // Marcar como carregado para não tentar novamente
+			return;
+		}
+
+		// Se já tem dados (do plugin de servidor), validar se são do estabelecimento correto
+		if (produtos.value.length > 0) {
+			// Verificar se os produtos são do estabelecimento correto
+			const produtosValidos = produtos.value.filter(
+				(p) => p.estabelecimento_id === estabelecimentoId,
+			);
+
+			if (produtosValidos.length === produtos.value.length) {
+				// Todos os produtos são válidos
+				loading.value = false;
+				cacheLoaded.value = true;
+				if (import.meta.client) {
+					saveToStorage(produtos.value);
+				}
+				return;
+			} else {
+				// Produtos de outro estabelecimento - limpar cache
+				console.warn("[useProdutosFetch] Cache inválido detectado - limpando");
+				produtos.value = [];
+				if (import.meta.client) {
+					localStorage.removeItem(CACHE_KEY);
+				}
 			}
+		}
+
+		// Se já foi carregado (mesmo que vazio), não carregar novamente
+		if (cacheLoaded.value) {
+			loading.value = false;
 			return;
 		}
 
 		// No cliente, tenta carregar do localStorage
-		if (import.meta.client && !cacheLoaded.value) {
+		if (import.meta.client) {
 			const cachedData = getFromStorage();
 			if (cachedData.length > 0) {
-				produtos.value = cachedData;
-				loading.value = false;
-				cacheLoaded.value = true;
-				return;
+				// Validar se os dados em cache são do estabelecimento correto
+				const produtosValidos = cachedData.filter(
+					(p) => p.estabelecimento_id === estabelecimentoId,
+				);
+
+				if (produtosValidos.length > 0) {
+					produtos.value = produtosValidos;
+					loading.value = false;
+					cacheLoaded.value = true;
+					return;
+				} else {
+					// Cache de outro estabelecimento - limpar
+					console.warn("[useProdutosFetch] Cache localStorage inválido - limpando");
+					localStorage.removeItem(CACHE_KEY);
+				}
 			}
 		}
 
-		// Sem dados de nenhuma fonte - faz fetch
+		// Sem dados válidos - faz fetch
 		await fetch();
 	};
 

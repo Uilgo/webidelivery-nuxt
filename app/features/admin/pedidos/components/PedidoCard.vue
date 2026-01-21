@@ -13,6 +13,7 @@ import {
 	formatarFormaPagamento,
 	formatarTempoDecorrido,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
+import { formatarCodigoRastreamento } from "../../../../../lib/formatters/codigo-rastreamento";
 
 interface Props {
 	pedido: PedidoCompleto;
@@ -89,14 +90,23 @@ const handleClick = () => {
 	<UiCard variant="outlined" size="sm" clickable class="w-full" @click="handleClick">
 		<!-- Header -->
 		<template #header>
-			<div class="flex items-center justify-between">
-				<span class="text-lg font-bold text-[var(--text-primary)]">#{{ pedido.numero }}</span>
-				<UiBadge :variant="statusConfig.variant" size="sm">
-					<template #iconLeft>
-						<Icon :name="statusConfig.icon" class="w-3 h-3" />
-					</template>
-					{{ formatarStatus(pedido.status) }}
-				</UiBadge>
+			<div class="flex flex-col gap-1.5">
+				<div class="flex items-center justify-between">
+					<span class="text-lg font-bold text-[var(--text-primary)]">#{{ pedido.numero }}</span>
+					<UiBadge :variant="statusConfig.variant" size="sm">
+						<template #iconLeft>
+							<Icon :name="statusConfig.icon" class="w-3 h-3" />
+						</template>
+						{{ formatarStatus(pedido.status) }}
+					</UiBadge>
+				</div>
+				<!-- Código de Rastreamento -->
+				<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+					<Icon name="lucide:hash" class="w-3.5 h-3.5" />
+					<span class="font-mono">{{
+						formatarCodigoRastreamento(pedido.codigo_rastreamento)
+					}}</span>
+				</div>
 			</div>
 		</template>
 

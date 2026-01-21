@@ -45,6 +45,7 @@ const estabelecimentoAtual = computed(
 			nome: "Estabelecimento",
 			slug: "",
 			logo_url: null,
+			onboarding: false,
 		},
 );
 

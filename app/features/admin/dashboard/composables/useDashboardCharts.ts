@@ -66,7 +66,28 @@ export const useDashboardCharts = (): UseDashboardChartsReturn => {
 	}): Promise<PedidoCompleto[]> => {
 		try {
 			const supabase = useSupabaseClient();
-			let query = supabase.from("pedidos").select("*");
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			// Buscar estabelecimento_id do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Query com filtro de estabelecimento
+			let query = supabase.from("pedidos").select("*").eq("estabelecimento_id", estabelecimentoId);
 
 			if (intervalo.inicio) {
 				const dataInicio = intervalo.inicio.toISOString().split("T")[0];

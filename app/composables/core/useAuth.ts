@@ -19,6 +19,7 @@ import type {
 	TeamMemberRegisterFormData,
 } from "#shared/schemas/auth";
 import { useUserStore } from "~/stores/user";
+import { clearAllCache } from "../../../lib/utils/cache";
 
 // ========================================
 // TIPOS E INTERFACES
@@ -50,11 +51,15 @@ export const useAuth = () => {
 
 	/**
 	 * Login com email e senha
+	 * CRÍTICO: Limpa cache antes de fazer login para evitar dados de sessão anterior
 	 */
 	const login = async (
 		credentials: LoginFormData | SuperAdminLoginFormData,
 	): Promise<AuthResponse> => {
 		try {
+			// 🔒 SEGURANÇA: Limpar cache ANTES do login
+			clearAllCache();
+
 			const { data, error } = await supabase.auth.signInWithPassword({
 				email: credentials.email,
 				password: credentials.password,
@@ -90,6 +95,7 @@ export const useAuth = () => {
 
 	/**
 	 * Logout do usuário atual
+	 * CRÍTICO: Limpa TODO o cache para evitar vazamento de dados entre usuários
 	 */
 	const logout = async (): Promise<AuthResponse> => {
 		try {
@@ -105,8 +111,36 @@ export const useAuth = () => {
 				};
 			}
 
+			// 🔒 SEGURANÇA: Limpar TODO o cache
+			clearAllCache();
+
 			// Limpar store de usuário
 			userStore.clearUser();
+
+			// Limpar estados globais do Nuxt (incluindo dashboard)
+			if (import.meta.client) {
+				clearNuxtState([
+					// Cardápio
+					"produtos",
+					"categorias",
+					"adicionais",
+					"grupos_adicionais",
+					"combos",
+					// Pedidos
+					"pedidos",
+					"admin-pedidos",
+					"admin-pedidos-loading",
+					"admin-pedidos-erro",
+					"admin-pedidos-cache-loaded",
+					// Dashboard
+					"admin-dashboard-kpis",
+					"admin-dashboard-charts",
+					"admin-dashboard-realtime",
+					"admin-dashboard-loading",
+					"admin-dashboard-cache-loaded",
+					"admin-dashboard-initialized",
+				]);
+			}
 
 			// Redirecionar para login após logout
 			await navigateTo("/login");

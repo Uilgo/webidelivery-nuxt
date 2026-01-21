@@ -59,8 +59,9 @@ export default defineNuxtConfig({
 		// Configuração de rotas de redirecionamento
 		redirectOptions: {
 			login: "/login", // Página de login
-			callback: "/confirm", // Página de confirmação após autenticação
+			callback: "/confirm", // Página de confirmação após signup
 			exclude: [
+				"/",
 				"/login",
 				"/signup",
 				"/signup-equipe",
@@ -71,7 +72,7 @@ export default defineNuxtConfig({
 				"/super-admin/forgot-password",
 			], // Páginas sem autenticação obrigatória
 			include: undefined, // Apenas páginas específicas (undefined = todas exceto exclude)
-			saveRedirectToCookie: true, // Salva página original no cookie para redirecionamento após login
+			saveRedirectToCookie: false, // Não salvar - sempre vai pro dashboard
 		},
 		// Path para tipos TypeScript gerados do schema do Supabase
 		types: "#shared/types/database.ts",
@@ -96,6 +97,21 @@ export default defineNuxtConfig({
 			apiBase: "/api",
 			siteUrl: "https://webidelivery.com.br",
 			siteName: "WebiDelivery",
+		},
+	},
+
+	// Headers de Segurança
+	nitro: {
+		routeRules: {
+			"/**": {
+				headers: {
+					"X-Frame-Options": "DENY",
+					"X-Content-Type-Options": "nosniff",
+					"X-XSS-Protection": "1; mode=block",
+					"Referrer-Policy": "strict-origin-when-cross-origin",
+					"Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+				},
+			},
 		},
 	},
 

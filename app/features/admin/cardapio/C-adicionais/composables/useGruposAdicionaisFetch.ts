@@ -64,6 +64,27 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 		error.value = null;
 
 		try {
+			// Buscar estabelecimento_id do usuário
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Buscar grupos de adicionais FILTRADO POR ESTABELECIMENTO
 			const { data: grupos, error: gruposError } = await supabase
 				.from("grupos_adicionais")
 				.select(
@@ -72,6 +93,7 @@ export const useGruposAdicionaisFetch = (): UseGruposAdicionaisFetchReturn => {
 					adicionais (id, nome, preco, ativo, permite_multiplas_unidades)
 				`,
 				)
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true });
 
 			if (gruposError) {

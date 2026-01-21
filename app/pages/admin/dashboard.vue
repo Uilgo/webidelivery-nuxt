@@ -11,7 +11,8 @@ import DashboardPage from "~/features/admin/dashboard/pages/DashboardPage.vue";
 
 // Configuração da página
 definePageMeta({
-	layout: "admin"
+	layout: "admin",
+	middleware: ["admin-only", "onboarding"], // ✅ Proteção de cargo + onboarding
 });
 
 // SEO

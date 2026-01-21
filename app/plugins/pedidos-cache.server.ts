@@ -31,6 +31,21 @@ export default defineNuxtPlugin(async () => {
 	const pedidosCacheLoaded = useState<boolean>("admin-pedidos-cache-loaded", () => false);
 
 	try {
+		// Buscar estabelecimento_id do usuário
+		const { data: perfil } = await supabase
+			.from("perfis")
+			.select("estabelecimento_id")
+			.eq("id", userId)
+			.single();
+
+		if (!perfil?.estabelecimento_id) {
+			console.warn("[PedidosCache] Estabelecimento não encontrado");
+			pedidosCacheLoaded.value = true; // Marcar como carregado mesmo sem dados
+			return;
+		}
+
+		const estabelecimentoId = perfil.estabelecimento_id;
+
 		// Buscar pedidos com RLS (últimos 50 pedidos para performance)
 		const { data, error } = await supabase
 			.from("pedidos")
@@ -43,14 +58,19 @@ export default defineNuxtPlugin(async () => {
 				)
 			`,
 			)
+			.eq("estabelecimento_id", estabelecimentoId)
 			.order("created_at", { ascending: false })
 			.limit(50);
 
 		if (!error && data) {
 			pedidos.value = data as PedidoCompleto[];
-			pedidosCacheLoaded.value = true;
 		}
+
+		// SEMPRE marcar como carregado, mesmo se não houver dados
+		pedidosCacheLoaded.value = true;
 	} catch (error) {
 		console.error("[PedidosCache] Erro ao carregar dados:", error);
+		// Mesmo com erro, marcar como carregado para não bloquear a UI
+		pedidosCacheLoaded.value = true;
 	}
 });

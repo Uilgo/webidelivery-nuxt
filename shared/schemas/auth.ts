@@ -25,15 +25,20 @@ export const emailSchema = z
 	.transform((email) => email.trim());
 
 /**
- * Validação de senha conforme PRD:
- * ≥8 chars, letra + número + especial
+ * Validação de senha conforme configuração do Supabase:
+ * - Lowercase letters (a-z)
+ * - Uppercase letters (A-Z)
+ * - Digits (0-9)
+ * - Symbols (!@#$%^&*(),.?":{}|<>)
+ * - Mínimo 8 caracteres
  */
 const passwordSchema = z
 	.string()
 	.min(8, "A senha deve ter pelo menos 8 caracteres")
-	.regex(/[a-zA-Z]/, "A senha deve conter pelo menos uma letra")
+	.regex(/[a-z]/, "A senha deve conter pelo menos uma letra minúscula")
+	.regex(/[A-Z]/, "A senha deve conter pelo menos uma letra maiúscula")
 	.regex(/\d/, "A senha deve conter pelo menos um número")
-	.regex(/[!@#$%^&*(),.?":{}|<>]/, "A senha deve conter pelo menos um caractere especial");
+	.regex(/[!@#$%^&*(),.?":{}|<>]/, "A senha deve conter pelo menos um símbolo (!@#$%^&*)");
 
 /**
  * Validação de nome (sem números ou caracteres especiais)

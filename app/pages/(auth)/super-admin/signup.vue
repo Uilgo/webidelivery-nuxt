@@ -11,6 +11,7 @@ import SuperAdminSignupPage from "~/features/auth/pages/SuperAdminSignupPage.vue
 // Definir layout
 definePageMeta({
 	layout: "auth",
+	middleware: ["guest"], // ✅ Redireciona usuários logados
 });
 
 // Meta tags para SEO

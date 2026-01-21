@@ -12,6 +12,7 @@ import {
 	formatarFormaPagamento,
 	formatarTempoDecorrido,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
+import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 
 interface Props {
 	pedido: PedidoCompleto;
@@ -90,8 +91,13 @@ const handleClick = () => {
 		@click="handleClick"
 	>
 		<!-- Número -->
-		<div class="flex-shrink-0 w-16">
-			<span class="text-lg font-bold text-[var(--text-primary)]">#{{ pedido.numero }}</span>
+		<div class="flex-shrink-0 w-20">
+			<div class="flex flex-col gap-0.5">
+				<span class="text-lg font-bold text-[var(--text-primary)]">#{{ pedido.numero }}</span>
+				<span class="text-xs text-[var(--text-muted)] font-mono">
+					{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
+				</span>
+			</div>
 		</div>
 
 		<!-- Cliente com Badge -->

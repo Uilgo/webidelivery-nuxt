@@ -8,6 +8,8 @@
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
 import { useCancelarPedido } from "~/features/public/pedido/composables/useCancelarPedido";
 import { useAvaliacaoPedido } from "~/composables/ui/useAvaliacaoPedido";
+import { useToast } from "~/composables/ui/useToast";
+import { formatarCodigoRastreamento } from "../../../../../lib/formatters/codigo-rastreamento";
 import {
 	clientePodeCancelar,
 	getAvisoCancelamento,
@@ -16,7 +18,7 @@ import {
 	MOTIVOS_CANCELAMENTO_LABELS,
 	type MotivoCancelamentoCliente,
 } from "~/features/admin/pedidos/types/pedidos-admin";
-import { STATUS_PEDIDO } from "~/shared/constants/pedidos";
+import { STATUS_PEDIDO } from "#shared/constants/pedidos";
 import PedidoStatus from "~/features/public/pedido/components/PedidoStatus.vue";
 import PedidoDetalhes from "~/features/public/pedido/components/PedidoDetalhes.vue";
 import AvaliacaoPedidoModal from "~/components/shared/AvaliacaoPedidoModal.vue";
@@ -27,7 +29,7 @@ import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
  */
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
-const pedidoId = computed(() => route.params.id as string);
+const codigo = computed(() => route.params.codigo as string); // ✅ MUDANÇA: usa código em vez de ID
 
 /**
  * Composables
@@ -51,7 +53,7 @@ const carregarPedido = async () => {
 	loading.value = true;
 	erro.value = false;
 
-	const resultado = await buscarPedido(pedidoId.value);
+	const resultado = await buscarPedido(codigo.value); // ✅ USA CÓDIGO
 
 	if (!resultado) {
 		erro.value = true;
@@ -168,6 +170,31 @@ const handleAvaliacaoEnviada = () => {
 
 	onAvaliacaoEnviada();
 };
+
+/**
+ * Copiar código de rastreamento
+ */
+const copiarCodigo = async () => {
+	if (!pedido.value) return;
+
+	try {
+		await navigator.clipboard.writeText(
+			formatarCodigoRastreamento(pedido.value.codigo_rastreamento),
+		);
+		toast.add({
+			title: "Código copiado!",
+			description: "O código de rastreamento foi copiado para a área de transferência",
+			color: "success",
+			duration: 3000,
+		});
+	} catch (error) {
+		toast.add({
+			title: "Erro ao copiar",
+			description: "Não foi possível copiar o código",
+			color: "error",
+		});
+	}
+};
 </script>
 
 <template>
@@ -210,18 +237,45 @@ const handleAvaliacaoEnviada = () => {
 
 			<!-- Conteúdo -->
 			<div v-else-if="pedido" class="space-y-6">
-				<!-- Mensagem de Sucesso -->
+				<!-- Mensagem de Sucesso com Código de Rastreamento -->
 				<div
 					class="p-6 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400"
 				>
 					<div class="flex items-start gap-3">
 						<Icon name="lucide:check-circle-2" class="w-6 h-6 flex-shrink-0" />
-						<div>
+						<div class="flex-1">
 							<h3 class="font-bold mb-1">Pedido realizado com sucesso!</h3>
-							<p class="text-sm">
+							<p class="text-sm mb-3">
 								Seu pedido <strong>#{{ pedido.numero }}</strong> foi recebido e está sendo
 								processado.
 							</p>
+
+							<!-- ✅ CÓDIGO DE RASTREAMENTO -->
+							<div
+								class="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-lg border border-green-500/30"
+							>
+								<p class="text-xs font-medium mb-2 text-green-600 dark:text-green-400">
+									Código de Rastreamento:
+								</p>
+								<div class="flex items-center gap-3">
+									<code
+										class="text-2xl font-bold tracking-wider text-green-700 dark:text-green-300"
+									>
+										{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
+									</code>
+									<button
+										type="button"
+										@click="copiarCodigo"
+										class="p-2 rounded-lg hover:bg-green-500/20 transition-colors"
+										title="Copiar código"
+									>
+										<Icon name="lucide:copy" class="w-4 h-4" />
+									</button>
+								</div>
+								<p class="text-xs mt-2 text-green-600/80 dark:text-green-400/80">
+									Guarde este código para acompanhar seu pedido
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>

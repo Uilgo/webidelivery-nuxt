@@ -9,6 +9,28 @@ import { useUserStore } from "~/stores/user";
 import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 /**
+ * Tipos para a resposta da query de perfil
+ */
+interface PerfilComEstabelecimento {
+	id: string;
+	nome: string;
+	sobrenome: string;
+	cargo: import("#shared/types/database").Cargo;
+	estabelecimento_id: string | null;
+	created_at: string;
+	updated_at: string;
+	estabelecimentos: {
+		id: string;
+		nome: string;
+		slug: string;
+		logo_url: string | null;
+		status: string;
+		aberto: boolean;
+		onboarding: boolean;
+	} | null;
+}
+
+/**
  * Extrai o ID do usuário (suporta 'id' e 'sub')
  */
 const getUserId = (user: unknown): string | null => {
@@ -34,7 +56,7 @@ export default defineNuxtPlugin(() => {
 		if (!userId) return;
 
 		try {
-			const { data: perfil, error } = await supabase
+			const { data: perfil, error } = (await supabase
 				.from("perfis")
 				.select(
 					`
@@ -45,25 +67,50 @@ export default defineNuxtPlugin(() => {
 						slug,
 						logo_url,
 						status,
-						aberto
+						aberto,
+						onboarding
 					)
 				`,
 				)
 				.eq("id", userId)
-				.single();
+				.single()) as { data: PerfilComEstabelecimento | null; error: unknown | null };
 
 			if (error) {
-				console.error("[AuthClient] Erro na query:", error.message);
+				const errorMessage =
+					error && typeof error === "object" && "message" in error
+						? (error as { message: string }).message
+						: "Erro desconhecido";
+				console.error("[AuthClient] Erro na query:", errorMessage);
 				return;
 			}
 
 			if (perfil) {
-				const { estabelecimentos, ...perfilData } = perfil;
+				// Extrair dados do estabelecimento
+				const estabelecimentos = perfil.estabelecimentos;
 
-				userStore.$patch({
-					profile: perfilData,
-					isLoadingProfile: false,
-					lastProfileFetch: Date.now(),
+				// Criar objeto do perfil completo com todas as propriedades necessárias
+				const perfilCompleto = {
+					id: perfil.id,
+					nome: perfil.nome,
+					sobrenome: perfil.sobrenome,
+					cargo: perfil.cargo as import("#shared/types/database").Cargo,
+					estabelecimento_id: perfil.estabelecimento_id,
+					created_at: perfil.created_at,
+					updated_at: perfil.updated_at,
+					// Propriedades que não estão na query mas são obrigatórias no tipo Perfil
+					avatar_url: null,
+					email: user.value?.email || "",
+					telefone: null,
+					ativo: true,
+					termos_aceitos_em: null,
+					privacidade_aceita_em: null,
+				};
+
+				// Atualizar store do usuário
+				userStore.$patch((state) => {
+					state.profile = perfilCompleto;
+					state.isLoadingProfile = false;
+					state.lastProfileFetch = Date.now();
 				});
 
 				if (estabelecimentos) {
@@ -72,6 +119,24 @@ export default defineNuxtPlugin(() => {
 						isLoading: false,
 						lastFetch: Date.now(),
 					});
+
+					// ========================================
+					// LÓGICA DE REDIRECIONAMENTO PARA ONBOARDING
+					// ========================================
+					await nextTick(); // Aguardar store ser atualizado
+
+					// Se estabelecimento existe mas onboarding não foi concluído
+					if (estabelecimentos.onboarding === false) {
+						// Usar window.location.pathname ao invés de useRoute() em plugin
+						const currentPath = window.location.pathname;
+
+						// Só redirecionar se estiver tentando acessar páginas admin (não onboarding)
+						if (currentPath.startsWith("/admin") && currentPath !== "/admin/onboarding") {
+							console.warn("[AuthClient] Onboarding pendente, redirecionando...");
+							await navigateTo("/admin/onboarding");
+							return; // Parar execução aqui
+						}
+					}
 				}
 			}
 		} catch (error) {
@@ -106,14 +171,14 @@ export default defineNuxtPlugin(() => {
 
 	watch(
 		user,
-		(newUser, oldUser) => {
+		async (newUser, oldUser) => {
 			const newUserId = getUserId(newUser);
 			const oldUserId = getUserId(oldUser);
 
 			if (newUserId && !oldUserId) {
 				// Login - carregar dados
 				userStore.setAuthUser(newUser);
-				loadAllData();
+				await loadAllData(); // Aguardar para verificar onboarding
 			} else if (!newUserId && oldUserId) {
 				// Logout - limpar dados
 				clearAllData();
@@ -121,7 +186,7 @@ export default defineNuxtPlugin(() => {
 				// Troca de conta
 				userStore.setAuthUser(newUser);
 				estabelecimentoStore.clear();
-				loadAllData();
+				await loadAllData();
 			}
 		},
 		{ immediate: false },
@@ -131,12 +196,12 @@ export default defineNuxtPlugin(() => {
 	// LISTENER DE EVENTOS DE AUTH DO SUPABASE
 	// ========================================
 
-	supabase.auth.onAuthStateChange((event, session) => {
+	supabase.auth.onAuthStateChange(async (event, session) => {
 		switch (event) {
 			case "SIGNED_IN":
 				if (session?.user && !userStore.profile) {
 					userStore.setAuthUser(session.user);
-					loadAllData();
+					await loadAllData(); // Aguardar carregar dados para verificar onboarding
 				}
 				break;
 
@@ -158,7 +223,7 @@ export default defineNuxtPlugin(() => {
 					userStore.setAuthUser(session.user);
 					// Recarregar perfil se email mudou
 					if (userStore.profile?.email !== session.user.email) {
-						loadAllData();
+						await loadAllData();
 					}
 				}
 				break;

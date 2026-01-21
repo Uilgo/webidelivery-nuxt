@@ -11,6 +11,7 @@ import LoginPage from "~/features/auth/pages/LoginPage.vue";
 // Definir layout
 definePageMeta({
 	layout: "auth",
+	middleware: ["guest"], // ✅ Redireciona usuários logados
 });
 
 // Meta tags para SEO

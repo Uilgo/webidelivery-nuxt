@@ -11,6 +11,7 @@ import ForgotPage from "~/features/auth/pages/ForgotPage.vue";
 // Definir layout
 definePageMeta({
 	layout: "auth",
+	middleware: ["guest"], // ✅ Redireciona usuários logados
 });
 
 // Meta tags para SEO

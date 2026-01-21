@@ -59,9 +59,29 @@ export const useCombosFetch = () => {
 		error.value = null;
 
 		try {
+			// Buscar estabelecimento_id do usuário
+			const userId = user.value.id ?? (user.value as { sub?: string } | null)?.sub;
+			if (!userId) {
+				throw new Error("ID do usuário não encontrado");
+			}
+
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Buscar combos FILTRADO POR ESTABELECIMENTO
 			const { data, error: fetchError } = await supabase
 				.from("combos")
 				.select("*")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true });
 
 			if (fetchError) throw fetchError;

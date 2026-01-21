@@ -36,8 +36,8 @@ const { signupEstablishment } = useAuth();
 const { success: showSuccess, error: showError } = useToast();
 
 // Estados de loading e erro
-const isSubmitting = ref(false);
 const submitError = ref<string | null>(null);
+const isSubmitting = ref<boolean>(false);
 
 // Configuração do VeeValidate com Zod
 const { handleSubmit } = useForm({
@@ -134,7 +134,7 @@ const onSubmit = handleSubmit(async (values) => {
 						v-model="nome.value.value"
 						type="text"
 						placeholder="Seu nome"
-						:disabled="props.loading"
+						:disabled="isSubmitting || props.loading"
 						autocomplete="given-name"
 						required
 					/>
@@ -145,7 +145,7 @@ const onSubmit = handleSubmit(async (values) => {
 						v-model="sobrenome.value.value"
 						type="text"
 						placeholder="Seu sobrenome"
-						:disabled="props.loading"
+						:disabled="isSubmitting || props.loading"
 						autocomplete="family-name"
 						required
 					/>
@@ -159,7 +159,7 @@ const onSubmit = handleSubmit(async (values) => {
 					v-model="email.value.value"
 					type="email"
 					placeholder="seu@email.com"
-					:disabled="props.loading"
+					:disabled="isSubmitting || props.loading"
 					autocomplete="email"
 					required
 				/>
@@ -172,7 +172,7 @@ const onSubmit = handleSubmit(async (values) => {
 					v-model="password.value.value"
 					type="password"
 					placeholder="Mínimo 8 caracteres"
-					:disabled="props.loading"
+					:disabled="isSubmitting || props.loading"
 					autocomplete="new-password"
 					required
 				/>
@@ -184,7 +184,7 @@ const onSubmit = handleSubmit(async (values) => {
 					v-model="confirmPassword.value.value"
 					type="password"
 					placeholder="Confirme sua senha"
-					:disabled="props.loading"
+					:disabled="isSubmitting || props.loading"
 					autocomplete="new-password"
 					required
 				/>
@@ -196,7 +196,7 @@ const onSubmit = handleSubmit(async (values) => {
 					v-model="terms.value.value"
 					label="Aceito os termos de uso"
 					size="sm"
-					:disabled="props.loading"
+					:disabled="isSubmitting || props.loading"
 					class="text-sm"
 				/>
 				<div
@@ -211,7 +211,7 @@ const onSubmit = handleSubmit(async (values) => {
 					v-model="privacy.value.value"
 					label="Aceito a política de privacidade"
 					size="sm"
-					:disabled="props.loading"
+					:disabled="isSubmitting || props.loading"
 					class="text-sm"
 				/>
 				<div
@@ -230,14 +230,14 @@ const onSubmit = handleSubmit(async (values) => {
 					variant="solid"
 					color="primary"
 					size="lg"
-					:loading="props.loading"
-					:disabled="props.loading"
+					:loading="isSubmitting || props.loading"
+					:disabled="isSubmitting || props.loading"
 					full-width
 				>
 					<template #iconLeft>
 						<Icon name="lucide:user-plus" class="w-5 h-5" />
 					</template>
-					{{ props.loading ? "Criando conta..." : "Criar conta" }}
+					{{ isSubmitting || props.loading ? "Criando conta..." : "Criar conta" }}
 				</UiButton>
 			</div>
 		</form>

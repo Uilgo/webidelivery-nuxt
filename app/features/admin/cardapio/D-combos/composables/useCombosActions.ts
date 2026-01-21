@@ -150,10 +150,15 @@ export const useCombosActions = () => {
 
 	/**
 	 * Toggle status ativo/inativo
+	 * SEGURANÇA: Usa RPC para garantir que só atualiza combos do próprio estabelecimento
 	 */
 	const toggleStatus = async (id: string, ativo: boolean): Promise<boolean> => {
 		try {
-			const { error } = await supabase.from("combos").update({ ativo }).eq("id", id);
+			// Usar RPC para garantir segurança multi-tenant
+			const { error } = await supabase.rpc("fn_combos_toggle_ativo", {
+				p_combo_id: id,
+				p_ativo: ativo,
+			});
 
 			if (error) throw error;
 

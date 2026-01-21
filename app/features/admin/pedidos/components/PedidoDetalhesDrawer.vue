@@ -13,6 +13,7 @@ import {
 	formatarTempoDecorrido,
 	formatarDataHora,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
+import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 import { usePedidoHistorico } from "~/features/admin/pedidos/composables/usePedidoHistorico";
 import { requerObservacao } from "~/features/admin/pedidos/utils/status-transitions";
 import { STATUS_PEDIDO } from "#shared/constants/pedidos";
@@ -249,14 +250,23 @@ const getStatusIcon = (status: StatusPedido): string => {
 		@update:model-value="emit('update:modelValue', $event)"
 	>
 		<div v-if="pedido" class="space-y-4">
-			<!-- Status e Tempo -->
-			<div class="flex items-center justify-between">
-				<UiBadge v-if="statusConfig" :variant="statusConfig.variant" size="md">
-					<template #iconLeft>
-						<Icon :name="statusConfig.icon" class="w-3.5 h-3.5" />
-					</template>
-					{{ formatarStatus(pedido.status) }}
-				</UiBadge>
+			<!-- Status, Código e Tempo -->
+			<div class="flex items-start justify-between gap-3">
+				<div class="flex flex-col gap-2">
+					<UiBadge v-if="statusConfig" :variant="statusConfig.variant" size="md">
+						<template #iconLeft>
+							<Icon :name="statusConfig.icon" class="w-3.5 h-3.5" />
+						</template>
+						{{ formatarStatus(pedido.status) }}
+					</UiBadge>
+					<!-- Código de Rastreamento -->
+					<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+						<Icon name="lucide:hash" class="w-3.5 h-3.5" />
+						<span class="font-mono font-medium">
+							{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
+						</span>
+					</div>
+				</div>
 				<div class="text-right">
 					<p class="text-xs text-[var(--text-muted)]">{{ tempoDecorrido }}</p>
 					<p class="text-xs text-[var(--text-muted)]">

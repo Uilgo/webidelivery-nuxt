@@ -43,9 +43,31 @@ export const useDashboardRealtime = (): UseDashboardRealtimeReturn => {
 	const buscarPedidosRecentes = async (): Promise<PedidoResumo[]> => {
 		try {
 			const supabase = useSupabaseClient();
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			// Buscar estabelecimento_id do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Buscar pedidos recentes FILTRADO POR ESTABELECIMENTO
 			const { data, error } = await supabase
 				.from("pedidos")
 				.select("*")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("created_at", { ascending: false })
 				.limit(10);
 

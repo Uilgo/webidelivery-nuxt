@@ -26,6 +26,7 @@ export interface Pedido {
 	updated_at: string;
 	estabelecimento_id: string;
 	numero: number;
+	codigo_rastreamento: string; // ✅ NOVO - Código único para rastreamento público
 	status: StatusPedido;
 	tipo_entrega: TipoEntregaPedido;
 	cliente_nome: string;

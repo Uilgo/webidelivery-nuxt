@@ -54,7 +54,28 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 	}): Promise<PedidoCompleto[]> => {
 		try {
 			const supabase = useSupabaseClient();
-			let query = supabase.from("pedidos").select("*");
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			// Buscar estabelecimento_id do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Query com filtro de estabelecimento
+			let query = supabase.from("pedidos").select("*").eq("estabelecimento_id", estabelecimentoId);
 
 			// Aplica filtros de data se especificados
 			// Para pegar todos os pedidos de hoje, usa o final do dia (23:59:59) em vez da hora atual
@@ -260,15 +281,36 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 	const calcularKpisProdutos = async (): Promise<KpiProdutos> => {
 		try {
 			const supabase = useSupabaseClient();
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
 
-			// Busca total de produtos ativos
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			// Buscar estabelecimento_id do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
+			// Busca total de produtos ativos - FILTRADO POR ESTABELECIMENTO
 			const { count: totalAtivos } = await supabase
 				.from("produtos")
 				.select("*", { count: "exact", head: true })
+				.eq("estabelecimento_id", estabelecimentoId)
 				.eq("ativo", true);
 
-			// Busca produtos mais vendidos com faturamento via RPC
+			// Busca produtos mais vendidos com faturamento via RPC - FILTRADO POR ESTABELECIMENTO
 			const { data: maisVendidos, error } = await supabase.rpc("fn_buscar_produtos_mais_vendidos", {
+				p_estabelecimento_id: estabelecimentoId,
 				p_limit: 10,
 			});
 
@@ -309,6 +351,26 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 	}): Promise<{ novos: number; recorrencia: number; variacao: number }> => {
 		try {
 			const supabase = useSupabaseClient();
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+
+			if (!userId) {
+				throw new Error("Usuário não autenticado");
+			}
+
+			// Buscar estabelecimento_id do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select("estabelecimento_id")
+				.eq("id", userId)
+				.single();
+
+			if (!perfil?.estabelecimento_id) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
 			const hoje = new Date();
 			hoje.setHours(23, 59, 59, 999); // Final do dia para garantir que pegue todos
 
@@ -341,17 +403,19 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				dataFimAnterior.setHours(23, 59, 59, 999);
 			}
 
-			// Busca novos clientes no período selecionado
+			// Busca novos clientes no período selecionado - FILTRADO POR ESTABELECIMENTO
 			const { data: novosClientes } = await supabase
 				.from("clientes")
 				.select("id")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.gte("primeiro_pedido_em", dataInicio.toISOString())
 				.lte("primeiro_pedido_em", dataFim.toISOString());
 
-			// Busca novos clientes no período anterior para comparação
+			// Busca novos clientes no período anterior para comparação - FILTRADO POR ESTABELECIMENTO
 			const { data: novosClientesAnterior } = await supabase
 				.from("clientes")
 				.select("id")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.gte("primeiro_pedido_em", dataInicioAnterior.toISOString())
 				.lte("primeiro_pedido_em", dataFimAnterior.toISOString());
 
@@ -368,11 +432,12 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 				variacao = Math.round(((novosPeriodo - novosAnterior) / novosAnterior) * 100);
 			}
 
-			// Busca taxa de recorrência (clientes com mais de 1 pedido)
+			// Busca taxa de recorrência (clientes com mais de 1 pedido) - FILTRADO POR ESTABELECIMENTO
 			// Conta pedidos por cliente diretamente da tabela de pedidos (mais preciso)
 			const { data: pedidosPorCliente } = await supabase
 				.from("pedidos")
 				.select("cliente_id")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.not("cliente_id", "is", null);
 
 			// Agrupa pedidos por cliente_id e conta
@@ -502,15 +567,32 @@ export const useDashboardKpis = (): UseDashboardKpisReturn => {
 		const taxaCancelamento =
 			totalPedidos > 0 ? Math.round((pedidosCancelados.length / totalPedidos) * 100) : 0;
 
-		// Busca satisfação média via Supabase (avaliações)
+		// Busca satisfação média via Supabase (avaliações) - FILTRADO POR ESTABELECIMENTO
 		let satisfacaoMedia = 0;
 		try {
 			const supabase = useSupabaseClient();
-			const { data: avaliacoes } = await supabase.from("avaliacoes").select("nota");
+			const user = useSupabaseUser();
+			const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
 
-			if (avaliacoes && avaliacoes.length > 0) {
-				const somaNotas = avaliacoes.reduce((acc, a) => acc + a.nota, 0);
-				satisfacaoMedia = Number((somaNotas / avaliacoes.length).toFixed(1));
+			if (userId) {
+				// Buscar estabelecimento_id do usuário
+				const { data: perfil } = await supabase
+					.from("perfis")
+					.select("estabelecimento_id")
+					.eq("id", userId)
+					.single();
+
+				if (perfil?.estabelecimento_id) {
+					const { data: avaliacoes } = await supabase
+						.from("avaliacoes")
+						.select("nota")
+						.eq("estabelecimento_id", perfil.estabelecimento_id);
+
+					if (avaliacoes && avaliacoes.length > 0) {
+						const somaNotas = avaliacoes.reduce((acc, a) => acc + a.nota, 0);
+						satisfacaoMedia = Number((somaNotas / avaliacoes.length).toFixed(1));
+					}
+				}
 			}
 		} catch {
 			// Retorna 0 em caso de erro

@@ -11,6 +11,7 @@ import TeamMemberSignupPage from "~/features/auth/pages/TeamMemberSignupPage.vue
 // Definir layout
 definePageMeta({
 	layout: "auth",
+	middleware: ["guest"], // ✅ Redireciona usuários logados
 });
 
 // Meta tags para SEO

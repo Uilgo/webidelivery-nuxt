@@ -12,6 +12,7 @@ import PedidosPage from "~/features/admin/pedidos/pages/PedidosPage.vue";
 // Metadados da página
 definePageMeta({
 	layout: "admin",
+	middleware: ["admin-only", "onboarding"], // ✅ Proteção de cargo + onboarding
 });
 
 // SEO

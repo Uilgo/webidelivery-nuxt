@@ -10,13 +10,18 @@ export const usePedido = () => {
 	const supabase = useSupabaseClient();
 
 	/**
-	 * Busca um pedido pelo ID
+	 * Busca um pedido pelo CÓDIGO DE RASTREAMENTO (não mais por ID)
+	 * @param codigoRastreamento - Código no formato XXXX-YYYY ou XXXXXXXX
+	 * @returns Pedido completo ou null se não encontrado
 	 */
-	const buscarPedido = async (pedidoId: string): Promise<PedidoCompleto | null> => {
+	const buscarPedido = async (codigoRastreamento: string): Promise<PedidoCompleto | null> => {
+		// Normaliza o código (remove hífen e converte para maiúsculas)
+		const codigoNormalizado = codigoRastreamento.replace("-", "").toUpperCase();
+
 		const { data: pedido, error: pedidoError } = await supabase
 			.from("pedidos")
 			.select("*")
-			.eq("id", pedidoId)
+			.eq("codigo_rastreamento", codigoNormalizado)
 			.single();
 
 		if (pedidoError || !pedido) {
@@ -29,7 +34,7 @@ export const usePedido = () => {
 		const { data: itens, error: itensError } = await supabase
 			.from("pedido_itens")
 			.select("*")
-			.eq("pedido_id", pedidoId);
+			.eq("pedido_id", pedido.id);
 
 		if (itensError || !itens) {
 			return null;

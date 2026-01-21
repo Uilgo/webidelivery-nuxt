@@ -12,6 +12,7 @@ import CardapioPage from "~/features/admin/cardapio/pages/CardapioPage.vue";
 // Meta da página
 definePageMeta({
 	layout: "admin",
+	middleware: ["admin-only", "onboarding"], // ✅ Proteção de cargo + onboarding
 });
 
 // SEO

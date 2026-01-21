@@ -49,12 +49,27 @@ export default defineNuxtPlugin(async () => {
 	const combosCacheLoaded = useState<boolean>("combos-cache-loaded", () => false);
 
 	try {
+		// Buscar estabelecimento_id do usuário
+		const { data: perfil } = await supabase
+			.from("perfis")
+			.select("estabelecimento_id")
+			.eq("id", userId)
+			.single();
+
+		if (!perfil?.estabelecimento_id) {
+			console.warn("[CardapioCache] Estabelecimento não encontrado");
+			return;
+		}
+
+		const estabelecimentoId = perfil.estabelecimento_id;
+
 		// Buscar todos os dados em paralelo
 		const [categoriasRes, produtosRes, gruposRes, combosRes] = await Promise.all([
 			// Categorias com contagem de produtos
 			supabase
 				.from("categorias")
 				.select(`*, produtos:produtos(count)`)
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true }),
 
 			// Produtos com categoria e variações
@@ -67,6 +82,7 @@ export default defineNuxtPlugin(async () => {
 					variacoes:produto_variacoes(id)
 				`,
 				)
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true }),
 
 			// Grupos de adicionais com adicionais
@@ -78,10 +94,15 @@ export default defineNuxtPlugin(async () => {
 					adicionais (id, nome, preco, ativo, permite_multiplas_unidades)
 				`,
 				)
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true }),
 
 			// Combos
-			supabase.from("combos").select("*").order("ordem", { ascending: true }),
+			supabase
+				.from("combos")
+				.select("*")
+				.eq("estabelecimento_id", estabelecimentoId)
+				.order("ordem", { ascending: true }),
 		]);
 
 		// Processar categorias

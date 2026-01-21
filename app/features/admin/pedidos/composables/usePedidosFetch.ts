@@ -40,7 +40,13 @@ export const usePedidosFetch = (): UsePedidosFetchReturn => {
 	 * para manter o cache completo e evitar perda de dados ao trocar tabs
 	 */
 	const fetch = async (): Promise<void> => {
-		loading.value = true;
+		// Se já foi carregado (mesmo que vazio), não mostrar loading
+		if (cacheLoaded.value) {
+			loading.value = false;
+		} else {
+			loading.value = true;
+		}
+
 		error.value = null;
 
 		try {
@@ -82,11 +88,17 @@ export const usePedidosFetch = (): UsePedidosFetchReturn => {
 
 	/**
 	 * Inicializa o composable
-	 * Se já tem dados em cache, não faz fetch
+	 * Se já tem dados em cache OU já foi carregado (mesmo vazio), não faz fetch
 	 */
 	const init = async (): Promise<void> => {
 		// Se já tem dados em cache, não faz nada
 		if (pedidos.value.length > 0 && cacheLoaded.value) {
+			loading.value = false;
+			return;
+		}
+
+		// Se já foi carregado (mesmo que vazio), não carregar novamente
+		if (cacheLoaded.value) {
 			loading.value = false;
 			return;
 		}

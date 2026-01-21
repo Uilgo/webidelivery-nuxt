@@ -308,10 +308,12 @@ export const useDashboard = (): UseDashboardReturn => {
 
 			// Carrega dados iniciais APENAS se não vieram do servidor
 			onMounted(async () => {
-				// Se os dados já existem (vieram do SSR), não faz nada
-				if (kpis.value && charts.value && dashboardCacheLoaded.value) {
+				// Se o cache já foi carregado (mesmo que vazio), não mostrar loading
+				if (dashboardCacheLoaded.value) {
+					loading.value = false;
 					return;
 				}
+
 				// Caso contrário (SPA puro), carrega
 				await carregarDados();
 			});

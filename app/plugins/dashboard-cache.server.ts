@@ -73,33 +73,71 @@ export default defineNuxtPlugin({
 		const dashboardCacheLoaded = useState<boolean>("admin-dashboard-cache-loaded", () => false);
 
 		try {
+			// Buscar estabelecimento_id e status do onboarding do usuário
+			const { data: perfil } = await supabase
+				.from("perfis")
+				.select(
+					`
+					estabelecimento_id,
+					estabelecimentos:estabelecimento_id (
+						id,
+						onboarding
+					)
+				`,
+				)
+				.eq("id", userId)
+				.single();
+
+			// Se não tem estabelecimento ou onboarding não foi concluído, não carregar dados
+			if (!perfil?.estabelecimento_id) {
+				console.warn("[DashboardCache] ⚠️ Estabelecimento não encontrado");
+				dashboardCacheLoaded.value = true;
+				return;
+			}
+
+			const estabelecimentos = perfil.estabelecimentos as {
+				id: string;
+				onboarding: boolean;
+			} | null;
+
+			if (!estabelecimentos || estabelecimentos.onboarding === false) {
+				console.warn("[DashboardCache] ⚠️ Onboarding não concluído, não carregando dados");
+				dashboardCacheLoaded.value = true;
+				return;
+			}
+
+			const estabelecimentoId = perfil.estabelecimento_id;
+
 			// Definir intervalo padrão (hoje)
 			const hoje = new Date();
 			const dataInicio = startOfDay(hoje).toISOString().split("T")[0];
 			const dataFim = hoje.toISOString().split("T")[0];
 
-			// Buscar TODOS os pedidos de hoje (para KPIs e Charts)
+			// Buscar TODOS os pedidos de hoje (para KPIs e Charts) - FILTRADO POR ESTABELECIMENTO
 			const { data: pedidosHoje, error: pedidosError } = await supabase
 				.from("pedidos")
 				.select("*")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.gte("created_at", `${dataInicio}T00:00:00-03:00`)
 				.lte("created_at", `${dataFim}T23:59:59.999-03:00`);
 
 			if (pedidosError) throw pedidosError;
 
-			// Buscar pedidos recentes (últimos 10) para realtime
+			// Buscar pedidos recentes (últimos 10) para realtime - FILTRADO POR ESTABELECIMENTO
 			const { data: pedidosRecentes, error: recentesError } = await supabase
 				.from("pedidos")
 				.select("*")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.order("created_at", { ascending: false })
 				.limit(10);
 
 			if (recentesError) throw recentesError;
 
-			// Buscar clientes novos de hoje
+			// Buscar clientes novos de hoje - FILTRADO POR ESTABELECIMENTO
 			const { data: clientesNovos, error: clientesError } = await supabase
 				.from("clientes")
 				.select("id")
+				.eq("estabelecimento_id", estabelecimentoId)
 				.gte("primeiro_pedido_em", `${dataInicio}T00:00:00-03:00`)
 				.lte("primeiro_pedido_em", `${dataFim}T23:59:59.999-03:00`);
 
@@ -108,10 +146,11 @@ export default defineNuxtPlugin({
 			// Tipar clientes
 			const clientesTyped = (clientesNovos || []) as { id: string }[];
 
-			// Buscar produtos mais vendidos com faturamento
+			// Buscar produtos mais vendidos com faturamento - FILTRADO POR ESTABELECIMENTO
 			const { data: produtosMaisVendidos, error: produtosError } = await supabase.rpc(
 				"fn_buscar_produtos_mais_vendidos",
 				{
+					p_estabelecimento_id: estabelecimentoId,
 					p_limit: 10,
 				},
 			);
@@ -160,8 +199,11 @@ export default defineNuxtPlugin({
 						)
 					: 0;
 
-			// Buscar satisfação média
-			const { data: avaliacoes } = await supabase.from("avaliacoes").select("nota");
+			// Buscar satisfação média - FILTRADO POR ESTABELECIMENTO
+			const { data: avaliacoes } = await supabase
+				.from("avaliacoes")
+				.select("nota")
+				.eq("estabelecimento_id", estabelecimentoId);
 			const avaliacoesTyped = (avaliacoes || []) as AvaliacaoSupabase[];
 			const satisfacaoMedia =
 				avaliacoesTyped.length > 0
