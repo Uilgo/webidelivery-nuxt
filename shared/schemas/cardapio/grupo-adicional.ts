@@ -35,8 +35,7 @@ const descricaoGrupoSchema = z
 const minSelecaoSchema = z
 	.number()
 	.int("Deve ser um número inteiro")
-	.min(0, "Mínimo não pode ser negativo")
-	.default(0);
+	.min(0, "Mínimo não pode ser negativo");
 
 /**
  * Validação de quantidade máxima de seleção
@@ -61,8 +60,8 @@ export const createGrupoAdicionalSchema = z
 		descricao: descricaoGrupoSchema,
 		min_selecao: minSelecaoSchema,
 		max_selecao: maxSelecaoSchema,
-		obrigatorio: z.boolean().default(false),
-		ativo: z.boolean().default(true),
+		obrigatorio: z.boolean(),
+		ativo: z.boolean(),
 	})
 	.refine(
 		(data) => {

@@ -52,7 +52,7 @@ export const createVariacaoSchema = z
 		nome: nomeVariacaoSchema,
 		preco: precoSchema,
 		preco_promocional: precoPromocionalSchema,
-		ativo: z.boolean().default(true),
+		ativo: z.boolean(),
 	})
 	.refine(
 		(data) => {

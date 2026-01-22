@@ -46,8 +46,7 @@ export const gerarCodigoConviteSchema = z.object({
 		.number()
 		.int("Dias de validade deve ser inteiro")
 		.min(1, "Mínimo de 1 dia")
-		.max(90, "Máximo de 90 dias")
-		.default(30),
+		.max(90, "Máximo de 90 dias"),
 });
 
 /**

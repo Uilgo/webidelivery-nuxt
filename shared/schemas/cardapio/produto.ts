@@ -57,10 +57,10 @@ export const createProdutoSchema = z
 			.array(createVariacaoSchema)
 			.min(1, "Produto deve ter pelo menos uma variação")
 			.max(10, "Produto pode ter no máximo 10 variações"),
-		grupos_adicionais_ids: z.array(z.string().uuid()).optional().default([]),
-		ativo: z.boolean().default(true),
-		destaque: z.boolean().default(false),
-		em_promocao: z.boolean().default(false),
+		grupos_adicionais_ids: z.array(z.string().uuid()).optional(),
+		ativo: z.boolean(),
+		destaque: z.boolean(),
+		em_promocao: z.boolean(),
 	})
 	.refine(
 		(data) => {

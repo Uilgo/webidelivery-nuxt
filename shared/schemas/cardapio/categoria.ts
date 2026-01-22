@@ -50,7 +50,7 @@ export const createCategoriaSchema = z.object({
 	nome: nomeCategoriaSchema,
 	descricao: descricaoCategoriaSchema,
 	imagem_url: imagemUrlSchema,
-	ativo: z.boolean().default(true),
+	ativo: z.boolean(),
 	ordem: z.number().int().min(0).optional(),
 	categoria_pai_id: z.string().uuid().optional().nullable(),
 });

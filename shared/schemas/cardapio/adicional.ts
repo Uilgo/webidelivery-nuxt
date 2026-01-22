@@ -50,7 +50,7 @@ export const createAdicionalSchema = z.object({
 	descricao: descricaoAdicionalSchema,
 	preco: precoSchema,
 	grupo_id: z.string().uuid("ID do grupo inválido"),
-	ativo: z.boolean().default(true),
+	ativo: z.boolean(),
 });
 
 /**

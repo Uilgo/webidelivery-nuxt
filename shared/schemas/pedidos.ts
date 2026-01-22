@@ -147,8 +147,7 @@ export const pedidoItemSchema = z.object({
 				preco_unitario: z.number().nonnegative("Preço deve ser não negativo"),
 			}),
 		)
-		.optional()
-		.default([]),
+		.optional(),
 });
 
 /**
