@@ -85,7 +85,7 @@ const cardClasses = computed(() => {
 
 	// Classes de tamanho
 	const sizeClasses = {
-		sm: "p-2 min-h-16",
+		sm: "p-2 min-h-[60px] min-w-[75px]",
 		md: "p-3 min-h-20",
 		lg: "p-4 min-h-24",
 	};
@@ -118,19 +118,10 @@ const cardClasses = computed(() => {
 });
 
 /**
- * Classes do indicador de status
- */
-const statusClasses = computed(() => {
-	return props.horario.aberto
-		? "w-3 h-3 bg-green-500 rounded-full"
-		: "w-3 h-3 bg-red-500 rounded-full";
-});
-
-/**
  * Classes do texto do dia
  */
 const dayTextClasses = computed(() => {
-	const baseClasses = "text-sm font-semibold";
+	const baseClasses = "text-xs font-semibold";
 
 	return props.horario.aberto
 		? `${baseClasses} text-green-900 dark:text-green-100`
@@ -141,7 +132,7 @@ const dayTextClasses = computed(() => {
  * Classes do texto do horário
  */
 const timeTextClasses = computed(() => {
-	const baseClasses = "text-xs font-medium";
+	const baseClasses = "text-[10px] font-medium";
 
 	return props.horario.aberto
 		? `${baseClasses} text-green-700 dark:text-green-300`
@@ -154,42 +145,12 @@ const timeTextClasses = computed(() => {
 const handleClick = (): void => {
 	emit("click");
 };
-
-/**
- * Handler para toggle do status (previne propagação do clique)
- */
-const handleToggle = async (event: Event): Promise<void> => {
-	event.stopPropagation();
-
-	// Animação de feedback
-	isUpdating.value = true;
-
-	// Pequeno delay para feedback visual
-	await new Promise((resolve) => setTimeout(resolve, 150));
-
-	emit("toggle-aberto", !props.horario.aberto);
-
-	// Remover animação após um tempo
-	setTimeout(() => {
-		isUpdating.value = false;
-	}, 500);
-};
 </script>
 
 <template>
 	<div :class="[cardClasses, { 'animate-pulse': isUpdating }]" @click="handleClick">
-		<!-- Indicador de Status -->
-		<div class="absolute top-2 right-2">
-			<button
-				type="button"
-				:class="statusClasses"
-				:title="horario.aberto ? 'Aberto - Clique para fechar' : 'Fechado - Clique para abrir'"
-				@click="handleToggle"
-			></button>
-		</div>
-
 		<!-- Conteúdo Principal -->
-		<div class="flex flex-col items-center space-y-1 relative z-10">
+		<div class="flex flex-col items-center space-y-1 w-full">
 			<!-- Nome do Dia -->
 			<span :class="dayTextClasses">
 				{{ diasAbreviados[horario.dia_semana] }}

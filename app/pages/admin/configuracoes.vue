@@ -22,5 +22,7 @@ useSeoMeta({
 </script>
 
 <template>
-	<ConfiguracoesPage />
+	<div class="h-full">
+		<ConfiguracoesPage />
+	</div>
 </template>

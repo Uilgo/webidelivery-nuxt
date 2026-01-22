@@ -10,5 +10,7 @@ import ConfiguracoesManager from "../components/ConfiguracoesManager.vue";
 </script>
 
 <template>
-	<ConfiguracoesManager />
+	<div class="h-full">
+		<ConfiguracoesManager />
+	</div>
 </template>

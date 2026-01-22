@@ -3,33 +3,34 @@
  * 📌 HorariosTab
  *
  * Tab de configuração de horários de funcionamento.
- * Reutiliza 100% dos componentes do onboarding Step4.
+ * Layout 2 colunas: Visão Geral (40%) | Editor (60%)
  */
 
 import type { HorarioFuncionamento } from "#shared/types/estabelecimentos";
 import { useHorariosFuncionamento } from "../../composables/useHorariosFuncionamento";
-import ConfiguracaoCard from "../shared/ConfiguracaoCard.vue";
 import WeekOverview from "~/components/ui/WeekOverview.vue";
 import DayEditor from "~/components/ui/DayEditor.vue";
+import ExcecoesHorarioDrawer from "../shared/ExcecoesHorarioDrawer.vue";
 import { DIAS_SEMANA_LABELS } from "#shared/constants/estabelecimento";
 
 // Composable de horários
-const { horarios, loading, saving, salvarHorarios } = useHorariosFuncionamento();
+const { horarios, excecoes, loading, saving, salvarHorarios } = useHorariosFuncionamento();
+
+// Estado do drawer de exceções
+const drawerExcecoesAberto = ref(false);
 
 // Estado do editor
 const editorState = ref({
-	diaSelecionado: null as string | null,
+	diaSelecionado: "segunda" as string, // Sempre ter um dia selecionado
 });
 
 // Nome completo do dia selecionado
 const nomeDiaCompleto = computed((): string => {
-	if (!editorState.value.diaSelecionado) return "";
 	return DIAS_SEMANA_LABELS[editorState.value.diaSelecionado] || editorState.value.diaSelecionado;
 });
 
 // Horário do dia selecionado para edição
 const horarioSelecionado = computed(() => {
-	if (!editorState.value.diaSelecionado) return null;
 	return horarios.value.find((h) => h.dia_semana === editorState.value.diaSelecionado) || null;
 });
 
@@ -41,9 +42,34 @@ const temDiaAberto = computed((): boolean => {
 // Estatísticas dos horários
 const estatisticas = computed(() => {
 	const diasAbertos = horarios.value.filter((h) => h.aberto);
+	const totalPeriodos = diasAbertos.reduce((acc, h) => acc + (h.periodos?.length || 0), 0);
+
+	// Cálculo de horas totais
+	let totalMinutos = 0;
+	diasAbertos.forEach((h) => {
+		h.periodos?.forEach((p) => {
+			const abertura = p.horario_abertura;
+			const fechamento = p.horario_fechamento;
+			if (!abertura || !fechamento) return;
+
+			const [startH, startM] = abertura.split(":").map(Number);
+			const [endH, endM] = fechamento.split(":").map(Number);
+
+			if (startH === undefined || startM === undefined || endH === undefined || endM === undefined)
+				return;
+
+			let diff = endH * 60 + endM - (startH * 60 + startM);
+			if (diff <= 0) diff += 24 * 60; // Funcionamento noturno
+			totalMinutos += diff;
+		});
+	});
+
 	return {
 		diasAbertos: diasAbertos.length,
 		diasFechados: 7 - diasAbertos.length,
+		totalPeriodos,
+		horasSemanais: Math.floor(totalMinutos / 60),
+		percentual: Math.round((diasAbertos.length / 7) * 100),
 	};
 });
 
@@ -73,139 +99,302 @@ const atualizarHorarioSelecionado = (horario: HorarioFuncionamento): void => {
 	updateHorario(horario.dia_semana, horario);
 };
 
-// Fechar editor
-const fecharEditor = (): void => {
-	editorState.value.diaSelecionado = null;
-};
-
 // Salvar horários
 const handleSave = async () => {
 	await salvarHorarios(horarios.value);
 };
+
+// Abrir drawer de exceções
+const abrirDrawerExcecoes = (): void => {
+	drawerExcecoesAberto.value = true;
+};
+
+// Próximas exceções (ordenadas por data)
+const proximasExcecoes = computed(() => {
+	const hoje = new Date();
+	hoje.setHours(0, 0, 0, 0);
+
+	return excecoes.value
+		.filter((exc) => {
+			const dataExcecao = new Date(exc.data + "T00:00:00");
+			return dataExcecao >= hoje;
+		})
+		.sort((a, b) => a.data.localeCompare(b.data))
+		.slice(0, 2); // Mostrar apenas as 2 próximas
+});
+
+// Formatar data para exibição
+const formatarDataExcecao = (data: string): string => {
+	const date = new Date(data + "T00:00:00");
+	return date.toLocaleDateString("pt-BR", {
+		day: "2-digit",
+		month: "long",
+		year: "numeric",
+	});
+};
 </script>
 
 <template>
-	<div class="space-y-6">
-		<ConfiguracaoCard
-			title="Horários de Funcionamento"
-			description="Configure os dias e horários em que seu estabelecimento estará aberto para receber pedidos."
-			icon="lucide:clock"
-			:loading="saving"
-			:disabled="!temDiaAberto"
-			@save="handleSave"
-		>
-			<!-- Skeleton de Loading -->
-			<div v-if="loading" class="space-y-4">
-				<UiSkeleton class="h-32 w-full" />
-				<UiSkeleton class="h-24 w-full" />
-			</div>
+	<div class="h-full flex flex-col">
+		<!-- Skeleton de Loading -->
+		<div v-if="loading" class="space-y-4">
+			<UiSkeleton class="h-32 w-full" />
+			<UiSkeleton class="h-24 w-full" />
+		</div>
 
-			<!-- Conteúdo -->
-			<div v-else class="space-y-6">
-				<!-- Visão Geral dos Dias -->
-				<WeekOverview
-					:horarios="horarios"
-					:selected-day="editorState.diaSelecionado"
-					@select-day="selecionarDia"
-					@toggle-day="toggleDia"
-				/>
+		<!-- Layout Principal: 2 Colunas com Cards -->
+		<div v-else class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
+			<div class="lg:col-span-3 flex min-h-0">
+				<UiCard class="flex-1" fill-height no-padding size="lg">
+					<template #header>
+						<div class="flex items-center gap-2">
+							<Icon name="lucide:calendar" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Visão Geral</h3>
+						</div>
+					</template>
 
-				<!-- Editor Expandido -->
-				<Transition
-					enter-active-class="transition-all duration-300 ease-out"
-					enter-from-class="opacity-0 transform -translate-y-4"
-					enter-to-class="opacity-100 transform translate-y-0"
-					leave-active-class="transition-all duration-200 ease-in"
-					leave-from-class="opacity-100 transform translate-y-0"
-					leave-to-class="opacity-0 transform -translate-y-4"
-				>
-					<div
-						v-if="horarioSelecionado"
-						class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"
-					>
-						<!-- Indicador de Expansão -->
-						<div class="flex items-center justify-center mb-4">
-							<div
-								class="flex items-center space-x-2 text-sm text-[var(--primary)] bg-[var(--primary-light)] px-3 py-1 rounded-full"
-							>
-								<Icon name="lucide:arrow-up" class="w-3 h-3" />
-								<span>Editando {{ nomeDiaCompleto }}</span>
-								<Icon name="lucide:arrow-up" class="w-3 h-3" />
-							</div>
+					<!-- Conteúdo com scroll -->
+					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+						<!-- Visão Geral dos Dias -->
+						<div>
+							<WeekOverview
+								:horarios="horarios"
+								:selected-day="editorState.diaSelecionado"
+								@select-day="selecionarDia"
+								@toggle-day="toggleDia"
+							/>
 						</div>
 
-						<!-- Cabeçalho do Editor -->
-						<div class="flex items-center justify-between mb-4">
-							<div class="flex items-center space-x-3">
-								<div
-									class="w-8 h-8 bg-[var(--primary-light)] rounded-lg flex items-center justify-center"
-								>
-									<Icon name="lucide:edit" class="w-4 h-4 text-[var(--primary)]" />
+						<!-- Estatísticas em Grid Organizado -->
+						<div class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+							<div class="flex items-center gap-2">
+								<Icon
+									name="lucide:bar-chart-3"
+									class="w-4 h-4 text-primary-600 dark:text-primary-400"
+								/>
+								<h4 class="text-sm font-medium text-gray-900 dark:text-white">
+									Resumo da Operação
+								</h4>
+							</div>
+
+							<!-- Grid de Estatísticas -->
+							<div class="space-y-4">
+								<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+									<!-- Dias Abertos -->
+									<div
+										class="bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 text-center"
+									>
+										<p
+											class="text-[9px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5"
+										>
+											Abertos
+										</p>
+										<div class="flex items-baseline justify-center gap-1">
+											<span class="text-lg font-bold text-gray-900 dark:text-white">{{
+												estatisticas.diasAbertos
+											}}</span>
+											<span class="text-[10px] text-gray-500">/ 7</span>
+										</div>
+									</div>
+
+									<!-- Horas Semanais -->
+									<div
+										class="bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 text-center"
+									>
+										<p
+											class="text-[9px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5 whitespace-nowrap"
+										>
+											H. Semanais
+										</p>
+										<div class="flex items-baseline justify-center gap-1">
+											<span class="text-lg font-bold text-gray-900 dark:text-white">{{
+												estatisticas.horasSemanais
+											}}</span>
+											<span class="text-[10px] text-gray-500">hrs</span>
+										</div>
+									</div>
+
+									<!-- Períodos -->
+									<div
+										class="bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 text-center"
+									>
+										<p
+											class="text-[9px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5"
+										>
+											Períodos
+										</p>
+										<span class="text-lg font-bold text-gray-900 dark:text-white">{{
+											estatisticas.totalPeriodos
+										}}</span>
+									</div>
+
+									<!-- Disponibilidade -->
+									<div
+										class="bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 text-center"
+									>
+										<p
+											class="text-[9px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5 whitespace-nowrap"
+										>
+											Disponibilidade
+										</p>
+										<span class="text-lg font-bold text-primary-600 dark:text-primary-400"
+											>{{ estatisticas.percentual }}%</span
+										>
+									</div>
 								</div>
-								<div>
-									<h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-										Configurar {{ nomeDiaCompleto }}
-									</h4>
-									<p class="text-sm text-gray-600 dark:text-gray-400">
-										Defina os horários de funcionamento para este dia
-									</p>
+
+								<!-- Alertas e Dicas -->
+								<div class="space-y-2">
+									<!-- Próximas Datas Especiais -->
+									<div
+										class="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/50 rounded-xl p-3"
+									>
+										<div class="flex items-center justify-between mb-2">
+											<div class="flex items-center gap-2">
+												<Icon name="lucide:calendar-clock" class="w-4 h-4 text-amber-500" />
+												<span class="text-xs font-semibold text-gray-900 dark:text-white"
+													>Datas Especiais ({{ excecoes.length }})</span
+												>
+											</div>
+											<button
+												type="button"
+												class="text-[10px] text-primary-600 font-bold hover:underline"
+												@click="abrirDrawerExcecoes"
+											>
+												Gerenciar
+											</button>
+										</div>
+
+										<!-- Lista de próximas exceções -->
+										<div v-if="proximasExcecoes.length > 0" class="space-y-3">
+											<div
+												v-for="excecao in proximasExcecoes"
+												:key="excecao.id"
+												class="flex items-center justify-between bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700"
+											>
+												<div class="flex flex-col gap-1">
+													<span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{
+														excecao.nome
+													}}</span>
+													<span class="text-xs text-gray-500">{{
+														formatarDataExcecao(excecao.data)
+													}}</span>
+												</div>
+												<span
+													:class="[
+														'px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide',
+														excecao.aberto
+															? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+															: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+													]"
+													>{{ excecao.aberto ? "H. Especial" : "Fechado" }}</span
+												>
+											</div>
+										</div>
+
+										<!-- Estado vazio -->
+										<div
+											v-else
+											class="text-center py-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
+										>
+											<p class="text-[11px] text-gray-500">Nenhuma exceção cadastrada</p>
+											<button
+												type="button"
+												class="text-[10px] text-primary-600 font-bold hover:underline mt-1"
+												@click="abrirDrawerExcecoes"
+											>
+												Adicionar feriados e datas especiais
+											</button>
+										</div>
+									</div>
+
+									<div
+										v-if="!temDiaAberto"
+										class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-xl p-3 flex items-center gap-3"
+									>
+										<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-500" />
+										<p class="text-xs text-red-700 dark:text-red-300 font-medium">
+											Atenção: Seu estabelecimento está configurado como fechado todos os dias.
+										</p>
+									</div>
+
+									<div
+										class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/50 rounded-xl p-3 flex items-start gap-3"
+									>
+										<Icon name="lucide:lightbulb" class="w-5 h-5 text-blue-500 flex-shrink-0" />
+										<div class="space-y-1">
+											<p class="text-xs text-blue-800 dark:text-blue-200 font-semibold italic">
+												Dica de Sucesso:
+											</p>
+											<p class="text-[11px] text-blue-700/80 dark:text-blue-300/80 leading-relaxed">
+												Mantenha seus horários atualizados para evitar cancelamentos. Clientes
+												valorizam estabelecimentos que cumprem os horários informados, especialmente
+												em feriados.
+											</p>
+										</div>
+									</div>
 								</div>
 							</div>
-							<UiButton variant="ghost" size="sm" @click="fecharEditor">
-								<Icon name="lucide:x" class="w-4 h-4" />
+						</div>
+					</div>
+				</UiCard>
+			</div>
+
+			<div class="lg:col-span-2 flex min-h-0">
+				<UiCard class="flex-1" fill-height no-padding size="lg">
+					<template #header>
+						<div class="flex items-center gap-2">
+							<Icon name="lucide:edit" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+								Configurar {{ nomeDiaCompleto }}
+							</h3>
+						</div>
+					</template>
+
+					<!-- Conteúdo com scroll -->
+					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+						<!-- Editor de Horário -->
+						<div v-if="horarioSelecionado">
+							<DayEditor
+								:horario="horarioSelecionado"
+								:visible="true"
+								@update:horario="atualizarHorarioSelecionado"
+							/>
+						</div>
+
+						<!-- Estado vazio -->
+						<div v-else class="flex items-center justify-center py-12">
+							<div class="text-center">
+								<Icon name="lucide:clock" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
+								<p class="text-sm text-gray-600 dark:text-gray-400">
+									Selecione um dia para configurar
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Botão de Salvar - FIXO NO FOOTER -->
+					<template #footer>
+						<div class="p-0">
+							<UiButton
+								:loading="saving"
+								:disabled="saving || !temDiaAberto"
+								class="w-full"
+								size="lg"
+								@click="handleSave"
+							>
+								<template #iconLeft>
+									<Icon name="lucide:save" class="w-4 h-4" />
+								</template>
+								{{ saving ? "Salvando..." : "Salvar Horários" }}
 							</UiButton>
 						</div>
-
-						<!-- Conteúdo do Editor -->
-						<DayEditor
-							:horario="horarioSelecionado"
-							:visible="!!editorState.diaSelecionado"
-							@update:horario="atualizarHorarioSelecionado"
-							@close="fecharEditor"
-						/>
-					</div>
-				</Transition>
-
-				<!-- Status e Validação -->
-				<div class="space-y-4">
-					<!-- Validação de Erro -->
-					<div
-						v-if="!temDiaAberto"
-						class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
-					>
-						<div class="flex items-center space-x-3">
-							<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-							<div>
-								<h4 class="font-semibold text-red-900 dark:text-red-100">
-									Configuração Obrigatória
-								</h4>
-								<p class="text-sm text-red-700 dark:text-red-300">
-									Configure pelo menos um dia de funcionamento para salvar
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- Resumo de Sucesso -->
-					<div
-						v-else
-						class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
-					>
-						<div class="flex items-center space-x-3">
-							<Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 dark:text-green-400" />
-							<div>
-								<h4 class="font-semibold text-green-900 dark:text-green-100">
-									Horários Configurados
-								</h4>
-								<p class="text-sm text-green-700 dark:text-green-300">
-									{{ estatisticas.diasAbertos }} dias abertos • {{ estatisticas.diasFechados }} dias
-									fechados
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
+					</template>
+				</UiCard>
 			</div>
-		</ConfiguracaoCard>
+		</div>
+
+		<!-- Drawer de Exceções de Horários -->
+		<ExcecoesHorarioDrawer v-model="drawerExcecoesAberto" />
 	</div>
 </template>

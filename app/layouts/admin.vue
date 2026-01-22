@@ -114,7 +114,7 @@ useHead({
 				@toggle-sidebar-collapse="handleToggleSidebarCollapse"
 			/>
 
-			<main class="flex-1 overflow-y-auto py-6 pl-6 pr-6">
+			<main class="flex-1 overflow-hidden p-6">
 				<slot></slot>
 			</main>
 		</div>

@@ -114,11 +114,11 @@ watch(defaultTab, (newDefault) => {
 </script>
 
 <template>
-	<div class="space-y-6">
+	<div class="h-full flex flex-col">
 		<!-- Indicador de erro global -->
 		<div
 			v-if="hasError"
-			class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
+			class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4"
 		>
 			<div class="flex items-center space-x-3">
 				<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -140,6 +140,6 @@ watch(defaultTab, (newDefault) => {
 		/>
 
 		<!-- Conteúdo da Tab Ativa -->
-		<SectionConfigTabs :active-tab="activeTab" />
+		<SectionConfigTabs :active-tab="activeTab" class="flex-1 min-h-0" />
 	</div>
 </template>

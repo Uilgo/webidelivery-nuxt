@@ -10,6 +10,7 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { useForm } from "vee-validate";
 import { dadosEmpresaSchema } from "#shared/schemas/configuracoes";
 import { useDadosEmpresa } from "../../composables/useDadosEmpresa";
+import LogoUploadTabs from "../shared/LogoUploadTabs.vue";
 
 // Composable de dados da empresa
 const { dados, loading, saving, salvarDados, slugValidation, validarSlug } = useDadosEmpresa();
@@ -74,7 +75,8 @@ const showSlugWarning = computed(() => {
 </script>
 
 <template>
-	<div class="space-y-6">
+	<!-- Container principal: altura total disponível, flex column -->
+	<div class="h-full flex flex-col">
 		<!-- Skeleton de Loading -->
 		<div v-if="loading" class="space-y-4">
 			<UiSkeleton class="h-12 w-full" />
@@ -83,55 +85,27 @@ const showSlugWarning = computed(() => {
 		</div>
 
 		<!-- Layout Principal: 2 Colunas com Cards -->
-		<div v-else class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-			<!-- CARD ESQUERDO: LOGOS (2/5) -->
-			<div class="lg:col-span-2">
-				<UiCard class="h-fit">
-					<div class="space-y-4">
-						<div class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-							<Icon name="lucide:palette" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Identidade Visual</h3>
-						</div>
-
-						<!-- Logo Claro -->
-						<UiPictureUpload
-							:model-value="values.logo_url || ''"
-							label="Logo Claro"
-							hint="Para tema claro"
-							preview-bg="light"
-							:max-size="200"
-							:max-size-k-b="100"
-							@update:model-value="(value: string) => setFieldValue('logo_url', value)"
+		<!-- Grid com flex-1 e min-h-0 para permitir que cards caibam na altura disponível -->
+		<div v-else class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
+			<!-- CARD ESQUERDO: LOGOS (2/5) - COM TABS PARA ALTERNAR -->
+			<div class="lg:col-span-2 min-h-0 h-full">
+				<UiCard class="h-full flex flex-col" no-padding>
+					<div class="p-6">
+						<!-- Componente de Upload de Logos com Tabs -->
+						<LogoUploadTabs
+							:logo-claro="values.logo_url || ''"
+							:logo-escuro="values.logo_url_dark || ''"
+							@update:logo-claro="(value: string) => setFieldValue('logo_url', value)"
+							@update:logo-escuro="(value: string) => setFieldValue('logo_url_dark', value)"
 						/>
-
-						<!-- Logo Escuro -->
-						<UiPictureUpload
-							:model-value="values.logo_url_dark || ''"
-							label="Logo Escuro"
-							hint="Para tema escuro"
-							preview-bg="dark"
-							:max-size="200"
-							:max-size-k-b="100"
-							@update:model-value="(value: string) => setFieldValue('logo_url_dark', value)"
-						/>
-
-						<!-- Dica sobre logos -->
-						<div
-							class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3"
-						>
-							<p class="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
-								<Icon name="lucide:lightbulb" class="w-4 h-4 flex-shrink-0" />
-								<span>PNG ou JPG • Recomendado: 200x200px • Fundo transparente</span>
-							</p>
-						</div>
 					</div>
 				</UiCard>
 			</div>
 
-			<!-- CARD DIREITO: DADOS (3/5) -->
-			<div class="lg:col-span-3">
-				<UiCard class="h-fit">
-					<form class="space-y-8" @submit.prevent="onSubmit">
+			<!-- CARD DIREITO: DADOS (3/5) - SEM SCROLL -->
+			<div class="lg:col-span-3 min-h-0 h-full">
+				<UiCard class="h-full flex flex-col" no-padding>
+					<form class="space-y-6 p-6 flex-1 flex flex-col" @submit.prevent="onSubmit">
 						<!-- SEÇÃO 1: IDENTIDADE -->
 						<div class="space-y-4">
 							<div
@@ -242,7 +216,7 @@ const showSlugWarning = computed(() => {
 						</div>
 
 						<!-- SEÇÃO 2: DESCRIÇÃO -->
-						<div class="space-y-4">
+						<div class="space-y-4 flex-1">
 							<div
 								class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700"
 							>
@@ -269,7 +243,9 @@ const showSlugWarning = computed(() => {
 						</div>
 
 						<!-- Botão de Salvar -->
-						<div class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+						<div
+							class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto"
+						>
 							<UiButton type="submit" :loading="saving" :disabled="saving" class="px-6">
 								<template #iconLeft>
 									<Icon name="lucide:save" class="w-4 h-4" />

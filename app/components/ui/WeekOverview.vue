@@ -106,14 +106,15 @@ const handleToggleDay = (horario: HorarioFuncionamento, aberto: boolean): void =
 			</div>
 		</div>
 
-		<!-- Grid de Dias -->
-		<div class="grid grid-cols-7 gap-2 md:gap-3">
+		<!-- Grid de Dias - Layout mais flexível -->
+		<div class="flex flex-wrap gap-2 justify-between">
 			<DayCard
 				v-for="horario in horariosOrdenados"
 				:key="horario.dia_semana"
 				:horario="horario"
 				:selected="selectedDay === horario.dia_semana"
-				size="md"
+				size="sm"
+				class="flex-1 min-w-[75px] max-w-[110px]"
 				@click="handleSelectDay(horario)"
 				@toggle-aberto="(aberto) => handleToggleDay(horario, aberto)"
 			/>

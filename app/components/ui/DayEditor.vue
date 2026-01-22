@@ -378,7 +378,9 @@ const resumoHorarios = computed(() => {
 <template>
 	<div v-if="visible" class="space-y-4">
 		<!-- Toggle Principal -->
-		<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+		<div
+			class="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 lg:p-5 transition-all"
+		>
 			<div class="flex items-center justify-between">
 				<div>
 					<h4 class="font-semibold text-gray-900 dark:text-white">Status do Dia</h4>
@@ -429,13 +431,15 @@ const resumoHorarios = computed(() => {
 					<div
 						v-for="(periodo, index) in localHorario.periodos || []"
 						:key="periodo.id || index"
-						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+						class="bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 lg:p-4 hover:border-primary-500/50 transition-colors group"
 					>
 						<div class="flex items-center space-x-3">
 							<!-- Horário de Abertura -->
 							<div class="flex-1">
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Das:
+								<label
+									class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5"
+								>
+									H. Inicial:
 								</label>
 								<SelectMenu
 									:model-value="periodo.horario_abertura"
@@ -451,8 +455,10 @@ const resumoHorarios = computed(() => {
 
 							<!-- Horário de Fechamento -->
 							<div class="flex-1">
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									até as:
+								<label
+									class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5"
+								>
+									H. Final:
 								</label>
 								<SelectMenu
 									:model-value="periodo.horario_fechamento"
@@ -530,7 +536,7 @@ const resumoHorarios = computed(() => {
 			<!-- Resumo -->
 			<div
 				v-else
-				class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+				class="bg-green-50/50 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-xl p-4"
 			>
 				<div class="flex items-center space-x-2">
 					<Icon name="lucide:check-circle" class="w-4 h-4 text-green-600 dark:text-green-400" />

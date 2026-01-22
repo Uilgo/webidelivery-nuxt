@@ -38,7 +38,7 @@ const currentComponent = computed(() => {
 </script>
 
 <template>
-	<div class="w-full">
+	<div class="w-full h-full">
 		<!-- Renderiza componente da tab ativa -->
 		<component :is="currentComponent" />
 	</div>

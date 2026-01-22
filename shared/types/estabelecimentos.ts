@@ -53,6 +53,7 @@ export interface ConfigGeral {
 	readonly raio_entrega_km: number;
 	readonly aceita_agendamento: boolean;
 	readonly horario_funcionamento: HorarioFuncionamento[];
+	readonly excecoes_horario?: HorarioExcecao[];
 }
 
 export interface ConfigPagamento {
@@ -91,6 +92,14 @@ export interface PeriodoFuncionamento {
 	readonly horario_abertura?: string;
 	readonly horario_fechamento?: string;
 	readonly nome?: string; // Ex: "Almoço", "Jantar", "Happy Hour" (opcional - não usado na interface simplificada)
+}
+
+export interface HorarioExcecao {
+	readonly id: string;
+	readonly data: string; // Formato ISO YYYY-MM-DD
+	readonly nome: string; // Ex: "Feriado Municipal", "Terça-feira de Carnaval"
+	readonly aberto: boolean;
+	readonly periodos: PeriodoFuncionamento[];
 }
 
 export interface SetupStatus {
