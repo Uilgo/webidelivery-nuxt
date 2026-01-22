@@ -56,19 +56,30 @@ export interface UseOnboardingValidationReturn {
 
 	// Funções
 	checkSlugAvailability: (slug: string) => Promise<void>;
+	resetSlugValidation: () => void;
+	forceResetSlugValidation: () => void;
 	getSchemaForStep: (step: number) => ReturnType<typeof toTypedSchema> | null;
 }
 
 export const useOnboardingValidation = (): UseOnboardingValidationReturn => {
 	const supabase = useSupabaseClient();
 
-	// Estado da validação de slug
-	const slugValidation = ref<SlugValidation>({
-		isValid: false,
-		isChecking: false,
-		message: "",
-		available: false,
+	// Estado da validação de slug com persistência
+	const SLUG_VALIDATION_KEY = "webidelivery_slug_validation";
+
+	const slugValidationCookie = useCookie<SlugValidation>(SLUG_VALIDATION_KEY, {
+		default: () => ({
+			isValid: false,
+			isChecking: false,
+			message: "",
+			available: false,
+		}),
+		maxAge: 60 * 60 * 24 * 7, // 7 dias
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
 	});
+
+	const slugValidation = slugValidationCookie;
 
 	// Converter schemas Zod para VeeValidate
 	const step1Schema = toTypedSchema(onboardingInfoBasicaSchema);
@@ -93,25 +104,37 @@ export const useOnboardingValidation = (): UseOnboardingValidationReturn => {
 			return errors;
 		}
 
-		return { general: "Erro de validação" };
+		// Se não for um erro do Zod, retornar erro genérico
+		const errorMessage = error instanceof Error ? error.message : "Erro de validação";
+		return { general: errorMessage };
 	};
 
 	/**
-	 * Validar Etapa 1: Informações Básicas
+	 * Validar Etapa 1: Informações Básicas - MANTÉM VALIDAÇÃO ANTERIOR
 	 */
 	const validateStep1 = (data: unknown): { isValid: boolean; errors: Record<string, string> } => {
 		try {
 			onboardingInfoBasicaSchema.parse(data);
 
-			// Verificar se slug está disponível
-			if (!slugValidation.value.available) {
+			// Se slug já foi validado uma vez e está disponível, manter como válido
+			// A revalidação será feita apenas no final do onboarding
+			if (slugValidation.value.available) {
+				return { isValid: true, errors: {} };
+			}
+
+			// Se nunca foi validado ou está indisponível, exigir validação
+			if (!slugValidation.value.available && slugValidation.value.message) {
 				return {
 					isValid: false,
-					errors: { slug: slugValidation.value.message || "Slug não verificado" },
+					errors: { slug: slugValidation.value.message },
 				};
 			}
 
-			return { isValid: true, errors: {} };
+			// Se não tem mensagem, significa que ainda não foi validado
+			return {
+				isValid: false,
+				errors: { slug: "Clique fora do campo para verificar disponibilidade" },
+			};
 		} catch (error) {
 			return { isValid: false, errors: processZodErrors(error) };
 		}
@@ -229,6 +252,34 @@ export const useOnboardingValidation = (): UseOnboardingValidationReturn => {
 	};
 
 	/**
+	 * Resetar validação do slug - APENAS se não estiver validado com sucesso
+	 */
+	const resetSlugValidation = (): void => {
+		// Só resetar se não estiver validado com sucesso
+		// Isso mantém o estado ✅ durante a navegação
+		if (!slugValidation.value.available) {
+			slugValidation.value = {
+				isValid: false,
+				isChecking: false,
+				message: "",
+				available: false,
+			};
+		}
+	};
+
+	/**
+	 * Forçar reset da validação do slug - SEMPRE limpa (para erros finais)
+	 */
+	const forceResetSlugValidation = (): void => {
+		slugValidation.value = {
+			isValid: false,
+			isChecking: false,
+			message: "",
+			available: false,
+		};
+	};
+
+	/**
 	 * Obter schema para uma etapa específica
 	 */
 	const getSchemaForStep = (step: number): ReturnType<typeof toTypedSchema> | null => {
@@ -268,6 +319,8 @@ export const useOnboardingValidation = (): UseOnboardingValidationReturn => {
 
 		// Funções
 		checkSlugAvailability,
+		resetSlugValidation,
+		forceResetSlugValidation,
 		getSchemaForStep,
 	};
 };

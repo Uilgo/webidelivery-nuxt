@@ -249,6 +249,11 @@ export const RAIO_ENTREGA_MAX = 50;
  */
 export const TEMPO_PREPARO_MAX = 240;
 
+/**
+ * Máximo de períodos de funcionamento por dia
+ */
+export const MAX_PERIODOS_POR_DIA = 5;
+
 // ========================================
 // TEMAS E ESTILOS
 // ========================================

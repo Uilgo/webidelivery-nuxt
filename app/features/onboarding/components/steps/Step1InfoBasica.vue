@@ -30,6 +30,7 @@ interface Props {
 interface Emits {
 	"update:modelValue": [value: Step1InfoBasica];
 	"check-slug": [slug: string];
+	"reset-slug-validation": [];
 }
 
 const props = defineProps<Props>();
@@ -44,114 +45,98 @@ const formData = computed({
 });
 
 /**
- * Debounce para verificação de slug
+ * Handler para mudança do slug
  */
-let slugCheckTimeout: NodeJS.Timeout;
+const handleSlugChange = (value: string | number): void => {
+	const rawValue = String(value);
 
-const handleSlugChange = (slug: string): void => {
-	// Limpar timeout anterior
-	if (slugCheckTimeout) {
-		clearTimeout(slugCheckTimeout);
-	}
+	// Resetar validação quando slug muda
+	emit("reset-slug-validation");
 
-	// Atualizar valor imediatamente
-	formData.value = { ...formData.value, slug };
+	// Usar o formatter oficial do projeto
+	const formattedSlug = formatSlug(rawValue);
 
-	// Verificar disponibilidade após delay
-	if (slug.trim()) {
-		slugCheckTimeout = setTimeout(() => {
-			emit("check-slug", slug);
-		}, 500);
+	// Atualizar modelo com valor formatado
+	formData.value = { ...formData.value, slug: formattedSlug };
+};
+
+/**
+ * Handler para quando o foco sai do input de slug (validar disponibilidade)
+ */
+const handleSlugBlur = (): void => {
+	const slug = formData.value.slug.trim();
+
+	// Verificar disponibilidade apenas se houver slug
+	if (slug) {
+		emit("check-slug", slug);
 	}
 };
 
 /**
- * Gerar slug automaticamente baseado no nome (usando formatter existente)
+ * Verificar slug automaticamente se já existe mas não foi validado
  */
-const generateSlugFromName = (nome: string): string => {
-	return formatSlug(nome);
-};
+onMounted(() => {
+	const slug = formData.value.slug.trim();
+
+	// Se há slug mas não foi validado ainda, validar automaticamente
+	if (slug && !props.slugValidation.available && !props.slugValidation.message) {
+		emit("check-slug", slug);
+	}
+});
 
 /**
  * Handler para mudança do nome
  */
-const handleNameChange = (nome: string): void => {
+const handleNameChange = (value: string | number): void => {
+	const nome = String(value);
 	formData.value = { ...formData.value, nome };
-
-	// Gerar slug automaticamente se estiver vazio
-	if (!formData.value.slug.trim()) {
-		const generatedSlug = generateSlugFromName(nome);
-		if (generatedSlug) {
-			handleSlugChange(generatedSlug);
-		}
-	}
 };
 </script>
 
 <template>
-	<div class="space-y-6">
-		<!-- Cabeçalho da etapa -->
-		<div class="text-center">
-			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Informações Básicas</h3>
-			<p class="text-gray-600 dark:text-gray-400">
-				Vamos começar com as informações principais do seu estabelecimento
-			</p>
-		</div>
-
-		<!-- Formulário -->
-		<div class="space-y-4">
+	<div class="space-y-4">
+		<!-- Grid 2 colunas: Nome + Slug -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<!-- Nome do estabelecimento -->
-			<FormField
-				label="Nome do estabelecimento"
-				description="Como seu estabelecimento será conhecido pelos clientes"
-				required
-			>
-				<Input
+			<UiFormField label="Nome do estabelecimento" required>
+				<UiInput
 					:model-value="formData.nome"
 					placeholder="Ex: Pizzaria do João"
-					:disabled="false"
 					@update:model-value="handleNameChange"
 				/>
-			</FormField>
+			</UiFormField>
 
 			<!-- Slug (URL personalizada) -->
-			<FormField
-				label="URL personalizada"
-				:description="`Seu cardápio ficará disponível em: webidelivery.com.br/${formData.slug || 'seu-slug'}`"
-				required
-			>
-				<div class="space-y-2">
-					<Input
-						:model-value="formData.slug"
-						placeholder="pizzaria-do-joao"
-						:disabled="slugValidation.isChecking"
-						@update:model-value="handleSlugChange"
-					>
-						<template #leading>
-							<span class="text-gray-500 text-sm">webidelivery.com.br/</span>
-						</template>
-						<template #trailing>
-							<Icon
-								v-if="slugValidation.isChecking"
-								name="lucide:loader-2"
-								class="w-4 h-4 animate-spin text-gray-400"
-							/>
-							<Icon
-								v-else-if="formData.slug && slugValidation.available"
-								name="lucide:check-circle"
-								class="w-4 h-4 text-green-500"
-							/>
-							<Icon
-								v-else-if="formData.slug && !slugValidation.available"
-								name="lucide:x-circle"
-								class="w-4 h-4 text-red-500"
-							/>
-						</template>
-					</Input>
+			<UiFormField label="URL personalizada" required>
+				<UiInput
+					:model-value="formData.slug"
+					placeholder="pizzaria-do-joao"
+					:disabled="slugValidation.isChecking"
+					@update:model-value="handleSlugChange"
+					@blur="handleSlugBlur"
+				>
+					<template #iconRight>
+						<Icon
+							v-if="slugValidation.isChecking"
+							name="lucide:loader-2"
+							class="w-5 h-5 animate-spin text-gray-400"
+						/>
+						<Icon
+							v-else-if="formData.slug && slugValidation.available"
+							name="lucide:check-circle"
+							class="w-5 h-5 text-green-500"
+						/>
+						<Icon
+							v-else-if="formData.slug && !slugValidation.available"
+							name="lucide:x-circle"
+							class="w-5 h-5 text-red-500"
+						/>
+					</template>
+				</UiInput>
 
-					<!-- Feedback da validação do slug -->
-					<p
-						v-if="slugValidation.message"
+				<!-- Feedback da validação do slug -->
+				<template v-if="slugValidation.message" #help>
+					<span
 						class="text-sm"
 						:class="{
 							'text-green-600 dark:text-green-400': slugValidation.available,
@@ -161,35 +146,46 @@ const handleNameChange = (nome: string): void => {
 						}"
 					>
 						{{ slugValidation.message }}
-					</p>
-				</div>
-			</FormField>
-
-			<!-- Descrição (opcional) -->
-			<FormField
-				label="Descrição"
-				description="Uma breve descrição sobre seu estabelecimento (opcional)"
-			>
-				<Textarea
-					v-model="formData.descricao"
-					placeholder="Ex: A melhor pizzaria da região, com ingredientes frescos e massa artesanal..."
-					rows="3"
-				/>
-			</FormField>
+					</span>
+				</template>
+			</UiFormField>
 		</div>
 
-		<!-- Dicas -->
+		<!-- Descrição (opcional) - Full width -->
+		<UiFormField label="Descrição (opcional)">
+			<UiTextarea
+				:model-value="formData.descricao || ''"
+				placeholder="Ex: A melhor pizzaria da região, com ingredientes frescos e massa artesanal..."
+				:rows="2"
+				@update:model-value="(value: string) => (formData.descricao = value)"
+			/>
+		</UiFormField>
+
+		<!-- Dicas com destaque -->
 		<div
-			class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+			class="relative bg-[var(--primary-light)] border-l-4 border-[var(--primary)] rounded-lg p-3 shadow-sm mt-4"
 		>
-			<div class="flex items-start space-x-3">
-				<Icon name="lucide:lightbulb" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-				<div class="text-sm">
-					<p class="font-medium text-blue-900 dark:text-blue-100 mb-1">Dicas importantes:</p>
-					<ul class="text-blue-700 dark:text-blue-300 space-y-1">
-						<li>• O nome aparecerá no topo do seu cardápio digital</li>
-						<li>• A URL personalizada não poderá ser alterada depois</li>
-						<li>• Use um nome fácil de lembrar e digitar</li>
+			<div class="flex items-start gap-3">
+				<div
+					class="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--primary)] flex items-center justify-center"
+				>
+					<Icon name="lucide:lightbulb" class="w-4 h-4 text-[var(--primary-foreground)]" />
+				</div>
+				<div class="flex-1 min-w-0">
+					<p class="font-semibold text-[var(--text-primary)] mb-1.5 text-sm">Dicas importantes:</p>
+					<ul class="text-[var(--text-secondary)] space-y-1 text-sm leading-relaxed">
+						<li class="flex items-start gap-2">
+							<span class="text-[var(--primary)] mt-0.5">•</span>
+							<span>O nome aparecerá no topo do seu cardápio digital</span>
+						</li>
+						<li class="flex items-start gap-2">
+							<span class="text-[var(--primary)] mt-0.5">•</span>
+							<span>A URL personalizada não poderá ser alterada depois</span>
+						</li>
+						<li class="flex items-start gap-2">
+							<span class="text-[var(--primary)] mt-0.5">•</span>
+							<span>Use um nome fácil de lembrar e digitar</span>
+						</li>
 					</ul>
 				</div>
 			</div>

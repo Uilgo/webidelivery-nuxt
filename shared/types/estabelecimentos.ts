@@ -77,10 +77,19 @@ export interface ConfigTema {
 export interface HorarioFuncionamento {
 	readonly dia_semana: DiaSemana;
 	readonly aberto: boolean;
+	readonly periodos?: PeriodoFuncionamento[];
+	// Campos de compatibilidade (deprecated)
 	readonly horario_abertura?: string;
 	readonly horario_fechamento?: string;
 	readonly pausa_inicio?: string;
 	readonly pausa_fim?: string;
+}
+
+export interface PeriodoFuncionamento {
+	readonly id?: string; // Para identificar períodos únicos
+	readonly horario_abertura?: string;
+	readonly horario_fechamento?: string;
+	readonly nome?: string; // Ex: "Almoço", "Jantar", "Happy Hour" (opcional - não usado na interface simplificada)
 }
 
 export interface SetupStatus {

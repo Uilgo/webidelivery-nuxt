@@ -18,7 +18,7 @@ import type {
 	Step5Pagamentos as Step5Type,
 } from "~/features/onboarding/types/onboarding";
 import OnboardingWelcome from "~/features/onboarding/components/OnboardingWelcome.vue";
-import OnboardingProgress from "~/features/onboarding/components/OnboardingProgress.vue";
+import OnboardingStepperVertical from "~/features/onboarding/components/OnboardingStepperVertical.vue";
 import Step1InfoBasica from "~/features/onboarding/components/steps/Step1InfoBasica.vue";
 import Step2Endereco from "~/features/onboarding/components/steps/Step2Endereco.vue";
 import Step3Contato from "~/features/onboarding/components/steps/Step3Contato.vue";
@@ -35,7 +35,6 @@ const {
 	// Navegação
 	currentStep,
 	totalSteps,
-	progress,
 	isFirstStep,
 	isLastStep,
 
@@ -53,28 +52,33 @@ const {
 	// Métodos
 	prevStep,
 	checkSlugAvailability,
+	resetSlugValidation,
 	handleNext,
 	handleComplete,
 	reset,
 } = useOnboarding();
 
 /**
- * Estado da tela de boas-vindas
+ * Estado da tela de boas-vindas - controlado pela URL
  */
-const showWelcome = ref(true);
+const route = useRoute();
+const router = useRouter();
+
+// Se não há query parameter 'step', mostrar welcome
+const showWelcome = computed(() => !route.query.step);
 
 /**
  * Iniciar onboarding (sair da tela de boas-vindas)
  */
 const startOnboarding = (): void => {
-	showWelcome.value = false;
+	router.push({ query: { step: "1" } });
 };
 
 /**
  * Voltar para tela de boas-vindas
  */
 const backToWelcome = (): void => {
-	showWelcome.value = true;
+	router.push({ query: {} }); // Remove query parameters
 	reset();
 };
 
@@ -88,6 +92,17 @@ const stepTitles = {
 	4: "Horários",
 	5: "Pagamentos",
 };
+
+/**
+ * Lista de steps para o stepper vertical
+ */
+const stepsList = [
+	{ title: "Informações" },
+	{ title: "Endereço" },
+	{ title: "Contato" },
+	{ title: "Horários" },
+	{ title: "Pagamentos" },
+];
 
 /**
  * Handler para voltar etapa
@@ -130,25 +145,27 @@ const isPrimaryButtonDisabled = computed((): boolean => {
 </script>
 
 <template>
-	<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-		<div class="container mx-auto px-4 py-8">
-			<!-- Tela de Boas-vindas -->
-			<div v-if="showWelcome" class="max-w-4xl mx-auto">
-				<OnboardingWelcome @start-onboarding="startOnboarding" />
-			</div>
+	<div class="min-h-full">
+		<!-- Tela de Boas-vindas -->
+		<div v-if="showWelcome" class="h-full flex items-center">
+			<OnboardingWelcome @start-onboarding="startOnboarding" />
+		</div>
 
-			<!-- Fluxo de Onboarding -->
-			<div v-else class="max-w-4xl mx-auto">
-				<!-- Barra de Progresso -->
-				<OnboardingProgress
-					:current-step="currentStep"
-					:total-steps="totalSteps"
-					:progress="progress"
-				/>
+		<!-- Fluxo de Onboarding -->
+		<div v-else class="min-h-full flex gap-4 max-w-6xl mx-auto py-4">
+			<!-- STEPPER VERTICAL (esquerda) -->
+			<OnboardingStepperVertical
+				:current-step="currentStep"
+				:total-steps="totalSteps"
+				:steps="stepsList"
+				class="hidden lg:block flex-shrink-0"
+			/>
 
-				<!-- Conteúdo Principal -->
+			<!-- CONTEÚDO (direita) -->
+			<div class="flex-1 min-w-0 flex flex-col">
+				<!-- Card -->
 				<div
-					class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+					class="flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<!-- Cabeçalho da Etapa -->
 					<div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -174,13 +191,14 @@ const isPrimaryButtonDisabled = computed((): boolean => {
 					</div>
 
 					<!-- Conteúdo da Etapa -->
-					<div class="px-6 py-8">
+					<div class="px-6 py-6">
 						<Step1InfoBasica
 							v-if="currentStep === 1"
 							:model-value="formData.step1"
 							:slug-validation="slugValidation"
 							@update:model-value="(value: Step1Type) => (formData.step1 = value)"
 							@check-slug="checkSlugAvailability"
+							@reset-slug-validation="resetSlugValidation"
 						/>
 						<Step2Endereco
 							v-else-if="currentStep === 2"

@@ -55,14 +55,14 @@ const metodosPagamento = [
 	{
 		key: "aceita_cartao_credito" as const,
 		label: "Cartão de Crédito",
-		description: "Pagamento com cartão de crédito",
+		description: "Com maquininha própria na entrega",
 		icon: "lucide:credit-card",
 		color: "text-purple-600 dark:text-purple-400",
 	},
 	{
 		key: "aceita_cartao_debito" as const,
 		label: "Cartão de Débito",
-		description: "Pagamento com cartão de débito",
+		description: "Com maquininha própria na entrega",
 		icon: "lucide:credit-card",
 		color: "text-orange-600 dark:text-orange-400",
 	},
@@ -104,19 +104,11 @@ const metodosAtivos = computed((): number => {
 </script>
 
 <template>
-	<div class="space-y-6">
-		<!-- Cabeçalho da etapa -->
-		<div class="text-center">
-			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Métodos de Pagamento</h3>
-			<p class="text-gray-600 dark:text-gray-400">
-				Selecione quais formas de pagamento você aceita
-			</p>
-		</div>
-
+	<div class="space-y-3">
 		<!-- Contador de métodos ativos -->
-		<div class="text-center">
+		<div class="flex justify-center">
 			<div
-				class="inline-flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-sm"
+				class="inline-flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-4 py-2 rounded-full text-sm font-medium"
 			>
 				<Icon name="lucide:check-circle" class="w-4 h-4" />
 				<span
@@ -127,23 +119,23 @@ const metodosAtivos = computed((): number => {
 			</div>
 		</div>
 
-		<!-- Lista de métodos de pagamento -->
-		<div class="space-y-3">
+		<!-- Grid 2 colunas: Métodos de pagamento (2x2) -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div
 				v-for="metodo in metodosPagamento"
 				:key="metodo.key"
-				class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200"
+				class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 hover:shadow-md"
 				:class="{
-					'border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20':
+					'border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 shadow-sm':
 						formData[metodo.key],
 					'hover:border-gray-300 dark:hover:border-gray-600': !formData[metodo.key],
 				}"
 			>
 				<div class="flex items-center justify-between">
-					<div class="flex items-center space-x-4">
+					<div class="flex items-center space-x-3">
 						<!-- Ícone -->
 						<div
-							class="w-10 h-10 rounded-lg flex items-center justify-center"
+							class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
 							:class="{
 								'bg-primary-100 dark:bg-primary-900/40': formData[metodo.key],
 								'bg-gray-100 dark:bg-gray-800': !formData[metodo.key],
@@ -151,7 +143,8 @@ const metodosAtivos = computed((): number => {
 						>
 							<Icon
 								:name="metodo.icon"
-								class="w-5 h-5"
+								class="!w-8 !h-8"
+								style="width: 32px !important; height: 32px !important"
 								:class="
 									formData[metodo.key] ? 'text-primary-600 dark:text-primary-400' : metodo.color
 								"
@@ -159,18 +152,18 @@ const metodosAtivos = computed((): number => {
 						</div>
 
 						<!-- Informações -->
-						<div>
-							<h4 class="font-medium text-gray-900 dark:text-white">
+						<div class="min-w-0 flex-1">
+							<h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate">
 								{{ metodo.label }}
 							</h4>
-							<p class="text-sm text-gray-600 dark:text-gray-400">
+							<p class="text-xs text-gray-600 dark:text-gray-400 truncate">
 								{{ metodo.description }}
 							</p>
 						</div>
 					</div>
 
 					<!-- Switch -->
-					<Switch
+					<UiSwitch
 						:model-value="formData[metodo.key]"
 						@update:model-value="(value: boolean) => updateMetodo(metodo.key, value)"
 					/>
@@ -183,16 +176,16 @@ const metodosAtivos = computed((): number => {
 			v-if="!temMetodoAtivo"
 			class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
 		>
-			<div class="flex items-center space-x-3">
+			<div class="flex items-center space-x-2">
 				<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-				<p class="text-sm text-red-700 dark:text-red-300">
-					Você precisa selecionar pelo menos um método de pagamento.
+				<p class="text-sm font-medium text-red-700 dark:text-red-300">
+					Selecione pelo menos um método de pagamento
 				</p>
 			</div>
 		</div>
 
-		<!-- Informações sobre métodos -->
-		<div class="space-y-4">
+		<!-- Grid 2 colunas: Boxes informativos (PIX + Cartões) -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<!-- PIX -->
 			<div
 				v-if="formData.aceita_pix"
@@ -201,10 +194,9 @@ const metodosAtivos = computed((): number => {
 				<div class="flex items-start space-x-3">
 					<Icon name="lucide:info" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
 					<div class="text-sm">
-						<p class="font-medium text-blue-900 dark:text-blue-100 mb-1">PIX selecionado</p>
+						<p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">PIX selecionado</p>
 						<p class="text-blue-700 dark:text-blue-300">
-							Você poderá configurar sua chave PIX nas configurações após o onboarding. O PIX é
-							instantâneo e não tem taxas.
+							Configure sua chave PIX depois. É instantâneo e sem taxas.
 						</p>
 					</div>
 				</div>
@@ -221,12 +213,12 @@ const metodosAtivos = computed((): number => {
 						class="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5"
 					/>
 					<div class="text-sm">
-						<p class="font-medium text-purple-900 dark:text-purple-100 mb-1">
+						<p class="font-semibold text-purple-900 dark:text-purple-100 mb-1">
 							Cartões selecionados
 						</p>
 						<p class="text-purple-700 dark:text-purple-300">
-							Para aceitar cartões, você precisará de uma maquininha ou integração com gateway de
-							pagamento. Configure isso nas configurações após o onboarding.
+							Você precisará ter sua própria maquininha de cartão para receber o pagamento no
+							momento da entrega. O sistema ainda não integra com gateways de pagamento.
 						</p>
 					</div>
 				</div>
@@ -240,12 +232,12 @@ const metodosAtivos = computed((): number => {
 			<div class="flex items-start space-x-3">
 				<Icon name="lucide:lightbulb" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
 				<div class="text-sm">
-					<p class="font-medium text-green-900 dark:text-green-100 mb-1">Dicas importantes:</p>
+					<p class="font-semibold text-green-900 dark:text-green-100 mb-2">Dicas:</p>
 					<ul class="text-green-700 dark:text-green-300 space-y-1">
-						<li>• Mais opções de pagamento = mais vendas</li>
+						<li>• Mais opções = mais vendas</li>
 						<li>• PIX é gratuito e instantâneo</li>
-						<li>• Dinheiro ainda é muito usado para delivery</li>
-						<li>• Você pode alterar essas configurações depois</li>
+						<li>• Dinheiro ainda é muito usado</li>
+						<li>• Pode alterar depois</li>
 					</ul>
 				</div>
 			</div>

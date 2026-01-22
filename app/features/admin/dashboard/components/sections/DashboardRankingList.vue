@@ -94,7 +94,13 @@ const rankItems = computed(() => {
 		</div>
 
 		<div v-else-if="items.length === 0" class="flex-1 flex items-center justify-center">
-			<p class="text-[var(--text-muted)] text-sm">Nenhum dado disponível</p>
+			<UiEmptyState
+				title="Sem dados de vendas"
+				description="Comece vendendo para ver seus produtos mais populares aqui."
+				icon="lucide:trending-up"
+				size="sm"
+				variant="default"
+			/>
 		</div>
 
 		<div v-else class="flex-1 flex flex-col justify-center space-y-5">

@@ -13,7 +13,7 @@ import {
 	formatarTempoDecorrido,
 	formatarDataHora,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
-import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
+import { formatarCodigoRastreamento } from "../../../../../lib/formatters/codigo-rastreamento";
 import { usePedidoHistorico } from "~/features/admin/pedidos/composables/usePedidoHistorico";
 import { requerObservacao } from "~/features/admin/pedidos/utils/status-transitions";
 import { STATUS_PEDIDO } from "#shared/constants/pedidos";

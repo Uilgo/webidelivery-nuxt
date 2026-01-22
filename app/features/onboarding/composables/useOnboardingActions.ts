@@ -55,6 +55,9 @@ export interface UseOnboardingActionsReturn {
 
 	// Finalização
 	finalizar: () => Promise<boolean>;
+
+	// Métodos de controle
+	setError: (message: string | null) => void;
 }
 
 // ========================================
@@ -244,6 +247,13 @@ export const useOnboardingActions = (): UseOnboardingActionsReturn => {
 		}
 	};
 
+	/**
+	 * Definir erro manualmente
+	 */
+	const setError = (message: string | null): void => {
+		actionError.value = message;
+	};
+
 	// ========================================
 	// RETORNO DO COMPOSABLE
 	// ========================================
@@ -263,5 +273,8 @@ export const useOnboardingActions = (): UseOnboardingActionsReturn => {
 
 		// Finalização
 		finalizar,
+
+		// Métodos de controle
+		setError,
 	};
 };

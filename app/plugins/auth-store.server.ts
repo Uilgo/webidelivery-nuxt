@@ -41,7 +41,8 @@ export default defineNuxtPlugin(async () => {
 					slug,
 					logo_url,
 					status,
-					aberto
+					aberto,
+					onboarding
 				)
 			`,
 			)

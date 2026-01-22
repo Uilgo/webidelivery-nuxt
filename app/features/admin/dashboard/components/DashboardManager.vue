@@ -114,18 +114,12 @@ const handlePeriodoChartsChange = async (novoPeriodo: DashboardPeriodo) => {
 					@update:periodo="handlePeriodoChartsChange"
 				/>
 
-				<DashboardRankingList
-					:items="kpis.produtos.mais_vendidos"
-					:loading="!kpis.produtos.mais_vendidos.length"
-				/>
+				<DashboardRankingList :items="kpis.produtos.mais_vendidos" :loading="loadingKpis" />
 			</div>
 
 			<!-- Linha 2: Feed e Eficiência -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-				<DashboardLiveFeed
-					:orders="realtime?.pedidos_recentes ?? []"
-					:loading="!realtime?.pedidos_recentes?.length"
-				/>
+				<DashboardLiveFeed :orders="realtime?.pedidos_recentes ?? []" :loading="loading" />
 
 				<DashboardEfficiency :performance="kpis.performance" :loading="!kpis.performance" />
 			</div>

@@ -96,7 +96,13 @@ const formatStatus = (status: string) => {
 		</div>
 
 		<div v-else-if="orders.length === 0" class="flex-1 flex items-center justify-center">
-			<p class="text-[var(--text-muted)] text-sm">Nenhum pedido recente</p>
+			<UiEmptyState
+				title="Nenhum pedido ainda"
+				description="Quando você receber pedidos, eles aparecerão aqui em tempo real."
+				icon="lucide:shopping-bag"
+				size="sm"
+				variant="default"
+			/>
 		</div>
 
 		<div v-else class="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[300px] custom-scrollbar">

@@ -81,7 +81,8 @@ const buscarCep = async (cep: string): Promise<void> => {
 		};
 	} catch (error) {
 		console.error("Erro ao buscar CEP:", error);
-		cepError.value = "Erro ao buscar CEP. Tente novamente.";
+		// Não bloquear o usuário se a API falhar - ele pode preencher manualmente
+		cepError.value = "CEP não encontrado. Preencha os campos manualmente.";
 	} finally {
 		isLoadingCep.value = false;
 	}
@@ -91,10 +92,11 @@ const buscarCep = async (cep: string): Promise<void> => {
  * Handler para mudança do CEP
  */
 const handleCepChange = (cep: string): void => {
-	formData.value = { ...formData.value, endereco_cep: cep };
+	// Sempre armazenar CEP sem formatação no modelo
+	const cepLimpo = cep.replace(/\D/g, "");
+	formData.value = { ...formData.value, endereco_cep: cepLimpo };
 
 	// Buscar automaticamente quando CEP estiver completo
-	const cepLimpo = cep.replace(/\D/g, "");
 	if (cepLimpo.length === 8) {
 		buscarCep(cep);
 	}
@@ -107,35 +109,25 @@ const estados = [
 	{ value: "", label: "Selecione o estado" }, // Opção vazia
 	...ESTADOS_BRASIL.map((uf) => ({
 		value: uf,
-		label: ESTADOS_LABELS[uf],
+		label: ESTADOS_LABELS[uf] || uf,
 	})),
 ];
 </script>
 
 <template>
-	<div class="space-y-6">
-		<!-- Cabeçalho da etapa -->
-		<div class="text-center">
-			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-				Endereço do Estabelecimento
-			</h3>
-			<p class="text-gray-600 dark:text-gray-400">
-				Informe o endereço onde seu estabelecimento está localizado
-			</p>
-		</div>
-
-		<!-- Formulário -->
-		<div class="space-y-4">
+	<div class="space-y-4">
+		<!-- Linha 1: CEP + Número + Complemento (3 colunas) -->
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 			<!-- CEP -->
-			<FormField label="CEP" description="Digite o CEP para preenchimento automático" required>
-				<Input
+			<UiFormField label="CEP" required>
+				<UiInput
 					:model-value="formatCEP(formData.endereco_cep || '')"
 					placeholder="00000-000"
 					:disabled="isLoadingCep"
 					maxlength="9"
-					@update:model-value="handleCepChange"
+					@update:model-value="(value: string | number) => handleCepChange(String(value))"
 				>
-					<template #trailing>
+					<template #iconRight>
 						<Icon
 							v-if="isLoadingCep"
 							name="lucide:loader-2"
@@ -147,94 +139,87 @@ const estados = [
 							class="w-4 h-4 text-green-500"
 						/>
 					</template>
-				</Input>
-				<p v-if="cepError" class="text-sm text-red-600 dark:text-red-400 mt-1">
+				</UiInput>
+				<template v-if="cepError" #error>
 					{{ cepError }}
-				</p>
-			</FormField>
+				</template>
+			</UiFormField>
 
-			<!-- Grid de endereço -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<!-- Rua -->
-				<div class="md:col-span-2">
-					<FormField label="Rua/Logradouro" required>
-						<Input
-							v-model="formData.endereco_rua"
-							placeholder="Ex: Rua das Flores"
-							:disabled="isLoadingCep"
-						/>
-					</FormField>
-				</div>
+			<!-- Número -->
+			<UiFormField label="Número" required>
+				<UiInput v-model="formData.endereco_numero" placeholder="123" :disabled="isLoadingCep" />
+			</UiFormField>
 
-				<!-- Número -->
-				<FormField label="Número" required>
-					<Input v-model="formData.endereco_numero" placeholder="123" :disabled="isLoadingCep" />
-				</FormField>
-
-				<!-- Complemento -->
-				<FormField label="Complemento">
-					<Input
-						v-model="formData.endereco_complemento"
-						placeholder="Apto 45, Bloco B"
-						:disabled="isLoadingCep"
-					/>
-				</FormField>
-
-				<!-- Bairro -->
-				<FormField label="Bairro" required>
-					<Input v-model="formData.endereco_bairro" placeholder="Centro" :disabled="isLoadingCep" />
-				</FormField>
-
-				<!-- Cidade -->
-				<FormField label="Cidade" required>
-					<Input
-						v-model="formData.endereco_cidade"
-						placeholder="São Paulo"
-						:disabled="isLoadingCep"
-					/>
-				</FormField>
-
-				<!-- Estado -->
-				<div class="md:col-span-2">
-					<FormField label="Estado" required>
-						<Select
-							v-model="formData.endereco_estado"
-							:options="estados"
-							placeholder="Selecione o estado"
-							:disabled="isLoadingCep"
-						/>
-					</FormField>
-				</div>
-
-				<!-- Referência -->
-				<div class="md:col-span-2">
-					<FormField
-						label="Ponto de referência"
-						description="Ajuda os clientes a encontrar seu estabelecimento"
-					>
-						<Input
-							v-model="formData.endereco_referencia"
-							placeholder="Ex: Próximo ao shopping, em frente à praça"
-							:disabled="isLoadingCep"
-						/>
-					</FormField>
-				</div>
-			</div>
+			<!-- Complemento -->
+			<UiFormField label="Complemento">
+				<UiInput
+					v-model="formData.endereco_complemento"
+					placeholder="Apto 45, Bloco B"
+					:disabled="isLoadingCep"
+				/>
+			</UiFormField>
 		</div>
 
-		<!-- Dicas -->
+		<!-- Linha 2: Rua (full width) -->
+		<UiFormField label="Rua/Logradouro" required>
+			<UiInput
+				v-model="formData.endereco_rua"
+				placeholder="Ex: Rua das Flores"
+				:disabled="isLoadingCep"
+			/>
+		</UiFormField>
+
+		<!-- Linha 3: Bairro + Cidade + Estado (3 colunas) -->
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<!-- Bairro -->
+			<UiFormField label="Bairro" required>
+				<UiInput v-model="formData.endereco_bairro" placeholder="Centro" :disabled="isLoadingCep" />
+			</UiFormField>
+
+			<!-- Cidade -->
+			<UiFormField label="Cidade" required>
+				<UiInput
+					v-model="formData.endereco_cidade"
+					placeholder="São Paulo"
+					:disabled="isLoadingCep"
+				/>
+			</UiFormField>
+
+			<!-- Estado -->
+			<UiFormField label="Estado" required>
+				<UiSelect
+					v-model="formData.endereco_estado"
+					:options="estados"
+					placeholder="Selecione o estado"
+					:disabled="isLoadingCep"
+				/>
+				<template v-if="!formData.endereco_estado" #error> Estado é obrigatório </template>
+			</UiFormField>
+		</div>
+
+		<!-- Linha 4: Referência (full width) -->
+		<UiFormField label="Ponto de referência">
+			<UiInput
+				v-model="formData.endereco_referencia"
+				placeholder="Ex: Próximo ao shopping, em frente à praça"
+				:disabled="isLoadingCep"
+			/>
+		</UiFormField>
+
+		<!-- Dica compacta -->
 		<div
-			class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
+			class="relative bg-[var(--primary-light)] border-l-4 border-[var(--primary)] rounded-lg p-3 shadow-sm"
 		>
-			<div class="flex items-start space-x-3">
-				<Icon name="lucide:map-pin" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
-				<div class="text-sm">
-					<p class="font-medium text-green-900 dark:text-green-100 mb-1">Dica importante:</p>
-					<p class="text-green-700 dark:text-green-300">
-						Um endereço completo e preciso ajuda os clientes a encontrar seu estabelecimento e
-						melhora a experiência de entrega.
-					</p>
+			<div class="flex items-center gap-3">
+				<div
+					class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center"
+				>
+					<Icon name="lucide:map-pin" class="w-4 h-4 text-[var(--primary-foreground)]" />
 				</div>
+				<p class="text-[var(--text-secondary)] text-sm">
+					<span class="font-semibold text-[var(--text-primary)]">Dica:</span>
+					Endereço completo melhora a experiência de entrega
+				</p>
 			</div>
 		</div>
 	</div>

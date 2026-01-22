@@ -37,8 +37,8 @@ export const slugSchema = z
 const whatsappSchema = z
 	.string()
 	.min(1, VALIDATION_MESSAGES.WHATSAPP_REQUIRED)
-	.regex(VALIDATION_PATTERNS.WHATSAPP, VALIDATION_MESSAGES.WHATSAPP_LENGTH)
-	.transform((tel) => tel.replace(/\D/g, ""));
+	.transform((tel) => tel.replace(/\D/g, "")) // PRIMEIRO: remover formatação
+	.refine((tel) => VALIDATION_PATTERNS.WHATSAPP.test(tel), VALIDATION_MESSAGES.WHATSAPP_LENGTH);
 
 // ========================================
 // SCHEMAS DE CEP E ENDEREÇO
@@ -49,19 +49,19 @@ const whatsappSchema = z
  */
 const cepSchema = z
 	.string()
-	.regex(/^\d{8}$/, "CEP deve ter 8 dígitos")
-	.transform((cep) => cep.replace(/\D/g, ""));
+	.min(1, "CEP é obrigatório")
+	.transform((cep) => cep.replace(/\D/g, "")) // Remove formatação
+	.refine((cep) => cep.length === 8, "CEP deve ter 8 dígitos")
+	.refine((cep) => /^\d{8}$/.test(cep), "CEP deve conter apenas números");
 
 /**
- * Schema para estado (UF) - permite vazio inicialmente
+ * Schema para estado (UF) - obrigatório e deve ser válido
  */
 const estadoSchema = z
 	.string()
-	.refine((val) => val === "" || ESTADOS_BRASIL.includes(val as (typeof ESTADOS_BRASIL)[number]), {
-		message: "Estado inválido",
-	})
-	.refine((val) => val !== "", {
-		message: "Estado é obrigatório",
+	.min(1, "Estado é obrigatório")
+	.refine((val) => ESTADOS_BRASIL.includes(val as (typeof ESTADOS_BRASIL)[number]), {
+		message: "Selecione um estado válido",
 	});
 
 // ========================================
@@ -144,13 +144,28 @@ export const onboardingContatoSchema = z.object({
 // ========================================
 
 /**
- * Schema para horário de funcionamento
+ * Schema para período de funcionamento individual
+ */
+const periodoFuncionamentoSchema = z.object({
+	id: z.string().optional(),
+	horario_abertura: z
+		.string()
+		.regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Horário de abertura inválido (formato HH:MM)"),
+	horario_fechamento: z
+		.string()
+		.regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Horário de fechamento inválido (formato HH:MM)"),
+});
+
+/**
+ * Schema para horário de funcionamento com suporte a múltiplos períodos
  */
 const horarioFuncionamentoSchema = z.object({
 	dia_semana: z.enum(["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"], {
 		message: "Dia da semana inválido",
 	}),
 	aberto: z.boolean(),
+	periodos: z.array(periodoFuncionamentoSchema).optional(),
+	// Campos legados para compatibilidade (opcionais)
 	horario_abertura: z
 		.string()
 		.regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Horário de abertura inválido (formato HH:MM)")
@@ -181,13 +196,48 @@ export const onboardingHorariosSchema = z.object({
 				// Validar que dias abertos têm horários definidos
 				return horarios.every((h) => {
 					if (h.aberto) {
-						return !!h.horario_abertura && !!h.horario_fechamento;
+						// Verificar se tem períodos configurados OU horários legados
+						const temPeriodos = h.periodos && h.periodos.length > 0;
+						const temHorariosLegados = h.horario_abertura && h.horario_fechamento;
+						return temPeriodos || temHorariosLegados;
 					}
 					return true;
 				});
 			},
 			{
-				message: "Dias abertos devem ter horários de abertura e fechamento",
+				message: "Dias abertos devem ter horários de funcionamento configurados",
+			},
+		)
+		.refine(
+			(horarios) => {
+				// Validar períodos individuais
+				return horarios.every((h) => {
+					if (!h.aberto || !h.periodos) return true;
+
+					return h.periodos.every((periodo) => {
+						if (!periodo.horario_abertura || !periodo.horario_fechamento) {
+							return false;
+						}
+
+						// Validar que abertura é antes do fechamento (considerando horário noturno)
+						const [aberturaH, aberturaM] = periodo.horario_abertura.split(":").map(Number);
+						const [fechamentoH, fechamentoM] = periodo.horario_fechamento.split(":").map(Number);
+
+						const aberturaMinutos = aberturaH * 60 + aberturaM;
+						const fechamentoMinutos = fechamentoH * 60 + fechamentoM;
+
+						// Permitir funcionamento noturno (ex: 22:00 - 02:00)
+						// Se fechamento é menor que abertura e fechamento é antes das 06:00, assumir dia seguinte
+						if (fechamentoMinutos < aberturaMinutos && fechamentoH < 6) {
+							return true; // Horário noturno válido
+						}
+
+						return fechamentoMinutos > aberturaMinutos;
+					});
+				});
+			},
+			{
+				message: "Horários de abertura devem ser anteriores aos de fechamento",
 			},
 		),
 });
@@ -229,19 +279,6 @@ export const onboardingPagamentosSchema = z
 		{
 			message: "Pelo menos um método de pagamento deve estar ativo",
 		},
-	)
-	.refine(
-		(data) => {
-			// Se aceita PIX, chave PIX é obrigatória
-			if (data.aceita_pix) {
-				return !!data.chave_pix && data.chave_pix.length > 0;
-			}
-			return true;
-		},
-		{
-			message: "Chave PIX é obrigatória quando PIX está ativo",
-			path: ["chave_pix"],
-		},
 	);
 
 // ========================================
@@ -270,6 +307,8 @@ export const configGeralSchema = z.object({
 // TIPOS INFERIDOS DOS SCHEMAS
 // ========================================
 
+export type PeriodoFuncionamentoFormData = z.infer<typeof periodoFuncionamentoSchema>;
+export type HorarioFuncionamentoFormData = z.infer<typeof horarioFuncionamentoSchema>;
 export type OnboardingInfoBasicaFormData = z.infer<typeof onboardingInfoBasicaSchema>;
 export type OnboardingEnderecoFormData = z.infer<typeof onboardingEnderecoSchema>;
 export type OnboardingContatoFormData = z.infer<typeof onboardingContatoSchema>;

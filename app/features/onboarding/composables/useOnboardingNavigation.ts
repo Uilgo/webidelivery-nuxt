@@ -1,11 +1,12 @@
 /**
- * 📌 useOnboardingNavigation - Navegação entre Etapas
+ * 📌 useOnboardingNavigation - Navegação entre Etapas com URL e Persistência
  *
  * Responsável por:
- * - Controlar etapa atual
+ * - Controlar etapa atual via URL (?step=N)
  * - Navegar entre etapas
  * - Calcular progresso
  * - Validar se pode avançar
+ * - Sincronizar com query parameters
  */
 
 export interface UseOnboardingNavigationReturn {
@@ -23,9 +24,34 @@ export interface UseOnboardingNavigationReturn {
 }
 
 export const useOnboardingNavigation = (): UseOnboardingNavigationReturn => {
-	// Estado da etapa atual
-	const currentStep = ref(1);
+	const route = useRoute();
+	const router = useRouter();
+
 	const TOTAL_STEPS = 5;
+
+	// Estado da etapa atual - inicializado pela URL de forma SSR-friendly
+	const stepFromUrl = parseInt(String(route.query.step || "1"));
+	const initialStep = stepFromUrl >= 1 && stepFromUrl <= TOTAL_STEPS ? stepFromUrl : 1;
+	const currentStep = ref(initialStep);
+
+	// Watcher para sincronizar mudanças de step com a URL
+	watch(currentStep, (newStep) => {
+		// Atualizar URL sem recarregar a página
+		router.replace({
+			query: { ...route.query, step: newStep.toString() },
+		});
+	});
+
+	// Watcher para sincronizar mudanças na URL com o step
+	watch(
+		() => route.query.step,
+		(newStepQuery) => {
+			const newStep = parseInt(String(newStepQuery || "1"));
+			if (newStep >= 1 && newStep <= TOTAL_STEPS && newStep !== currentStep.value) {
+				currentStep.value = newStep;
+			}
+		},
+	);
 
 	// Computadas
 	const totalSteps = computed(() => TOTAL_STEPS);

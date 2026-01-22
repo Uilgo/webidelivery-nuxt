@@ -25,6 +25,12 @@ interface Props {
 	type?: "button" | "submit" | "reset";
 	/** Ocupar toda a largura disponível */
 	fullWidth?: boolean;
+	/** URL para transformar em link */
+	href?: string;
+	/** Target do link (quando href é fornecido) */
+	target?: "_blank" | "_self" | "_parent" | "_top";
+	/** Rel do link (quando href é fornecido) */
+	rel?: string;
 }
 
 // Props com valores padrão
@@ -37,6 +43,9 @@ const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	type: "button",
 	fullWidth: false,
+	href: undefined,
+	target: "_self",
+	rel: undefined,
 });
 
 // Emits tipados
@@ -52,6 +61,20 @@ const handleClick = (event: MouseEvent): void => {
 		emit("click", event);
 	}
 };
+
+// Determinar se deve renderizar como link ou botão
+const isLink = computed(() => !!props.href);
+
+// Atributos para links
+const linkAttrs = computed(() => {
+	if (!isLink.value) return {};
+
+	return {
+		href: props.href,
+		target: props.target,
+		rel: props.rel || (props.target === "_blank" ? "noopener noreferrer" : undefined),
+	};
+});
 
 // Classes do ícone baseadas no tamanho
 const iconClasses = computed(() => {
@@ -159,11 +182,12 @@ const buttonClasses = computed(() => {
 </script>
 
 <template>
-	<button
+	<component
+		:is="isLink ? 'a' : 'button'"
 		:class="buttonClasses"
-		:disabled="disabled"
-		:type="type"
-		v-bind="$attrs"
+		:disabled="!isLink && disabled"
+		:type="!isLink ? type : undefined"
+		v-bind="isLink ? linkAttrs : $attrs"
 		@click="handleClick"
 	>
 		<!-- Ícone à esquerda -->
@@ -206,5 +230,5 @@ const buttonClasses = computed(() => {
 		<span v-if="loading" class="absolute inset-0 flex items-center justify-center">
 			<Icon name="lucide:loader-2" class="animate-spin h-4 w-4" />
 		</span>
-	</button>
+	</component>
 </template>

@@ -6,7 +6,8 @@
  * - WhatsApp (obrigatório)
  */
 
-import { formatWhatsApp, parsePhone, isValidPhone } from "../../../../../lib/formatters/phone";
+import { formatWhatsApp, parsePhone } from "../../../../../lib/formatters/phone";
+import { isValidWhatsApp } from "../../../../../lib/validators/phone";
 import type { Step3Contato } from "../../types/onboarding";
 
 /**
@@ -35,24 +36,76 @@ const formData = computed({
 });
 
 /**
- * Handler para mudança do WhatsApp
+ * Handler para mudança do WhatsApp - COM BLOQUEIO ABSOLUTO
  */
-const handleWhatsAppChange = (value: string): void => {
-	// Usar formatter existente
-	const formatted = formatWhatsApp(parsePhone(value));
+const handleWhatsAppChange = (value: string | number): void => {
+	const rawValue = String(value);
+
+	// Extrair apenas dígitos do valor atual
+	const cleaned = rawValue.replace(/\D/g, "");
+
+	// Remover DDI +55 se presente para contar apenas os dígitos do número
+	const withoutDDI = cleaned.startsWith("55") ? cleaned.slice(2) : cleaned;
+
+	// BLOQUEIO ABSOLUTO: Se exceder 11 dígitos, truncar
+	const limitedDigits = withoutDDI.slice(0, 11);
+
+	// Reconstruir com DDI e formatar
+	const reconstructed = "55" + limitedDigits;
+	const formatted = formatWhatsApp(reconstructed);
+
+	// Atualizar modelo com valor formatado e limitado
 	formData.value = { ...formData.value, whatsapp: formatted };
 };
 
 /**
- * Validar WhatsApp
+ * Referência para o input do WhatsApp
+ */
+const whatsappInputRef = ref<HTMLInputElement>();
+
+/**
+ * Handler para interceptar input direto no DOM - PROTEÇÃO TRIPLA
+ */
+const handleWhatsAppInput = (event: Event): void => {
+	const target = event.target as HTMLInputElement;
+	const currentValue = target.value;
+
+	// Extrair dígitos
+	const cleaned = currentValue.replace(/\D/g, "");
+	const withoutDDI = cleaned.startsWith("55") ? cleaned.slice(2) : cleaned;
+
+	// PROTEÇÃO 1: Se exceder 11 dígitos, reverter para valor anterior
+	if (withoutDDI.length > 11) {
+		event.preventDefault();
+		event.stopPropagation();
+		target.value = formData.value.whatsapp;
+		return;
+	}
+
+	// Processar normalmente
+	handleWhatsAppChange(currentValue);
+};
+
+/**
+ * Maxlength dinâmico baseado no formato atual
+ */
+const whatsappMaxLength = computed((): number => {
+	// +55 (XX) XXXXX-XXXX = 19 caracteres máximo
+	return 19;
+});
+
+/**
+ * Validar WhatsApp - USANDO VALIDATOR OFICIAL COM DDI
  */
 const isWhatsAppValid = computed((): boolean => {
 	const whatsapp = formData.value.whatsapp;
 	if (!whatsapp) return false;
 
-	// Usar validator existente
-	const phoneOnly = parsePhone(whatsapp);
-	return isValidPhone(phoneOnly);
+	// Extrair apenas números (incluindo DDI +55)
+	const phoneNumbers = parsePhone(whatsapp);
+
+	// Usar validator oficial que espera DDI +55
+	return isValidWhatsApp(phoneNumbers);
 });
 
 /**
@@ -61,109 +114,84 @@ const isWhatsAppValid = computed((): boolean => {
 const whatsappLink = computed((): string => {
 	if (!isWhatsAppValid.value) return "";
 
+	// Extrair apenas números
 	const numbers = parsePhone(formData.value.whatsapp);
-	return `https://wa.me/55${numbers}`;
+
+	// Remover DDI +55 se já estiver presente para evitar duplicação
+	const withoutDDI = numbers.startsWith("55") ? numbers.slice(2) : numbers;
+
+	// Sempre adicionar DDI +55 para o link do WhatsApp
+	return `https://wa.me/55${withoutDDI}`;
 });
 </script>
 
 <template>
-	<div class="space-y-6">
-		<!-- Cabeçalho da etapa -->
-		<div class="text-center">
-			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-				Informações de Contato
-			</h3>
-			<p class="text-gray-600 dark:text-gray-400">
-				Configure o WhatsApp para que os clientes possam entrar em contato
-			</p>
-		</div>
-
-		<!-- Formulário -->
-		<div class="space-y-4">
-			<!-- WhatsApp -->
-			<FormField
-				label="WhatsApp"
-				description="Número do WhatsApp para contato com os clientes"
-				required
+	<div class="space-y-3">
+		<!-- WhatsApp -->
+		<UiFormField label="WhatsApp" required>
+			<UiInput
+				ref="whatsappInputRef"
+				:model-value="formData.whatsapp"
+				placeholder="+55 (11) 99999-9999"
+				:maxlength="whatsappMaxLength"
+				@input="handleWhatsAppInput"
+				@update:model-value="handleWhatsAppChange"
 			>
-				<Input
-					:model-value="formData.whatsapp"
-					placeholder="(11) 99999-9999"
-					maxlength="15"
-					@update:model-value="handleWhatsAppChange"
-				>
-					<template #leading>
-						<Icon name="logos:whatsapp-icon" class="w-4 h-4" />
-					</template>
-					<template #trailing>
-						<Icon
-							v-if="isWhatsAppValid"
-							name="lucide:check-circle"
-							class="w-4 h-4 text-green-500"
-						/>
-						<Icon
-							v-else-if="formData.whatsapp"
-							name="lucide:x-circle"
-							class="w-4 h-4 text-red-500"
-						/>
-					</template>
-				</Input>
+				<template #iconLeft>
+					<Icon name="logos:whatsapp-icon" class="w-4 h-4" />
+				</template>
+				<template #iconRight>
+					<Icon v-if="isWhatsAppValid" name="lucide:check-circle" class="w-4 h-4 text-green-500" />
+					<Icon v-else-if="formData.whatsapp" name="lucide:x-circle" class="w-4 h-4 text-red-500" />
+				</template>
+			</UiInput>
 
-				<!-- Feedback de validação -->
-				<p
-					v-if="formData.whatsapp && !isWhatsAppValid"
-					class="text-sm text-red-600 dark:text-red-400 mt-1"
-				>
-					Formato inválido. Use: (11) 99999-9999
-				</p>
-			</FormField>
+			<!-- Feedback de validação -->
+			<template v-if="formData.whatsapp && !isWhatsAppValid" #error>
+				Formato inválido. Use: (11) 99999-9999
+			</template>
+		</UiFormField>
 
-			<!-- Teste do WhatsApp -->
-			<div
-				v-if="isWhatsAppValid"
-				class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
-			>
-				<div class="flex items-center justify-between">
-					<div class="flex items-center space-x-3">
-						<Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 dark:text-green-400" />
-						<div>
-							<p class="font-medium text-green-900 dark:text-green-100">WhatsApp configurado!</p>
-							<p class="text-sm text-green-700 dark:text-green-300">
-								Teste se o número está funcionando
-							</p>
-						</div>
+		<!-- Teste do WhatsApp -->
+		<div
+			v-if="isWhatsAppValid"
+			class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+		>
+			<div class="flex items-center justify-between">
+				<div class="flex items-center space-x-2">
+					<Icon name="lucide:check-circle" class="w-4 h-4 text-green-600 dark:text-green-400" />
+					<div>
+						<p class="text-sm font-semibold text-green-900 dark:text-green-100">
+							WhatsApp configurado!
+						</p>
+						<p class="text-xs text-green-700 dark:text-green-300">
+							Teste se o número está funcionando
+						</p>
 					</div>
-					<UiButton
-						:href="whatsappLink"
-						target="_blank"
-						variant="outline"
-						size="sm"
-						color="success"
-					>
-						<Icon name="logos:whatsapp-icon" class="w-4 h-4 mr-2" />
-						Testar
-					</UiButton>
 				</div>
+				<UiButton :href="whatsappLink" target="_blank" variant="outline" size="sm" color="success">
+					<Icon name="logos:whatsapp-icon" class="w-4 h-4 mr-2" />
+					Testar
+				</UiButton>
 			</div>
 		</div>
 
-		<!-- Informações importantes -->
-		<div class="space-y-4">
+		<!-- Boxes informativos lado a lado -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 			<!-- Como funciona -->
 			<div
-				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3"
 			>
-				<div class="flex items-start space-x-3">
-					<Icon name="lucide:info" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-					<div class="text-sm">
-						<p class="font-medium text-blue-900 dark:text-blue-100 mb-2">
+				<div class="flex items-start space-x-2">
+					<Icon name="lucide:info" class="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+					<div class="text-xs">
+						<p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">
 							Como o WhatsApp será usado:
 						</p>
-						<ul class="text-blue-700 dark:text-blue-300 space-y-1">
-							<li>• Os clientes poderão entrar em contato diretamente</li>
-							<li>• Você receberá notificações de novos pedidos</li>
-							<li>• Poderá tirar dúvidas sobre produtos e entregas</li>
-							<li>• Confirmações de pedidos serão enviadas automaticamente</li>
+						<ul class="text-blue-700 dark:text-blue-300 space-y-0.5">
+							<li>• Contato direto com clientes</li>
+							<li>• Notificações de pedidos</li>
+							<li>• Tirar dúvidas sobre produtos</li>
 						</ul>
 					</div>
 				</div>
@@ -171,20 +199,21 @@ const whatsappLink = computed((): string => {
 
 			<!-- Dicas -->
 			<div
-				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4"
+				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3"
 			>
-				<div class="flex items-start space-x-3">
+				<div class="flex items-start space-x-2">
 					<Icon
 						name="lucide:lightbulb"
-						class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5"
+						class="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5"
 					/>
-					<div class="text-sm">
-						<p class="font-medium text-yellow-900 dark:text-yellow-100 mb-1">Dicas importantes:</p>
-						<ul class="text-yellow-700 dark:text-yellow-300 space-y-1">
-							<li>• Use um número que você sempre monitora</li>
-							<li>• Mantenha o WhatsApp Business ativo</li>
-							<li>• Configure mensagens automáticas de ausência</li>
-							<li>• Responda rapidamente para melhor experiência</li>
+					<div class="text-xs">
+						<p class="font-semibold text-yellow-900 dark:text-yellow-100 mb-0.5">
+							Dicas importantes:
+						</p>
+						<ul class="text-yellow-700 dark:text-yellow-300 space-y-0.5">
+							<li>• Use um número monitorado</li>
+							<li>• Mantenha WhatsApp Business ativo</li>
+							<li>• Responda rapidamente</li>
 						</ul>
 					</div>
 				</div>
