@@ -3,14 +3,13 @@
  * 📌 PagamentosTab
  *
  * Tab de configuração de métodos de pagamento (Admin only).
- * Reutiliza componentes do Step5 do onboarding com campos extras.
+ * Design premium de duas colunas com resumo e editor integrado.
  */
 
 import { toTypedSchema } from "@vee-validate/zod";
 import { useForm } from "vee-validate";
 import { pagamentosSchema } from "#shared/schemas/configuracoes";
 import { usePagamentos } from "../../composables/usePagamentos";
-import ConfiguracaoCard from "../shared/ConfiguracaoCard.vue";
 
 // Composable de pagamentos
 const { pagamentos, loading, saving, salvarPagamentos } = usePagamentos();
@@ -18,7 +17,7 @@ const { pagamentos, loading, saving, salvarPagamentos } = usePagamentos();
 // Schema de validação
 const validationSchema = toTypedSchema(pagamentosSchema);
 
-// Formulário com vee-validate (sem initialValues - será preenchido pelo watch)
+// Formulário com vee-validate
 const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
 	validationSchema,
 	keepValuesOnUnmount: true,
@@ -29,7 +28,6 @@ watch(
 	pagamentos,
 	(newPagamentos) => {
 		if (newPagamentos) {
-			// Resetar formulário com novos valores
 			resetForm({
 				values: {
 					aceita_dinheiro: newPagamentos.aceita_dinheiro,
@@ -90,7 +88,7 @@ const tiposChavePix = [
 ] as const;
 
 /**
- * Obter placeholder e máscara baseado no tipo de chave
+ * Obter placeholder baseado no tipo de chave
  */
 const tipoChaveSelecionado = computed(() => {
 	return tiposChavePix.find((tipo) => tipo.value === values.tipo_chave_pix) || tiposChavePix[0];
@@ -105,41 +103,31 @@ const metodosPagamento = [
 		label: "Dinheiro",
 		description: "Pagamento em espécie na entrega",
 		icon: "lucide:banknote",
-		color: "text-green-600 dark:text-green-400",
 	},
 	{
 		key: "aceita_pix" as const,
 		label: "PIX",
 		description: "Transferência instantânea via PIX",
 		icon: "lucide:zap",
-		color: "text-blue-600 dark:text-blue-400",
 	},
 	{
 		key: "aceita_cartao_credito" as const,
 		label: "Cartão de Crédito",
 		description: "Com maquininha própria na entrega",
 		icon: "lucide:credit-card",
-		color: "text-purple-600 dark:text-purple-400",
 	},
 	{
 		key: "aceita_cartao_debito" as const,
 		label: "Cartão de Débito",
 		description: "Com maquininha própria na entrega",
 		icon: "lucide:credit-card",
-		color: "text-orange-600 dark:text-orange-400",
 	},
 ];
 
-/**
- * Atualizar método de pagamento
- */
 const updateMetodo = (key: keyof typeof values, value: boolean): void => {
 	setFieldValue(key, value);
 };
 
-/**
- * Verificar se pelo menos um método está ativo
- */
 const temMetodoAtivo = computed((): boolean => {
 	return !!(
 		values.aceita_dinheiro ||
@@ -149,10 +137,7 @@ const temMetodoAtivo = computed((): boolean => {
 	);
 });
 
-/**
- * Contar métodos ativos
- */
-const metodosAtivos = computed((): number => {
+const metodosAtivosCount = computed((): number => {
 	return [
 		values.aceita_dinheiro,
 		values.aceita_pix,
@@ -160,210 +145,321 @@ const metodosAtivos = computed((): number => {
 		values.aceita_cartao_debito,
 	].filter(Boolean).length;
 });
+
+const listaMetodosAtivos = computed(() => {
+	return metodosPagamento.filter((m) => values[m.key]);
+});
+
+const percentualAtivacao = computed(() => {
+	return Math.round((metodosAtivosCount.value / metodosPagamento.length) * 100);
+});
 </script>
 
 <template>
-	<div class="space-y-6">
-		<ConfiguracaoCard
-			title="Métodos de Pagamento"
-			description="Configure as formas de pagamento aceitas na entrega."
-			icon="lucide:credit-card"
-			:loading="saving"
-			@save="onSubmit"
-		>
-			<!-- Skeleton de Loading -->
-			<div v-if="loading" class="space-y-4">
-				<UiSkeleton class="h-24 w-full" />
-				<UiSkeleton class="h-24 w-full" />
-			</div>
+	<div class="h-full flex flex-col">
+		<!-- Skeleton de Loading -->
+		<div v-if="loading" class="space-y-4">
+			<UiSkeleton class="h-32 w-full" />
+			<UiSkeleton class="h-24 w-full" />
+		</div>
 
-			<!-- Formulário -->
-			<form v-else class="space-y-6">
-				<!-- Contador de métodos ativos -->
-				<div class="flex justify-center">
-					<div
-						class="inline-flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-4 py-2 rounded-full text-sm font-medium"
-					>
-						<Icon name="lucide:check-circle" class="w-4 h-4" />
-						<span
-							>{{ metodosAtivos }} método{{ metodosAtivos !== 1 ? "s" : "" }} selecionado{{
-								metodosAtivos !== 1 ? "s" : ""
-							}}</span
+		<!-- Layout Principal: 2 Colunas -->
+		<div v-else class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
+			<!-- COLUNA ESQUERDA: RESUMO (3/5) -->
+			<div class="lg:col-span-3 flex min-h-0">
+				<UiCard class="flex-1" fill-height no-padding size="lg">
+					<template #header>
+						<div class="flex items-center gap-2">
+							<Icon
+								name="lucide:credit-card"
+								class="w-5 h-5 text-primary-600 dark:text-primary-400"
+							/>
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+								Visão Geral de Pagamentos
+							</h3>
+						</div>
+					</template>
+
+					<!-- Conteúdo com scroll -->
+					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+						<!-- Status de Ativação -->
+						<div
+							class="flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 shadow-sm border-none rounded-xl p-4 lg:p-5"
 						>
-					</div>
-				</div>
+							<div>
+								<h4 class="font-semibold text-gray-900 dark:text-white text-sm">
+									Métodos de Pagamento
+								</h4>
+								<p class="text-xs text-gray-500 mt-1">
+									{{ metodosAtivosCount }} de {{ metodosPagamento.length }} métodos configurados
+								</p>
+							</div>
+							<div class="flex items-center gap-3">
+								<div class="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+									<div
+										class="h-full bg-primary-600 transition-all duration-500"
+										:style="{ width: `${percentualAtivacao}%` }"
+									></div>
+								</div>
+								<span class="text-sm font-bold text-primary-600">{{ percentualAtivacao }}%</span>
+							</div>
+						</div>
 
-				<!-- Grid 2 colunas: Métodos de pagamento (2x2) -->
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div
-						v-for="metodo in metodosPagamento"
-						:key="metodo.key"
-						class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 hover:shadow-md"
-						:class="{
-							'border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 shadow-sm':
-								values[metodo.key],
-							'hover:border-gray-300 dark:hover:border-gray-600': !values[metodo.key],
-						}"
-					>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center space-x-3">
-								<!-- Ícone -->
+						<!-- Grid de Métodos Ativos -->
+						<div class="space-y-3">
+							<h4
+								class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2 uppercase tracking-wider opacity-60"
+							>
+								<Icon name="lucide:check-circle-2" class="w-4 h-4 text-green-500" />
+								Formas Aceitas
+							</h4>
+
+							<div
+								v-if="listaMetodosAtivos.length > 0"
+								class="grid grid-cols-1 md:grid-cols-2 gap-3"
+							>
 								<div
-									class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-									:class="{
-										'bg-primary-100 dark:bg-primary-900/40': values[metodo.key],
-										'bg-gray-100 dark:bg-gray-800': !values[metodo.key],
-									}"
+									v-for="metodo in listaMetodosAtivos"
+									:key="metodo.key"
+									class="flex items-center gap-3 bg-white dark:bg-gray-800/40 shadow-sm rounded-xl p-3 transition-all hover:shadow-md border-none"
 								>
-									<Icon
-										:name="metodo.icon"
-										class="!w-8 !h-8"
-										style="width: 32px !important; height: 32px !important"
-										:class="
-											values[metodo.key] ? 'text-primary-600 dark:text-primary-400' : metodo.color
-										"
-									/>
+									<div
+										class="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0"
+									>
+										<Icon
+											:name="metodo.icon"
+											class="w-5 h-5 text-primary-600 dark:text-primary-400"
+										/>
+									</div>
+									<div class="min-w-0 flex-1">
+										<p class="text-sm font-bold text-gray-800 dark:text-white">
+											{{ metodo.label }}
+										</p>
+										<p class="text-[10px] text-gray-500 italic">Ativo no delivery</p>
+									</div>
+								</div>
+							</div>
+
+							<div
+								v-else
+								class="text-center py-8 bg-white dark:bg-gray-800/10 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl"
+							>
+								<Icon name="lucide:alert-circle" class="w-8 h-8 text-gray-400 mx-auto mb-2" />
+								<p class="text-xs text-gray-500">Nenhum método de pagamento ativo.</p>
+							</div>
+						</div>
+
+						<!-- Resumo do PIX -->
+						<div v-if="values.aceita_pix" class="space-y-3 pt-6 border-none">
+							<div class="flex items-center justify-between">
+								<h4
+									class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2 uppercase tracking-wider opacity-60"
+								>
+									<Icon name="lucide:zap" class="w-4 h-4 text-amber-500" />
+									Configuração PIX
+								</h4>
+								<span
+									v-if="values.chave_pix"
+									class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 px-2 py-0.5 rounded-full font-bold uppercase"
+									>Configurada</span
+								>
+							</div>
+
+							<div class="bg-blue-50/50 dark:bg-blue-900/10 shadow-sm border-none rounded-xl p-4">
+								<div class="flex items-center gap-4">
+									<div
+										class="w-12 h-12 bg-blue-100 dark:bg-blue-800/30 rounded-xl flex items-center justify-center text-blue-600"
+									>
+										<Icon :name="tipoChaveSelecionado.icon" class="w-6 h-6" />
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-0.5">
+											Chave {{ tipoChaveSelecionado.label }}
+										</p>
+										<p
+											class="text-sm font-mono font-bold text-blue-900 dark:text-blue-100 truncate"
+										>
+											{{ values.chave_pix || "Não configurada" }}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Dicas de Operação -->
+						<div class="space-y-4 pt-6 border-none">
+							<div class="flex items-center gap-2">
+								<Icon name="lucide:lightbulb" class="w-4 h-4 text-yellow-500" />
+								<h4
+									class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider opacity-60"
+								>
+									Dicas para seu Delivery
+								</h4>
+							</div>
+
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div
+									class="bg-indigo-50/50 dark:bg-indigo-900/10 shadow-sm border-none rounded-xl p-4"
+								>
+									<p
+										class="text-xs font-bold text-indigo-900 dark:text-indigo-200 mb-2 flex items-center gap-1.5"
+									>
+										<Icon name="lucide:trending-up" class="w-3.5 h-3.5" />
+										Venda Mais
+									</p>
+									<p class="text-[11px] text-indigo-700/80 dark:text-indigo-300 leading-relaxed">
+										Oferecer PIX e Cartão aumenta em até 40% a chance do cliente concluir o pedido
+										na hora.
+									</p>
 								</div>
 
-								<!-- Informações -->
-								<div class="min-w-0 flex-1">
-									<h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate">
-										{{ metodo.label }}
-									</h4>
-									<p class="text-xs text-gray-600 dark:text-gray-400 truncate">
-										{{ metodo.description }}
+								<div
+									class="bg-emerald-50/50 dark:bg-emerald-900/10 shadow-sm border-none rounded-xl p-4"
+								>
+									<p
+										class="text-xs font-bold text-emerald-900 dark:text-emerald-200 mb-2 flex items-center gap-1.5"
+									>
+										<Icon name="lucide:shield-check" class="w-3.5 h-3.5" />
+										Segurança
+									</p>
+									<p class="text-[11px] text-emerald-700/80 dark:text-emerald-300 leading-relaxed">
+										Pagamentos digitais (PIX) reduzem a necessidade de troco e diminuem riscos
+										operacionais.
 									</p>
 								</div>
 							</div>
-
-							<!-- Switch -->
-							<UiSwitch
-								:model-value="values[metodo.key]"
-								@update:model-value="(value: boolean) => updateMetodo(metodo.key, value)"
-							/>
 						</div>
 					</div>
-				</div>
+				</UiCard>
+			</div>
 
-				<!-- Campo Chave PIX (condicional) -->
-				<div
-					v-if="values.aceita_pix"
-					class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4"
-				>
-					<!-- Seletor de Tipo de Chave -->
-					<UiFormField name="tipo_chave_pix" label="Tipo de Chave PIX" required>
-						<div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-							<button
-								v-for="tipo in tiposChavePix"
-								:key="tipo.value"
-								type="button"
-								class="flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all"
-								:class="{
-									'border-primary-500 bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300':
-										values.tipo_chave_pix === tipo.value,
-									'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300':
-										values.tipo_chave_pix !== tipo.value,
-								}"
-								@click="setFieldValue('tipo_chave_pix', tipo.value)"
-							>
-								<Icon :name="tipo.icon" class="w-5 h-5 mb-1" />
-								<span class="text-xs font-medium">{{ tipo.label }}</span>
-							</button>
-						</div>
-						<template v-if="errors.tipo_chave_pix" #error>{{ errors.tipo_chave_pix }}</template>
-					</UiFormField>
-
-					<!-- Campo Chave PIX -->
-					<UiFormField name="chave_pix" label="Chave PIX" required>
-						<UiInput
-							v-model="values.chave_pix"
-							:placeholder="tipoChaveSelecionado.placeholder"
-							:error="!!errors.chave_pix"
-							@blur="() => setFieldValue('chave_pix', values.chave_pix)"
-						/>
-						<template v-if="errors.chave_pix" #error>{{ errors.chave_pix }}</template>
-					</UiFormField>
-
-					<p class="text-xs text-blue-700 dark:text-blue-300">
-						Esta chave será exibida para os clientes que escolherem pagar via PIX.
-					</p>
-				</div>
-
-				<!-- Validação: pelo menos 1 método ativo -->
-				<div
-					v-if="!temMetodoAtivo"
-					class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
-				>
-					<div class="flex items-center space-x-2">
-						<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-						<p class="text-sm font-medium text-red-700 dark:text-red-300">
-							Selecione pelo menos um método de pagamento
-						</p>
-					</div>
-				</div>
-
-				<!-- Grid 2 colunas: Boxes informativos (PIX + Cartões) -->
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<!-- PIX -->
-					<div
-						v-if="values.aceita_pix"
-						class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-					>
-						<div class="flex items-start space-x-3">
-							<Icon name="lucide:info" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-							<div class="text-sm">
-								<p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">PIX ativo</p>
-								<p class="text-blue-700 dark:text-blue-300">
-									Transferência instantânea e sem taxas. Configure sua chave PIX acima.
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- Cartões -->
-					<div
-						v-if="values.aceita_cartao_credito || values.aceita_cartao_debito"
-						class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
-					>
-						<div class="flex items-start space-x-3">
+			<!-- COLUNA DIREITA: EDITOR (2/5) -->
+			<div class="lg:col-span-2 flex min-h-0">
+				<UiCard class="flex-1" fill-height no-padding size="lg">
+					<template #header>
+						<div class="flex items-center gap-2">
 							<Icon
-								name="lucide:credit-card"
-								class="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5"
+								name="lucide:settings-2"
+								class="w-5 h-5 text-primary-600 dark:text-primary-400"
 							/>
-							<div class="text-sm">
-								<p class="font-semibold text-purple-900 dark:text-purple-100 mb-1">
-									Cartões ativos
-								</p>
-								<p class="text-purple-700 dark:text-purple-300">
-									Você precisará ter sua própria maquininha de cartão para receber o pagamento no
-									momento da entrega.
-								</p>
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+								Configurar Métodos
+							</h3>
+						</div>
+					</template>
+
+					<!-- Conteúdo com scroll -->
+					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+						<div class="space-y-3">
+							<div
+								v-for="metodo in metodosPagamento"
+								:key="metodo.key"
+								class="bg-white dark:bg-gray-800/40 shadow-sm rounded-xl p-4 transition-all hover:shadow-md border-none"
+							>
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-3">
+										<div
+											class="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300"
+											:class="[
+												values[metodo.key]
+													? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'
+													: 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400',
+											]"
+										>
+											<Icon :name="metodo.icon" class="w-5 h-5" />
+										</div>
+										<div class="min-w-0">
+											<h4 class="text-sm font-bold text-gray-800 dark:text-white">
+												{{ metodo.label }}
+											</h4>
+											<p class="text-[10px] text-gray-500 italic">
+												{{ metodo.description }}
+											</p>
+										</div>
+									</div>
+									<UiSwitch
+										:model-value="values[metodo.key] || false"
+										@update:model-value="(value: boolean) => updateMetodo(metodo.key, value)"
+									/>
+								</div>
+
+								<!-- Configuração específica do PIX -->
+								<div
+									v-if="metodo.key === 'aceita_pix' && values.aceita_pix"
+									class="mt-6 pt-0 space-y-6"
+								>
+									<UiFormField label="Tipo de Chave PIX" required>
+										<div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+											<button
+												v-for="tipo in tiposChavePix"
+												:key="tipo.value"
+												type="button"
+												class="flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-300 shadow-sm border-none"
+												:class="[
+													values.tipo_chave_pix === tipo.value
+														? 'bg-primary text-white shadow-lg shadow-primary/40 font-bold z-10 scale-105'
+														: 'bg-white dark:bg-gray-800/20 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/40',
+												]"
+												@click="setFieldValue('tipo_chave_pix', tipo.value)"
+											>
+												<Icon :name="tipo.icon" class="w-5 h-5 mb-1.5" />
+												<span class="text-[10px] uppercase tracking-wide">{{ tipo.label }}</span>
+											</button>
+										</div>
+									</UiFormField>
+
+									<UiFormField label="Chave PIX" required :error="errors.chave_pix">
+										<UiInput
+											v-model="values.chave_pix"
+											:placeholder="tipoChaveSelecionado.placeholder"
+											size="md"
+											@blur="() => setFieldValue('chave_pix', values.chave_pix)"
+										/>
+									</UiFormField>
+								</div>
 							</div>
 						</div>
-					</div>
-				</div>
 
-				<!-- Dicas gerais -->
-				<div
-					class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
-				>
-					<div class="flex items-start space-x-3">
-						<Icon
-							name="lucide:lightbulb"
-							class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5"
-						/>
-						<div class="text-sm">
-							<p class="font-semibold text-green-900 dark:text-green-100 mb-2">Dicas:</p>
-							<ul class="text-green-700 dark:text-green-300 space-y-1">
-								<li>• Mais opções = mais vendas</li>
-								<li>• PIX é gratuito e instantâneo</li>
-								<li>• Dinheiro ainda é muito usado</li>
-								<li>• Pode alterar a qualquer momento</li>
-							</ul>
+						<!-- Aviso de Validação -->
+						<div
+							v-if="!temMetodoAtivo"
+							class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3 shadow-sm"
+						>
+							<Icon name="lucide:alert-circle" class="w-5 h-5 text-red-600" />
+							<p class="text-xs text-red-700 dark:text-red-300 font-medium">
+								Selecione ao menos um método para continuar.
+							</p>
 						</div>
 					</div>
-				</div>
-			</form>
-		</ConfiguracaoCard>
+
+					<!-- Botão de Salvar -->
+					<template #footer>
+						<div class="p-0">
+							<UiButton
+								:loading="saving"
+								:disabled="saving || !temMetodoAtivo"
+								class="w-full"
+								size="lg"
+								@click="onSubmit"
+							>
+								<template #iconLeft>
+									<Icon name="lucide:save" class="w-4 h-4" />
+								</template>
+								{{ saving ? "Salvando..." : "Salvar Configurações" }}
+							</UiButton>
+						</div>
+					</template>
+				</UiCard>
+			</div>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+/* Transições suaves */
+.transition-all {
+	transition-property: all;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	transition-duration: 300ms;
+}
+</style>

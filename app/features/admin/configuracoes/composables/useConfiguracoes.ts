@@ -1,71 +1,179 @@
 /**
- * 📌 useConfiguracoes - Composable Orquestrador de Configurações
+ * 📌 useConfiguracoes - Composable Orquestrador Global de Configurações
  *
- * Unifica todos os composables de configurações em uma API única:
- * - useDadosEmpresa (dados da empresa)
- * - useHorariosFuncionamento (horários)
- * - usePagamentos (métodos de pagamento)
- * - useFreteEntrega (frete e entrega)
- * - usePersonalizacao (tema e personalização)
+ * Gerencia estado global do módulo de configurações:
+ * - Navegação entre abas
+ * - Sincronização com URL e cookies
+ * - Estados de loading por aba
  */
 
-import { useDadosEmpresa } from "./useDadosEmpresa";
-import { useHorariosFuncionamento } from "./useHorariosFuncionamento";
-import { usePagamentos } from "./usePagamentos";
-import { useFreteEntrega } from "./useFreteEntrega";
-import { usePersonalizacao } from "./usePersonalizacao";
+/** Tipos das abas disponíveis */
+export type ConfiguracaoTab =
+	| "dados-empresa"
+	| "horarios"
+	| "pagamentos"
+	| "frete-entrega"
+	| "personalizar"
+	| "seguranca";
 
+/** Interface de retorno do composable */
 export interface UseConfiguracoesReturn {
-	// Composables específicos
-	dadosEmpresa: ReturnType<typeof useDadosEmpresa>;
-	horarios: ReturnType<typeof useHorariosFuncionamento>;
-	pagamentos: ReturnType<typeof usePagamentos>;
-	freteEntrega: ReturnType<typeof useFreteEntrega>;
-	personalizacao: ReturnType<typeof usePersonalizacao>;
+	// Estado das abas
+	activeTab: Ref<ConfiguracaoTab>;
 
-	// Estado global de loading
-	isLoading: ComputedRef<boolean>;
-	hasError: ComputedRef<boolean>;
+	// Estados de loading
+	loadingStates: Ref<Record<ConfiguracaoTab, boolean>>;
+	currentLoading: ComputedRef<boolean>;
+
+	// Handlers
+	handleTabChange: (tab: string) => void;
+
+	// Métodos para atualizar estados (usados pelos composables filhos)
+	setTabLoading: (tab: ConfiguracaoTab, loading: boolean) => void;
 }
 
 export const useConfiguracoes = (): UseConfiguracoesReturn => {
-	// Instanciar todos os composables
-	const dadosEmpresa = useDadosEmpresa();
-	const horarios = useHorariosFuncionamento();
-	const pagamentos = usePagamentos();
-	const freteEntrega = useFreteEntrega();
-	const personalizacao = usePersonalizacao();
+	const route = useRoute();
+	const router = useRouter();
 
-	// Estado global de loading (qualquer composable carregando)
-	const isLoading = computed(
-		() =>
-			dadosEmpresa.loading.value ||
-			horarios.loading.value ||
-			pagamentos.loading.value ||
-			freteEntrega.loading.value ||
-			personalizacao.loading.value,
+	// ========================================
+	// COOKIES PARA PERSISTÊNCIA
+	// ========================================
+
+	const lastTabCookie = useCookie<ConfiguracaoTab>("configuracoes-last-tab", {
+		default: () => "dados-empresa",
+		maxAge: 60 * 60 * 24 * 30, // 30 dias
+	});
+
+	// ========================================
+	// ESTADO DAS ABAS
+	// ========================================
+
+	/**
+	 * Determina a aba inicial baseado na URL ou cookie
+	 */
+	const getInitialTab = (): ConfiguracaoTab => {
+		const queryTab = route.query.tab as string;
+		const validTabs: ConfiguracaoTab[] = [
+			"dados-empresa",
+			"horarios",
+			"pagamentos",
+			"frete-entrega",
+			"personalizar",
+			"seguranca",
+		];
+
+		if (queryTab && validTabs.includes(queryTab as ConfiguracaoTab)) {
+			return queryTab as ConfiguracaoTab;
+		}
+
+		return lastTabCookie.value;
+	};
+
+	const activeTab = ref<ConfiguracaoTab>(getInitialTab());
+
+	// ========================================
+	// ESTADOS DE LOADING
+	// ========================================
+
+	const loadingStates = ref<Record<ConfiguracaoTab, boolean>>({
+		"dados-empresa": false,
+		horarios: false,
+		pagamentos: false,
+		"frete-entrega": false,
+		personalizar: false,
+		seguranca: false,
+	});
+
+	// ========================================
+	// COMPUTADAS
+	// ========================================
+
+	const currentLoading = computed(() => loadingStates.value[activeTab.value]);
+
+	// ========================================
+	// HANDLERS
+	// ========================================
+
+	/**
+	 * Handler para mudança de aba
+	 */
+	const handleTabChange = (tab: string): void => {
+		const newTab = tab as ConfiguracaoTab;
+		activeTab.value = newTab;
+		lastTabCookie.value = newTab;
+
+		router.push({
+			query: {
+				...route.query,
+				tab: newTab,
+			},
+		});
+	};
+
+	// ========================================
+	// MÉTODOS PARA COMPOSABLES FILHOS
+	// ========================================
+
+	/**
+	 * Atualiza estado de loading de uma aba específica
+	 */
+	const setTabLoading = (tab: ConfiguracaoTab, loading: boolean): void => {
+		loadingStates.value[tab] = loading;
+	};
+
+	// ========================================
+	// SINCRONIZAÇÃO COM URL
+	// ========================================
+
+	// Forçar parâmetro tab na URL se não existir
+	if (import.meta.client && !route.query.tab) {
+		router.replace({
+			query: {
+				...route.query,
+				tab: activeTab.value,
+			},
+		});
+	}
+
+	// Watch para sincronizar aba ativa com mudanças na URL
+	watch(
+		() => route.query.tab,
+		(newTab) => {
+			const validTabs: ConfiguracaoTab[] = [
+				"dados-empresa",
+				"horarios",
+				"pagamentos",
+				"frete-entrega",
+				"personalizar",
+				"seguranca",
+			];
+			const validTab = validTabs.includes(newTab as ConfiguracaoTab)
+				? (newTab as ConfiguracaoTab)
+				: "dados-empresa";
+
+			if (activeTab.value !== validTab) {
+				activeTab.value = validTab;
+			}
+		},
 	);
 
-	// Estado global de erro (qualquer composable com erro)
-	const hasError = computed(
-		() =>
-			!!dadosEmpresa.error.value ||
-			!!horarios.error.value ||
-			!!pagamentos.error.value ||
-			!!freteEntrega.error.value ||
-			!!personalizacao.error.value,
-	);
+	// ========================================
+	// RETORNO
+	// ========================================
 
 	return {
-		// Composables específicos
-		dadosEmpresa,
-		horarios,
-		pagamentos,
-		freteEntrega,
-		personalizacao,
+		// Estado das abas
+		activeTab,
 
-		// Estados globais
-		isLoading,
-		hasError,
+		// Estados de loading
+		loadingStates,
+		currentLoading,
+
+		// Handlers
+		handleTabChange,
+
+		// Métodos para composables filhos
+		setTabLoading,
 	};
 };

@@ -5,7 +5,7 @@
  * Orquestrador principal da página de configurações.
  * Gerencia:
  * - RBAC (controle de acesso por cargo)
- * - Estado da tab ativa
+ * - Estado da tab ativa com sincronização de URL
  * - Navegação entre tabs (ConfigTabs)
  * - Renderização do conteúdo (SectionConfigTabs)
  * - Estados globais de loading/erro
@@ -16,8 +16,8 @@ import { useUserStore } from "~/stores/user";
 import ConfigTabs from "./ConfigTabs.vue";
 import SectionConfigTabs from "./SectionConfigTabs.vue";
 
-// Composable principal (estados globais)
-const { hasError } = useConfiguracoes();
+// Composable principal (estados globais + sincronização URL)
+const { activeTab, handleTabChange } = useConfiguracoes();
 
 // Store do usuário (para RBAC)
 const userStore = useUserStore();
@@ -93,44 +93,29 @@ const tabs = computed(() => {
 /**
  * Tab ativa padrão (primeira tab disponível)
  */
-const defaultTab = computed(() => availableTabs.value[0]?.key || "horarios");
-
-// Estado da tab ativa (gerenciado pelo Manager)
-const activeTab = ref<string>(defaultTab.value);
+const defaultTab = computed(() => availableTabs.value[0]?.key || "dados-empresa");
 
 /**
- * Handler para mudança de tab
+ * Validar se a tab ativa é permitida para o usuário
+ * Se não for, redirecionar para a primeira tab disponível
  */
-const handleTabChange = (tabKey: string): void => {
-	activeTab.value = tabKey;
-};
-
-// Atualizar activeTab se defaultTab mudar (caso o cargo mude)
-watch(defaultTab, (newDefault) => {
-	if (!availableTabs.value.find((t) => t.key === activeTab.value)) {
-		activeTab.value = newDefault;
-	}
-});
+watch(
+	[activeTab, availableTabs],
+	([currentTab, available]) => {
+		const isTabAllowed = available.some((t) => t.key === currentTab);
+		if (!isTabAllowed && available.length > 0) {
+			const firstTab = available[0];
+			if (firstTab) {
+				handleTabChange(firstTab.key);
+			}
+		}
+	},
+	{ immediate: true },
+);
 </script>
 
 <template>
 	<div class="h-full flex flex-col">
-		<!-- Indicador de erro global -->
-		<div
-			v-if="hasError"
-			class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4"
-		>
-			<div class="flex items-center space-x-3">
-				<Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-				<div>
-					<h4 class="font-semibold text-red-900 dark:text-red-100">Erro ao carregar dados</h4>
-					<p class="text-sm text-red-700 dark:text-red-300">
-						Ocorreu um erro ao carregar as configurações. Tente recarregar a página.
-					</p>
-				</div>
-			</div>
-		</div>
-
 		<!-- Navegação de Tabs (recebe tabs filtradas por RBAC) -->
 		<ConfigTabs
 			v-model="activeTab"
