@@ -1,0 +1,171 @@
+/**
+ * 📌 useHorariosFuncionamento - Gerenciamento de Horários de Funcionamento
+ *
+ * Responsável por:
+ * - Buscar horários de funcionamento (config_geral.horarios)
+ * - Atualizar horários via RPC fn_rpc_onboarding_salvar_horarios
+ * - Reutiliza lógica do onboarding
+ */
+
+import type { HorarioFuncionamento } from "#shared/types/estabelecimentos";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
+import { useToast } from "~/composables/ui/useToast";
+
+export interface UseHorariosFuncionamentoReturn {
+	// Dados
+	horarios: Ref<HorarioFuncionamento[]>;
+
+	// Estados
+	loading: Ref<boolean>;
+	saving: Ref<boolean>;
+	error: Ref<string | null>;
+
+	// Métodos
+	buscarHorarios: () => Promise<void>;
+	salvarHorarios: (horarios: HorarioFuncionamento[]) => Promise<boolean>;
+}
+
+export const useHorariosFuncionamento = (): UseHorariosFuncionamentoReturn => {
+	const supabase = useSupabaseClient();
+	const estabelecimentoStore = useEstabelecimentoStore();
+	const { success, error: showError } = useToast();
+
+	// Estados
+	const horarios = ref<HorarioFuncionamento[]>([]);
+	const loading = ref(false);
+	const saving = ref(false);
+	const error = ref<string | null>(null);
+
+	/**
+	 * Buscar horários de funcionamento (READ via RLS)
+	 */
+	const buscarHorarios = async (): Promise<void> => {
+		loading.value = true;
+		error.value = null;
+
+		try {
+			const estabelecimento = estabelecimentoStore.estabelecimento;
+
+			if (!estabelecimento) {
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			// Extrair horários de config_geral
+			const configGeral = estabelecimento.config_geral as Record<string, unknown> | null;
+			const horariosData = (configGeral?.horario_funcionamento ||
+				configGeral?.horarios ||
+				[]) as HorarioFuncionamento[];
+
+			// Se não houver horários salvos, inicializar com estrutura padrão
+			if (!horariosData || horariosData.length === 0) {
+				horarios.value = [
+					{ dia_semana: "domingo", aberto: false, periodos: [] },
+					{ dia_semana: "segunda", aberto: false, periodos: [] },
+					{ dia_semana: "terca", aberto: false, periodos: [] },
+					{ dia_semana: "quarta", aberto: false, periodos: [] },
+					{ dia_semana: "quinta", aberto: false, periodos: [] },
+					{ dia_semana: "sexta", aberto: false, periodos: [] },
+					{ dia_semana: "sabado", aberto: false, periodos: [] },
+				];
+			} else {
+				horarios.value = horariosData;
+			}
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Erro ao buscar horários";
+			error.value = message;
+			console.error("[useHorariosFuncionamento] Erro ao buscar horários:", err);
+
+			// Inicializar com estrutura padrão em caso de erro
+			horarios.value = [
+				{ dia_semana: "domingo", aberto: false, periodos: [] },
+				{ dia_semana: "segunda", aberto: false, periodos: [] },
+				{ dia_semana: "terca", aberto: false, periodos: [] },
+				{ dia_semana: "quarta", aberto: false, periodos: [] },
+				{ dia_semana: "quinta", aberto: false, periodos: [] },
+				{ dia_semana: "sexta", aberto: false, periodos: [] },
+				{ dia_semana: "sabado", aberto: false, periodos: [] },
+			];
+		} finally {
+			loading.value = false;
+		}
+	};
+
+	/**
+	 * Salvar horários de funcionamento (UPDATE via RPC)
+	 */
+	const salvarHorarios = async (horariosAtualizados: HorarioFuncionamento[]): Promise<boolean> => {
+		saving.value = true;
+		error.value = null;
+
+		try {
+			// Chamar RPC fn_rpc_onboarding_salvar_horarios (reutiliza do onboarding)
+			const { error: rpcError } = await supabase.rpc("fn_rpc_onboarding_salvar_horarios", {
+				p_horarios: horariosAtualizados,
+			});
+
+			if (rpcError) {
+				throw rpcError;
+			}
+
+			// Atualizar store local usando função mutadora
+			if (estabelecimentoStore.estabelecimento) {
+				estabelecimentoStore.$patch((state) => {
+					if (state.estabelecimento) {
+						const configGeral = (state.estabelecimento.config_geral || {}) as Record<
+							string,
+							unknown
+						>;
+						state.estabelecimento.config_geral = {
+							...configGeral,
+							horario_funcionamento: horariosAtualizados,
+						};
+					}
+				});
+			}
+
+			// Atualizar dados locais
+			horarios.value = horariosAtualizados;
+
+			success({
+				title: "Horários atualizados",
+				description: "Os horários de funcionamento foram salvos com sucesso",
+			});
+
+			return true;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Erro ao salvar horários";
+			error.value = message;
+			showError({
+				title: "Erro ao salvar",
+				description: message,
+			});
+			console.error("[useHorariosFuncionamento] Erro ao salvar horários:", err);
+			return false;
+		} finally {
+			saving.value = false;
+		}
+	};
+
+	// Watch para reagir a mudanças na store (dados carregados pelo plugin)
+	watch(
+		() => estabelecimentoStore.estabelecimento?.config_geral,
+		() => {
+			buscarHorarios();
+		},
+		{ immediate: true },
+	);
+
+	return {
+		// Dados
+		horarios,
+
+		// Estados
+		loading,
+		saving,
+		error,
+
+		// Métodos
+		buscarHorarios,
+		salvarHorarios,
+	};
+};

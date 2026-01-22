@@ -60,6 +60,7 @@ export interface ConfigPagamento {
 	readonly aceita_pix: boolean;
 	readonly aceita_cartao_credito: boolean;
 	readonly aceita_cartao_debito: boolean;
+	readonly tipo_chave_pix?: "cpf" | "cnpj" | "email" | "telefone" | "aleatoria";
 	readonly chave_pix?: string;
 	readonly taxa_cartao?: number;
 }

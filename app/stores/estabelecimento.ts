@@ -16,9 +16,26 @@ interface Estabelecimento {
 	nome: string;
 	slug?: string;
 	logo_url?: string | null;
+	logo_url_dark?: string | null;
+	capa_url?: string | null;
+	foto_capa_url?: string | null;
+	cor_fundo?: string | null;
 	status?: string;
 	aberto?: boolean;
-	onboarding?: boolean; // ✅ Status do onboarding
+	onboarding?: boolean;
+	descricao?: string | null;
+	whatsapp?: string | null;
+	endereco_rua?: string | null;
+	endereco_numero?: string | null;
+	endereco_bairro?: string | null;
+	endereco_cidade?: string | null;
+	endereco_estado?: string | null;
+	endereco_cep?: string | null;
+	endereco_complemento?: string | null;
+	endereco_referencia?: string | null;
+	config_geral?: Record<string, unknown> | null;
+	config_pagamento?: Record<string, unknown> | null;
+	config_tema?: Record<string, unknown> | null;
 }
 
 interface EstabelecimentoState {
@@ -107,7 +124,7 @@ export const useEstabelecimentoStore = defineStore("estabelecimento", {
 
 				const { data, error } = await supabase
 					.from("estabelecimentos")
-					.select("id, nome, slug, logo_url, status, aberto, onboarding")
+					.select("*")
 					.eq("id", estabelecimentoId)
 					.single();
 
