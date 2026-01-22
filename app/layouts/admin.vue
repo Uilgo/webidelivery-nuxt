@@ -67,6 +67,26 @@ const handleToggleSidebarCollapse = (): void => {
 	sidebarCollapsedCookie.value = isSidebarCollapsed.value;
 };
 
+// Título da página baseado na rota atual
+const pageTitle = computed(() => {
+	const route = useRoute();
+	const routePath = route.path;
+
+	// Mapeamento de rotas para títulos
+	const routeTitles: Record<string, string> = {
+		"/admin/dashboard": "Dashboard",
+		"/admin/pedidos": "Pedidos",
+		"/admin/cardapio": "Cardápio",
+		"/admin/configuracoes": "Configurações",
+		"/admin/marketing": "Marketing",
+		"/admin/equipe": "Equipe",
+		"/admin/relatorios": "Relatórios",
+		"/admin/onboarding": "Configuração Inicial",
+	};
+
+	return routeTitles[routePath] || "Dashboard";
+});
+
 // SEO
 useHead({
 	title: "Painel Administrativo - WebiDelivery",
@@ -87,7 +107,7 @@ useHead({
 
 		<div class="flex-1 flex flex-col min-h-0">
 			<AdminHeader
-				title="Dashboard"
+				:title="pageTitle"
 				:sidebar-open="isSidebarOpen"
 				:sidebar-collapsed="isSidebarCollapsed"
 				@toggle-sidebar="handleToggleSidebar"
