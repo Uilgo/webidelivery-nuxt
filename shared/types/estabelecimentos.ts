@@ -45,13 +45,35 @@ export interface Estabelecimento {
 // TIPOS ESTRUTURADOS PARA CONFIGURAÇÕES
 // ========================================
 
+export type TipoTaxaEntrega = "sem_taxa" | "taxa_unica" | "taxa_distancia" | "taxa_localizacao";
+
+export interface TaxaDistancia {
+	readonly id: string;
+	readonly distancia_km: number;
+	readonly taxa_valor: number;
+	readonly tempo_min: number;
+	readonly tempo_max: number;
+	readonly status: "ativado" | "desativado";
+}
+
+export interface TaxaLocalizacao {
+	readonly id: string;
+	readonly nome: string;
+	readonly taxa_valor: number;
+	readonly tempo_min: number;
+	readonly tempo_max: number;
+	readonly status: "ativado" | "desativado";
+}
+
 export interface ConfigGeral {
 	readonly taxa_entrega: number;
+	readonly tipo_taxa_entrega?: TipoTaxaEntrega;
+	readonly taxas_por_distancia?: TaxaDistancia[];
+	readonly taxas_por_localizacao?: TaxaLocalizacao[];
 	readonly tempo_preparo_min: number;
 	readonly tempo_preparo_max: number;
 	readonly valor_minimo_pedido: number;
 	readonly raio_entrega_km: number;
-	readonly aceita_agendamento: boolean;
 	readonly horario_funcionamento: HorarioFuncionamento[];
 	readonly excecoes_horario?: HorarioExcecao[];
 }

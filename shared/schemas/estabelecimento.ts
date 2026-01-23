@@ -299,8 +299,7 @@ export const configGeralSchema = z.object({
 		.int("Tempo máximo deve ser inteiro")
 		.positive("Tempo máximo deve ser positivo"),
 	valor_minimo_pedido: z.number().nonnegative("Valor mínimo deve ser não negativo"),
-	raio_entrega_km: z.number().positive("Raio de entrega deve ser positivo"),
-	aceita_agendamento: z.boolean(),
+	raio_entrega_km: z.number().nonnegative("Raio de entrega deve ser não negativo"),
 });
 
 // ========================================

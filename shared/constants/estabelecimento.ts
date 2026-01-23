@@ -205,11 +205,6 @@ export const VALOR_MINIMO_PEDIDO_PADRAO = 0;
  */
 export const RAIO_ENTREGA_PADRAO = 5;
 
-/**
- * Aceita agendamento padrão
- */
-export const ACEITA_AGENDAMENTO_PADRAO = false;
-
 // ========================================
 // LIMITES E VALIDAÇÕES
 // ========================================

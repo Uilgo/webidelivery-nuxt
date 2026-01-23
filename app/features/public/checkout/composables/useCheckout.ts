@@ -11,6 +11,7 @@ import type {
 	DadosCliente,
 	EnderecoEntrega,
 	DadosPagamento,
+	DadosAgendamento,
 	TipoEntrega,
 } from "~/features/public/checkout/types/checkout";
 import { useCheckoutStorage } from "~/features/public/checkout/composables/useCheckoutStorage";
@@ -95,9 +96,13 @@ export const useCheckout = () => {
 	};
 
 	/**
-	 * Salva tipo de entrega e endereço (Etapa 2)
+	 * Salva tipo de entrega, endereço e agendamento (Etapa 2)
 	 */
-	const salvarEntrega = (tipo: TipoEntrega, endereco?: EnderecoEntrega): void => {
+	const salvarEntrega = (
+		tipo: TipoEntrega,
+		endereco?: EnderecoEntrega,
+		agendamento?: DadosAgendamento,
+	): void => {
 		state.value.dados.tipo_entrega = tipo;
 
 		if (tipo === "delivery" && endereco) {
@@ -113,6 +118,11 @@ export const useCheckout = () => {
 			salvarEndereco(validacao.data);
 		} else {
 			state.value.dados.endereco = undefined;
+		}
+
+		// Salva dados de agendamento se fornecidos
+		if (agendamento) {
+			state.value.dados.agendamento = agendamento;
 		}
 
 		proximaEtapa();

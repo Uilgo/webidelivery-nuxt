@@ -87,6 +87,24 @@ const pageTitle = computed(() => {
 	return routeTitles[routePath] || "Dashboard";
 });
 
+// Controle de scroll por página
+const shouldHaveScroll = computed(() => {
+	const route = useRoute();
+	const routePath = route.path;
+
+	// Páginas que PRECISAM de scroll
+	const scrollPages = [
+		"/admin/dashboard",
+		"/admin/pedidos",
+		"/admin/marketing",
+		"/admin/equipe",
+		"/admin/relatorios",
+		"/admin/onboarding",
+	];
+
+	return scrollPages.includes(routePath);
+});
+
 // SEO
 useHead({
 	title: "Painel Administrativo - WebiDelivery",
@@ -114,7 +132,7 @@ useHead({
 				@toggle-sidebar-collapse="handleToggleSidebarCollapse"
 			/>
 
-			<main class="flex-1 overflow-hidden p-6">
+			<main :class="['flex-1 p-6', shouldHaveScroll ? 'overflow-y-auto' : 'overflow-hidden']">
 				<slot></slot>
 			</main>
 		</div>

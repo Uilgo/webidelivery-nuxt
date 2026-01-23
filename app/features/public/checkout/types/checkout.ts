@@ -47,6 +47,14 @@ export interface DadosPagamento {
 }
 
 /**
+ * Dados de agendamento
+ */
+export interface DadosAgendamento {
+	tipo: "agora" | "agendar";
+	horario?: string; // Horário selecionado se tipo for "agendar"
+}
+
+/**
  * Dados completos do checkout
  */
 export interface CheckoutData {
@@ -56,6 +64,7 @@ export interface CheckoutData {
 	// Etapa 2: Tipo de entrega
 	tipo_entrega: TipoEntrega;
 	endereco?: EnderecoEntrega;
+	agendamento?: DadosAgendamento;
 
 	// Etapa 3: Forma de pagamento
 	pagamento: DadosPagamento;

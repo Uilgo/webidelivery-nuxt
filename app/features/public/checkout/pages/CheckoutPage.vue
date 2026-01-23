@@ -133,6 +133,7 @@ const handleConfirmarPedido = async (observacoes: string) => {
 					:tipo-inicial="checkout.state.value.dados.tipo_entrega"
 					:endereco-inicial="checkout.state.value.dados.endereco"
 					:endereco-estabelecimento="estabelecimento.endereco"
+					:slug="slug"
 					@submit="checkout.salvarEntrega"
 					@voltar="checkout.etapaAnterior"
 				/>

@@ -113,6 +113,31 @@ export const pagamentosSchema = z
  */
 export const freteEntregaSchema = z.object({
 	taxa_entrega: z.number().min(0, "Taxa de entrega não pode ser negativa"),
+	tipo_taxa_entrega: z.enum(["sem_taxa", "taxa_unica", "taxa_distancia", "taxa_localizacao"]),
+	taxas_por_distancia: z
+		.array(
+			z.object({
+				id: z.string(),
+				distancia_km: z.number().min(0, "Distância não pode ser negativa"),
+				taxa_valor: z.number().min(0, "Taxa não pode ser negativa"),
+				tempo_min: z.number().min(0, "Tempo mínimo não pode ser negativo"),
+				tempo_max: z.number().min(0, "Tempo máximo não pode ser negativo"),
+				status: z.enum(["ativado", "desativado"]),
+			}),
+		)
+		.optional(),
+	taxas_por_localizacao: z
+		.array(
+			z.object({
+				id: z.string(),
+				nome: z.string().min(1, "Nome da localização é obrigatório"),
+				taxa_valor: z.number().min(0, "Taxa não pode ser negativa"),
+				tempo_min: z.number().min(0, "Tempo mínimo não pode ser negativo"),
+				tempo_max: z.number().min(0, "Tempo máximo não pode ser negativo"),
+				status: z.enum(["ativado", "desativado"]),
+			}),
+		)
+		.optional(),
 	tempo_preparo_min: z
 		.number()
 		.min(10, "Tempo mínimo deve ser pelo menos 10 minutos")
@@ -126,7 +151,6 @@ export const freteEntregaSchema = z.object({
 		.number()
 		.min(0, "Raio de entrega não pode ser negativo")
 		.max(50, "Raio de entrega não pode exceder 50km"),
-	aceita_agendamento: z.boolean(),
 });
 
 /**

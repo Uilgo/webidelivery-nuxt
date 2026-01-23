@@ -6,17 +6,24 @@
  * - Atualizar configurações via RPC fn_rpc_admin_atualizar_estabelecimento
  */
 
-import type { ConfiguracoesGerais } from "../types/configuracoes";
+import type {
+	TipoTaxaEntrega,
+	TaxaDistancia,
+	TaxaLocalizacao,
+	ConfigGeral as ConfiguracoesGerais,
+} from "#shared/types/estabelecimentos";
 import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 import { useToast } from "~/composables/ui/useToast";
 
 export interface ConfigFreteEntrega {
 	taxa_entrega: number;
+	tipo_taxa_entrega: TipoTaxaEntrega;
+	taxas_por_distancia: TaxaDistancia[];
+	taxas_por_localizacao: TaxaLocalizacao[];
 	tempo_preparo_min: number;
 	tempo_preparo_max: number;
 	valor_minimo_pedido: number;
 	raio_entrega_km: number;
-	aceita_agendamento: boolean;
 }
 
 export interface UseFreteEntregaReturn {
@@ -63,11 +70,13 @@ export const useFreteEntrega = (): UseFreteEntregaReturn => {
 
 			configuracoes.value = {
 				taxa_entrega: configGeral?.taxa_entrega || 0,
+				tipo_taxa_entrega: configGeral?.tipo_taxa_entrega || "taxa_unica",
+				taxas_por_distancia: (configGeral?.taxas_por_distancia || []) as TaxaDistancia[],
+				taxas_por_localizacao: (configGeral?.taxas_por_localizacao || []) as TaxaLocalizacao[],
 				tempo_preparo_min: configGeral?.tempo_preparo_min || 30,
 				tempo_preparo_max: configGeral?.tempo_preparo_max || 60,
 				valor_minimo_pedido: configGeral?.valor_minimo_pedido || 0,
-				raio_entrega_km: configGeral?.raio_entrega_km || 5,
-				aceita_agendamento: configGeral?.aceita_agendamento || false,
+				raio_entrega_km: configGeral?.raio_entrega_km ?? 0,
 			};
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao buscar configurações de frete";
