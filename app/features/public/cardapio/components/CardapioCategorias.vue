@@ -119,28 +119,34 @@ watch(
 				style="scrollbar-width: none; -ms-overflow-style: none"
 			>
 				<!-- Botão "Todos" -->
-				<UiButton
-					:variant="categoriaSelecionada === null ? 'solid' : 'ghost'"
-					:color="categoriaSelecionada === null ? 'primary' : 'neutral'"
-					size="sm"
-					class="flex-shrink-0 whitespace-nowrap"
+				<button
+					type="button"
+					class="flex-shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition-all cardapio-rounded"
+					:class="[
+						categoriaSelecionada === null
+							? 'cardapio-bg-primary text-white shadow-sm'
+							: 'cardapio-bg-surface cardapio-text-content hover:bg-[var(--bg-hover)] border cardapio-border-primary border-opacity-20',
+					]"
 					@click="selecionarCategoria(null)"
 				>
 					Todos
-				</UiButton>
+				</button>
 
 				<!-- Botões de Categorias -->
-				<UiButton
+				<button
 					v-for="categoria in categorias"
 					:key="categoria.id"
-					:variant="categoriaSelecionada === categoria.id ? 'solid' : 'ghost'"
-					:color="categoriaSelecionada === categoria.id ? 'primary' : 'neutral'"
-					size="sm"
-					class="flex-shrink-0 whitespace-nowrap"
+					type="button"
+					class="flex-shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition-all cardapio-rounded"
+					:class="[
+						categoriaSelecionada === categoria.id
+							? 'cardapio-bg-primary text-white shadow-sm'
+							: 'cardapio-bg-surface cardapio-text-content hover:bg-[var(--bg-hover)] border cardapio-border-primary border-opacity-20',
+					]"
 					@click="selecionarCategoria(categoria.id)"
 				>
 					{{ categoria.nome }}
-				</UiButton>
+				</button>
 			</div>
 
 			<!-- Botão Direita (Desktop) -->

@@ -27,7 +27,9 @@ export default defineNuxtPlugin(async (_nuxtApp) => {
 		// 1. Busca estabelecimento pelo slug
 		const { data: estabelecimentoData, error: estabelecimentoError } = await supabase
 			.from("estabelecimentos")
-			.select("id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, config_geral")
+			.select(
+				"id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, config_geral, config_tema",
+			)
 			.eq("slug", slug)
 			.eq("status", "ativo")
 			.single();
@@ -39,6 +41,7 @@ export default defineNuxtPlugin(async (_nuxtApp) => {
 
 		// Extrai configurações
 		const configGeral = estabelecimentoData.config_geral as Record<string, unknown> | null;
+		const configTema = estabelecimentoData.config_tema as Record<string, unknown> | null;
 		const tempoEntregaMin = (configGeral?.tempo_entrega_min as number) ?? 20;
 		const tempoEntregaMax = (configGeral?.tempo_entrega_max as number) ?? 40;
 		const entregaGratisAcima = (configGeral?.valor_minimo_pedido as number) ?? null;
@@ -56,6 +59,7 @@ export default defineNuxtPlugin(async (_nuxtApp) => {
 			tempo_entrega_max: tempoEntregaMax,
 			entrega_gratis_acima: entregaGratisAcima,
 			aberto: estabelecimentoData.aberto,
+			config_tema: configTema,
 		};
 
 		// 2. Busca categorias ativas

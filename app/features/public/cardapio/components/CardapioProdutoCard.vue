@@ -64,12 +64,12 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="w-full flex gap-2 sm:gap-2.5 md:gap-3 p-2 sm:p-2.5 md:p-3 lg:p-4 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+		class="w-full flex gap-2 sm:gap-2.5 md:gap-3 p-2 sm:p-2.5 md:p-3 lg:p-4 cardapio-bg-surface hover:bg-[var(--bg-hover)] transition-colors text-left cardapio-rounded"
 		@click="abrirDrawer(produto)"
 	>
 		<!-- Imagem (esquerda - muito menor no mobile) -->
 		<div
-			class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-md sm:rounded-lg bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
+			class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 cardapio-rounded bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
 		>
 			<img
 				v-if="produto.imagem_url"
@@ -88,7 +88,7 @@ const temMultiplasVariacoes = computed(() => {
 		<div class="flex-1 min-w-0">
 			<!-- Nome -->
 			<h3
-				class="text-xs sm:text-sm md:text-base font-medium text-[var(--text-primary)] line-clamp-2 leading-tight"
+				class="text-xs sm:text-sm md:text-base font-medium cardapio-text-content line-clamp-2 leading-tight"
 			>
 				{{ produto.nome }}
 			</h3>
@@ -104,7 +104,7 @@ const temMultiplasVariacoes = computed(() => {
 			<!-- Preço -->
 			<div class="mt-1 sm:mt-1.5 md:mt-2 flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
 				<!-- Preço promocional ou normal -->
-				<span class="text-xs sm:text-sm md:text-base font-semibold text-[var(--text-primary)]">
+				<span class="text-xs sm:text-sm md:text-base font-semibold cardapio-text-primary">
 					<span
 						v-if="temMultiplasVariacoes"
 						class="text-[var(--text-muted)] font-normal text-[10px] sm:text-xs md:text-sm"

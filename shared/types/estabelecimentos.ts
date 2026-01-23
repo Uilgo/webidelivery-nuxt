@@ -93,7 +93,6 @@ export interface ConfigTema {
 	readonly cor_secundaria: string;
 	readonly cor_fundo: string;
 	readonly cor_texto: string;
-	readonly fonte_principal: string;
 	readonly estilo_botoes: "rounded" | "square";
 	readonly layout_cardapio: "grid" | "list";
 }

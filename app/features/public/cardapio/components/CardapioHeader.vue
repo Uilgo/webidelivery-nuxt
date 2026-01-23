@@ -57,11 +57,11 @@ const abrirWhatsApp = (): void => {
 
 <template>
 	<header class="sticky top-0 z-40 bg-transparent">
-		<div class="bg-[var(--bg-surface)] rounded-lg sm:rounded-xl shadow-lg p-2 sm:p-3 md:p-4">
+		<div class="cardapio-bg-surface rounded-lg sm:rounded-xl shadow-lg p-2 sm:p-3 md:p-4">
 			<div class="flex items-start gap-2 sm:gap-3 md:gap-4">
 				<!-- Logo Quadrado -->
 				<div
-					class="size-16 sm:size-20 md:size-24 lg:size-28 rounded-md sm:rounded-lg overflow-hidden bg-[var(--bg-surface)] shadow-lg shrink-0"
+					class="size-16 sm:size-20 md:size-24 lg:size-28 cardapio-rounded overflow-hidden cardapio-bg-surface shadow-lg shrink-0"
 				>
 					<img
 						v-if="estabelecimento.logo"
@@ -80,11 +80,11 @@ const abrirWhatsApp = (): void => {
 
 				<!-- Info -->
 				<div class="flex-1 min-w-0">
-					<!-- Linha 1: Nome + ModeToggle -->
+					<!-- Linha 1: Nome -->
 					<div class="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
 						<div class="flex-1 min-w-0">
 							<h1
-								class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[var(--text-primary)] leading-tight"
+								class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold cardapio-text-content leading-tight"
 							>
 								{{ estabelecimento.nome ?? "Estabelecimento" }}
 							</h1>
@@ -95,13 +95,12 @@ const abrirWhatsApp = (): void => {
 								{{ estabelecimento.descricao }}
 							</p>
 						</div>
-						<LayoutsModeToggle class="shrink-0" />
 					</div>
 
 					<!-- Linha 2: Entrega Grátis -->
 					<div
 						v-if="entregaGratisTexto"
-						class="flex items-center gap-1 text-xs sm:text-sm text-green-600 font-medium mb-2"
+						class="flex items-center gap-1 text-xs sm:text-sm cardapio-text-secondary font-medium mb-2"
 					>
 						{{ entregaGratisTexto }}
 					</div>

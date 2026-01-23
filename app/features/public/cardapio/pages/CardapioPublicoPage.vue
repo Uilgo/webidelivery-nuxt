@@ -8,6 +8,7 @@
 
 import { useCardapioPublico } from "~/features/public/cardapio/composables/useCardapioPublico";
 import { useProdutoDrawer } from "~/features/public/cardapio/composables/useProdutoDrawer";
+import { useTemaPublico } from "~/features/public/cardapio/composables/useTemaPublico";
 import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
 
 // Imports explícitos dos componentes
@@ -42,6 +43,9 @@ const {
 	hasMore,
 	loadMore,
 } = useCardapioPublico(props.slug);
+
+// Aplica tema personalizado do estabelecimento
+const { tema } = useTemaPublico(estabelecimento);
 
 // Estado da busca
 const termoBusca = ref("");
@@ -257,7 +261,7 @@ useSeoMeta({
 												v-for="produto in produtosPorCategoria(categoria.id)"
 												:key="produto.id"
 												:produto="produto"
-												class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden"
+												class="cardapio-bg-surface cardapio-rounded shadow-sm overflow-hidden"
 											/>
 										</div>
 									</template>

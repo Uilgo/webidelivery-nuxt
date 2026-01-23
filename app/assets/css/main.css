@@ -244,6 +244,51 @@ body {
 		color 0.3s ease;
 }
 
+/* =========================================
+TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
+========================================= */
+.cardapio-tema-personalizado {
+	/* Cores personalizadas do estabelecimento */
+	--cardapio-primary: var(--cardapio-cor-primaria, var(--primary));
+	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--accent));
+	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-surface));
+	--cardapio-text: var(--cardapio-cor-texto, var(--text-primary));
+	--cardapio-radius: var(--cardapio-border-radius, 8px);
+}
+
+/* Classes utilitárias para o cardápio público */
+.cardapio-bg-primary {
+	background-color: var(--cardapio-primary) !important;
+}
+
+.cardapio-text-primary {
+	color: var(--cardapio-primary) !important;
+}
+
+.cardapio-bg-secondary {
+	background-color: var(--cardapio-secondary) !important;
+}
+
+.cardapio-text-secondary {
+	color: var(--cardapio-secondary) !important;
+}
+
+.cardapio-bg-surface {
+	background-color: var(--cardapio-background) !important;
+}
+
+.cardapio-text-content {
+	color: var(--cardapio-text) !important;
+}
+
+.cardapio-border-primary {
+	border-color: var(--cardapio-primary) !important;
+}
+
+.cardapio-rounded {
+	border-radius: var(--cardapio-radius) !important;
+}
+
 /* Cursor pointer para elementos clicáveis */
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),

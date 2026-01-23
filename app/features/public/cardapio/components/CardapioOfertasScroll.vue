@@ -20,11 +20,13 @@ const props = defineProps<Props>();
 	<section v-if="ofertas.length" class="mb-4">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
-			<h3 class="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">
-				<Icon name="lucide:flame" class="w-5 h-5 text-primary" />
+			<h3 class="text-xl font-bold cardapio-text-content flex items-center gap-2">
+				<Icon name="lucide:flame" class="w-5 h-5 cardapio-text-primary" />
 				Ofertas Imperdíveis
 			</h3>
-			<NuxtLink to="#" class="text-primary text-sm font-bold hover:underline"> Ver tudo </NuxtLink>
+			<NuxtLink to="#" class="cardapio-text-primary text-sm font-bold hover:underline">
+				Ver tudo
+			</NuxtLink>
 		</div>
 
 		<!-- Scroll Horizontal -->

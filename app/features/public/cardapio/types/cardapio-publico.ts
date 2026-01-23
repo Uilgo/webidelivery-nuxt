@@ -36,6 +36,7 @@ export interface Estabelecimento {
 	tempo_entrega_max: number;
 	entrega_gratis_acima: number | null;
 	aberto: boolean;
+	config_tema?: Record<string, unknown> | null;
 }
 
 // Horário de funcionamento

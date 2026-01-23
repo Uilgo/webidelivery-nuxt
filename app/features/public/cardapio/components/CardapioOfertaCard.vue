@@ -64,7 +64,7 @@ const adicionarAoCarrinho = () => {
 
 <template>
 	<div
-		class="shrink-0 w-[140px] bg-[var(--bg-surface)] rounded-xl overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all cursor-pointer group"
+		class="shrink-0 w-[140px] cardapio-bg-surface cardapio-rounded overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all cursor-pointer group"
 		@click="abrirProduto"
 	>
 		<!-- Imagem -->
@@ -72,7 +72,7 @@ const adicionarAoCarrinho = () => {
 			<!-- Badge de Desconto -->
 			<div
 				v-if="descontoPercentual"
-				class="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10"
+				class="absolute top-2 left-2 cardapio-bg-secondary text-white text-[10px] font-bold px-2 py-0.5 cardapio-rounded z-10"
 			>
 				-{{ descontoPercentual }}%
 			</div>
@@ -91,16 +91,18 @@ const adicionarAoCarrinho = () => {
 
 		<!-- Informações -->
 		<div class="p-3">
-			<h4 class="font-bold text-sm text-[var(--text-primary)] truncate mb-1">
+			<h4 class="font-bold text-sm cardapio-text-content truncate mb-1">
 				{{ produto.nome }}
 			</h4>
 
 			<div class="flex items-center justify-between">
-				<span class="text-primary font-bold text-sm"> R$ {{ (precoMinimo || 0).toFixed(2) }} </span>
+				<span class="cardapio-text-primary font-bold text-sm">
+					R$ {{ (precoMinimo || 0).toFixed(2) }}
+				</span>
 
 				<button
 					type="button"
-					class="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+					class="size-6 cardapio-rounded cardapio-bg-primary cardapio-text-primary bg-opacity-10 flex items-center justify-center hover:cardapio-bg-primary hover:text-white transition-colors"
 					@click.stop="adicionarAoCarrinho"
 				>
 					<Icon name="lucide:plus" class="w-4 h-4" />

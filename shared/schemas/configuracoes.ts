@@ -161,7 +161,6 @@ export const personalizacaoSchema = z.object({
 	cor_secundaria: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor secundária inválida"),
 	cor_fundo: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor de fundo inválida"),
 	cor_texto: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor de texto inválida"),
-	fonte_principal: z.string().min(1, "Fonte principal é obrigatória"),
 	estilo_botoes: z.enum(["rounded", "square"]),
-	layout_cardapio: z.enum(["grid", "list"]),
+	layout_cardapio: z.enum(["grid", "list"]).optional(),
 });

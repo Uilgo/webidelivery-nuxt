@@ -57,7 +57,6 @@ export const usePersonalizacao = (): UsePersonalizacaoReturn => {
 				cor_secundaria: "#10b981",
 				cor_fundo: "#ffffff",
 				cor_texto: "#1f2937",
-				fonte_principal: "Inter",
 				estilo_botoes: "rounded",
 				layout_cardapio: "grid",
 			};
