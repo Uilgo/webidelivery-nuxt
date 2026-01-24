@@ -19,6 +19,7 @@ import type { ProdutoComputado } from "../../../types/produto";
 import type { CategoriaComputada } from "../../../types/categoria";
 import { useCategoriasFetch } from "../../A-categorias/composables/useCategoriasFetch";
 import { useGruposAdicionaisFetch } from "../../C-adicionais/composables/useGruposAdicionaisFetch";
+import PromocaoFields from "../../../cardapio/components/shared/PromocaoFields.vue";
 
 // Props do componente
 interface Props {
@@ -74,6 +75,7 @@ const getInitialValues = () => {
 				nome: "Padrão",
 				preco: 0,
 				preco_promocional: null,
+				ativo: true,
 			},
 		],
 		grupos_adicionais_ids: [],
@@ -102,17 +104,26 @@ const [ativo] = defineField("ativo");
 const [destaque] = defineField("destaque");
 const [em_promocao] = defineField("em_promocao");
 
+// Campos de promoção
+const promocao_tipo = ref<"percentual" | "valor_fixo">("percentual");
+const promocao_valor = ref<number>(0);
+const promocao_inicio = ref<string | null>(null);
+const promocao_fim = ref<string | null>(null);
+
 // Campos que só existem no modo criação - usar ref simples no modo edição
 const grupos_adicionais_ids = ref<string[]>([]);
 
 /**
  * Field Array para variações (apenas no modo criação)
  */
-const variacoes = ref<Array<{ nome: string; preco: number; preco_promocional: number | null }>>([]);
+const variacoes = ref<
+	Array<{ nome: string; preco: number; preco_promocional: number | null; ativo: boolean }>
+>([]);
 const adicionarVariacao = (value: {
 	nome: string;
 	preco: number;
 	preco_promocional: number | null;
+	ativo: boolean;
 }) => {
 	variacoes.value.push(value);
 };
@@ -132,6 +143,21 @@ const categoriaOptions = computed(() => {
  * Submit com validação automática
  */
 const onSubmit = handleSubmit((formValues) => {
+	// Preparar dados de promoção se estiver ativo
+	const dadosPromocao = em_promocao.value
+		? {
+				promocao_tipo: promocao_tipo.value,
+				promocao_valor: promocao_valor.value,
+				promocao_inicio: promocao_inicio.value,
+				promocao_fim: promocao_fim.value,
+			}
+		: {
+				promocao_tipo: null,
+				promocao_valor: null,
+				promocao_inicio: null,
+				promocao_fim: null,
+			};
+
 	// No modo criação, adicionar variacoes e grupos_adicionais_ids manualmente
 	if (!props.isEdicao) {
 		const variacoesValidas = variacoes.value.filter(
@@ -139,12 +165,13 @@ const onSubmit = handleSubmit((formValues) => {
 		);
 		const dataComVariacoes = {
 			...formValues,
+			...dadosPromocao,
 			variacoes: variacoesValidas,
 			grupos_adicionais_ids: grupos_adicionais_ids.value,
 		};
 		emit("submit", dataComVariacoes as CreateProdutoFormData);
 	} else {
-		emit("submit", formValues);
+		emit("submit", { ...formValues, ...dadosPromocao });
 	}
 });
 
@@ -166,6 +193,15 @@ watch(
 					em_promocao: newData.em_promocao ?? false,
 				},
 			});
+
+			// Atualizar campos de promoção
+			if (newData.em_promocao) {
+				promocao_tipo.value =
+					(newData.promocao_tipo as "percentual" | "valor_fixo") || "percentual";
+				promocao_valor.value = newData.promocao_valor || 0;
+				promocao_inicio.value = newData.promocao_inicio || null;
+				promocao_fim.value = newData.promocao_fim || null;
+			}
 		} else if (newData && !props.isEdicao) {
 			// No modo criação, atualizar variacoes e grupos manualmente
 			if (newData.variacoes && newData.variacoes.length > 0) {
@@ -173,6 +209,7 @@ watch(
 					nome: v.nome,
 					preco: Number(v.preco),
 					preco_promocional: v.preco_promocional ? Number(v.preco_promocional) : null,
+					ativo: v.ativo ?? true,
 				}));
 			}
 			if (newData.grupos_adicionais && newData.grupos_adicionais.length > 0) {
@@ -252,61 +289,6 @@ defineExpose({
 			</UiFormField>
 		</div>
 
-		<!-- Seção Configurações -->
-		<div class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg">
-			<h3 class="text-base font-semibold text-[var(--text-primary)] mb-4">Configurações</h3>
-
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-				<!-- Ativo -->
-				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
-					<label for="ativo" class="block text-sm font-medium text-[var(--text-primary)] mb-3">
-						Produto Ativo
-					</label>
-					<div class="flex items-center justify-between">
-						<p class="text-xs text-[var(--text-muted)]">Visível no cardápio</p>
-						<UiSwitch
-							id="ativo"
-							:model-value="ativo ?? true"
-							@update:model-value="ativo = $event"
-						/>
-					</div>
-				</div>
-
-				<!-- Destaque -->
-				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
-					<label for="destaque" class="block text-sm font-medium text-[var(--text-primary)] mb-3">
-						Em Destaque
-					</label>
-					<div class="flex items-center justify-between">
-						<p class="text-xs text-[var(--text-muted)]">Aparece em destaque</p>
-						<UiSwitch
-							id="destaque"
-							:model-value="destaque ?? false"
-							@update:model-value="destaque = $event"
-						/>
-					</div>
-				</div>
-
-				<!-- Promoção -->
-				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
-					<label
-						for="em_promocao"
-						class="block text-sm font-medium text-[var(--text-primary)] mb-3"
-					>
-						Em Promoção
-					</label>
-					<div class="flex items-center justify-between">
-						<p class="text-xs text-[var(--text-muted)]">Preço promocional</p>
-						<UiSwitch
-							id="em_promocao"
-							:model-value="em_promocao ?? false"
-							@update:model-value="em_promocao = $event"
-						/>
-					</div>
-				</div>
-			</div>
-		</div>
-
 		<!-- Seção Variações (apenas no modo criação) -->
 		<div
 			v-if="!isEdicao"
@@ -318,11 +300,31 @@ defineExpose({
 					type="button"
 					variant="outline"
 					size="sm"
-					@click="adicionarVariacao({ nome: '', preco: 0, preco_promocional: null })"
+					@click="adicionarVariacao({ nome: '', preco: 0, preco_promocional: null, ativo: true })"
 				>
 					<Icon name="lucide:plus" class="w-4 h-4 mr-1.5" />
 					Adicionar
 				</UiButton>
+			</div>
+
+			<!-- Card Informativo -->
+			<div
+				class="mb-4 flex items-start gap-3 rounded-lg border border-info-200 bg-info-50 p-4 dark:border-info-800 dark:bg-info-900/20"
+			>
+				<Icon
+					name="lucide:info"
+					class="mt-0.5 h-6! w-6! flex-shrink-0 text-info-600 dark:text-info-400"
+				/>
+				<div class="flex-1">
+					<p class="text-base font-medium text-info-900 dark:text-info-100">
+						Pelo menos uma variação é obrigatória
+					</p>
+					<p class="mt-1 text-sm text-info-700 dark:text-info-300">
+						As variações definem os preços do produto. Exemplos: <strong>Pizza</strong> (Pequena ou "P",
+						Média ou "M", Grande ou "G", Gigante ou "GG") ou <strong>Açaí</strong> (300ml, 500ml, 700ml, 1L). Se o produto
+						tiver preço único, use apenas uma variação "Padrão".
+					</p>
+				</div>
 			</div>
 
 			<!-- Container com scroll -->
@@ -406,6 +408,81 @@ defineExpose({
 					:label="grupo.nome"
 					class="p-3.5 bg-[var(--bg-muted)] rounded-lg border border-[var(--border-muted)] hover:border-[var(--border-strong)] transition-colors duration-200"
 					@update:model-value="grupos_adicionais_ids = $event as string[]"
+				/>
+			</div>
+		</div>
+
+		<!-- Seção Configurações -->
+		<div class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg">
+			<h3 class="text-base font-semibold text-[var(--text-primary)] mb-4">Configurações</h3>
+
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+				<!-- Ativo -->
+				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
+					<label for="ativo" class="block text-sm font-medium text-[var(--text-primary)] mb-3">
+						Produto Ativo
+					</label>
+					<div class="flex items-center justify-between">
+						<p class="text-xs text-[var(--text-muted)]">Visível no cardápio</p>
+						<UiSwitch
+							id="ativo"
+							:model-value="ativo ?? true"
+							@update:model-value="ativo = $event"
+						/>
+					</div>
+				</div>
+
+				<!-- Destaque -->
+				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
+					<label for="destaque" class="block text-sm font-medium text-[var(--text-primary)] mb-3">
+						Em Destaque
+					</label>
+					<div class="flex items-center justify-between">
+						<p class="text-xs text-[var(--text-muted)]">Aparece em destaque</p>
+						<UiSwitch
+							id="destaque"
+							:model-value="destaque ?? false"
+							@update:model-value="destaque = $event"
+						/>
+					</div>
+				</div>
+
+				<!-- Promoção -->
+				<div class="p-4 bg-[var(--bg-muted)] rounded-lg">
+					<label
+						for="em_promocao"
+						class="block text-sm font-medium text-[var(--text-primary)] mb-3"
+					>
+						Em Promoção
+					</label>
+					<div class="flex items-center justify-between">
+						<p class="text-xs text-[var(--text-muted)]">Preço promocional</p>
+						<UiSwitch
+							id="em_promocao"
+							:model-value="em_promocao ?? false"
+							@update:model-value="em_promocao = $event"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Campos de Promoção (aparecem quando toggle está ativo) -->
+			<div v-if="em_promocao" class="mt-4">
+				<PromocaoFields
+					:model-value="{
+						tipo: promocao_tipo,
+						valor: promocao_valor,
+						inicio: promocao_inicio,
+						fim: promocao_fim,
+					}"
+					@update:model-value="
+						(value) => {
+							promocao_tipo = value.tipo;
+							promocao_valor = value.valor;
+							promocao_inicio = value.inicio;
+							promocao_fim = value.fim;
+						}
+					"
 				/>
 			</div>
 		</div>

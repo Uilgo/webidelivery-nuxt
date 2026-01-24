@@ -8,20 +8,18 @@
 import type {
 	TipoCupom,
 	TipoBanner,
-	TipoPromocao,
 	TipoConteudoBanner,
 	TipoPosicaoTexto,
 	StatusCupom,
 	CupomFormData,
 	BannerFormData,
-	PromocaoFormData,
 } from "#shared/types/marketing";
 
 // ========================================
 // TIPOS DE ABAS E NAVEGAÇÃO
 // ========================================
 
-export type MarketingTab = "cupons" | "banners" | "promocoes";
+export type MarketingTab = "cupons" | "banners";
 export type MarketingViewMode = "card" | "list";
 
 // ========================================
@@ -44,13 +42,6 @@ export interface BannerFilters {
 	readonly status?: "ativo" | "inativo";
 }
 
-export interface PromocaoFilters {
-	readonly tipo?: TipoPromocao;
-	readonly status?: "ativo" | "inativo" | "expirado";
-	readonly periodo?: "hoje" | "semana" | "mes" | "personalizado";
-	readonly search?: string;
-}
-
 // ========================================
 // TIPOS DE ESTATÍSTICAS
 // ========================================
@@ -67,12 +58,6 @@ export interface MarketingStats {
 		readonly total: number;
 		readonly ativos: number;
 		readonly por_tipo: Record<TipoBanner, number>;
-	};
-	readonly promocoes: {
-		readonly total: number;
-		readonly ativas: number;
-		readonly expiradas: number;
-		readonly economia_total: number;
 	};
 }
 
@@ -111,10 +96,7 @@ export interface CupomValidationResult {
 	readonly codigo_disponivel: boolean;
 }
 
-// ========================================
-// TIPOS DE VALIDAÇÃO ESPECÍFICOS CUPONS
-// ========================================
-
+// Tipo para validação de cupom no checkout
 export interface ValidacaoCupom {
 	readonly codigo: string;
 	readonly valido: boolean;
@@ -124,32 +106,15 @@ export interface ValidacaoCupom {
 	readonly desconto_aplicado?: number;
 }
 
-export interface PromocaoValidationResult {
-	readonly valida: boolean;
-	readonly motivo?: string;
-	readonly periodo_valido: boolean;
-}
-
-// ========================================
-// TIPOS DE VALIDAÇÃO ESPECÍFICOS
-// ========================================
-
-export interface ValidacaoPromocao {
-	readonly promocao_id: string;
-	readonly valida: boolean;
-	readonly motivo_invalido?: string;
-	readonly desconto_aplicado?: number;
-}
-
 // ========================================
 // TIPOS DE AÇÕES E EVENTOS
 // ========================================
 
 export interface MarketingAction {
 	readonly type: "create" | "update" | "delete" | "toggle" | "duplicate";
-	readonly entity: "cupom" | "banner" | "promocao";
+	readonly entity: "cupom" | "banner";
 	readonly id?: string;
-	readonly data?: CupomFormData | BannerFormData | PromocaoFormData;
+	readonly data?: CupomFormData | BannerFormData;
 }
 
 export interface MarketingEvent {
@@ -199,12 +164,11 @@ export type CupomSortField =
 	| "usos_realizados"
 	| "created_at";
 export type BannerSortField = "titulo" | "tipo" | "ordem" | "created_at";
-export type PromocaoSortField = "nome" | "tipo" | "desconto" | "data_inicio" | "created_at";
 
 export type SortDirection = "asc" | "desc";
 
 export interface SortConfig {
-	readonly field: CupomSortField | BannerSortField | PromocaoSortField;
+	readonly field: CupomSortField | BannerSortField;
 	readonly direction: SortDirection;
 }
 
@@ -229,14 +193,14 @@ export interface DrawerState {
 	readonly isOpen: boolean;
 	readonly mode: "create" | "edit";
 	readonly entityId?: string;
-	readonly entityType: "cupom" | "banner" | "promocao";
+	readonly entityType: "cupom" | "banner";
 }
 
 export interface ModalState {
 	readonly isOpen: boolean;
 	readonly type: "delete" | "duplicate" | "preview";
 	readonly entityId?: string;
-	readonly entityType: "cupom" | "banner" | "promocao";
+	readonly entityType: "cupom" | "banner";
 	readonly title?: string;
 	readonly message?: string;
 }
@@ -256,16 +220,6 @@ export interface CupomAplicacao {
 	readonly valor_final: number;
 }
 
-export interface PromocaoAplicacao {
-	readonly promocao_id: string;
-	readonly nome: string;
-	readonly tipo: TipoPromocao;
-	readonly desconto: number;
-	readonly desconto_aplicado: number;
-	readonly produtos_afetados: string[];
-	readonly economia: number;
-}
-
 // ========================================
 // TIPOS DE RELATÓRIOS
 // ========================================
@@ -282,14 +236,6 @@ export interface MarketingReport {
 			readonly economia: number;
 		}>;
 		readonly por_tipo: Record<TipoCupom, number>;
-	};
-	readonly promocoes: {
-		readonly mais_efetivas: Array<{
-			readonly nome: string;
-			readonly aplicacoes: number;
-			readonly economia: number;
-		}>;
-		readonly por_tipo: Record<TipoPromocao, number>;
 	};
 	readonly economia_total: number;
 	readonly conversao: number;

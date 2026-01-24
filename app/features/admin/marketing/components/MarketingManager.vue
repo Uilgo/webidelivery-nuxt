@@ -3,22 +3,17 @@
  * 📌 MarketingManager
  *
  * Componente orquestrador principal da feature de marketing.
- * Gerencia navegação entre abas, filtros e estado global.
+ * Gerencia navegação entre abas (Cupons e Banners).
  */
 
 // Imports dos componentes
-import MarketingStats from "./MarketingStats.vue";
 import MarketingTabs from "./MarketingTabs.vue";
 import MarketingFilters from "./shared/MarketingFilters.vue";
 import CuponsView from "./cupons/CuponsView.vue";
 import BannersView from "./banners/BannersView.vue";
-import PromocoesView from "./promocoes/PromocoesView.vue";
 
 // Imports dos composables
 import { useMarketing } from "../composables/useMarketing";
-import { useCupons } from "../composables/useCupons";
-import { useBanners } from "../composables/useBanners";
-import { usePromocoes } from "../composables/usePromocoes";
 
 // Composables
 const {
@@ -36,17 +31,12 @@ const {
 	handleRefresh,
 } = useMarketing();
 
-const { cuponsCount } = useCupons();
-const { bannersCount } = useBanners();
-const { promocoesCount } = usePromocoes();
-
 // ========================================
 // ESTADO DOS DRAWERS
 // ========================================
 
 const showCreateCupomDrawer = ref(false);
 const showCreateBannerDrawer = ref(false);
-const showCreatePromocaoDrawer = ref(false);
 
 // ========================================
 // HANDLERS
@@ -63,9 +53,6 @@ const handleCreate = (): void => {
 		case "banners":
 			showCreateBannerDrawer.value = true;
 			break;
-		case "promocoes":
-			showCreatePromocaoDrawer.value = true;
-			break;
 	}
 };
 </script>
@@ -74,13 +61,6 @@ const handleCreate = (): void => {
 	<div class="w-full min-h-screen space-y-6">
 		<!-- Navegação por abas -->
 		<MarketingTabs :active-tab="activeTab" :tab-counts="tabCounts" @tab-change="handleTabChange" />
-
-		<!-- Header com estatísticas gerais -->
-		<MarketingStats
-			:cupons-count="cuponsCount"
-			:banners-count="bannersCount"
-			:promocoes-count="promocoesCount"
-		/>
 
 		<!-- Filtros e busca -->
 		<MarketingFilters
@@ -107,11 +87,6 @@ const handleCreate = (): void => {
 			<!-- Aba Banners -->
 			<div v-if="activeTab === 'banners'" class="w-full">
 				<BannersView v-model:show-create-drawer="showCreateBannerDrawer" />
-			</div>
-
-			<!-- Aba Promoções -->
-			<div v-if="activeTab === 'promocoes'" class="w-full">
-				<PromocoesView v-model:show-create-drawer="showCreatePromocaoDrawer" />
 			</div>
 		</div>
 	</div>

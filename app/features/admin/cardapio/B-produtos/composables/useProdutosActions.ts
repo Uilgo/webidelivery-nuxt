@@ -55,6 +55,10 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_ativo: data.ativo ?? true,
 				p_destaque: data.destaque ?? false,
 				p_em_promocao: data.em_promocao ?? false,
+				p_promocao_tipo: data.promocao_tipo ?? null,
+				p_promocao_valor: data.promocao_valor ?? null,
+				p_promocao_inicio: data.promocao_inicio ?? null,
+				p_promocao_fim: data.promocao_fim ?? null,
 				p_variacoes: variacoesJsonb,
 			});
 
@@ -109,6 +113,10 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_ativo: data.ativo ?? true,
 				p_destaque: data.destaque ?? false,
 				p_em_promocao: data.em_promocao ?? false,
+				p_promocao_tipo: data.promocao_tipo ?? null,
+				p_promocao_valor: data.promocao_valor ?? null,
+				p_promocao_inicio: data.promocao_inicio ?? null,
+				p_promocao_fim: data.promocao_fim ?? null,
 				p_categoria_id: data.categoria_id ?? null,
 			});
 
@@ -220,7 +228,9 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 			// Busca o produto atual para manter os outros dados
 			const { data: produto, error: fetchError } = await supabase
 				.from("produtos")
-				.select("categoria_id, nome, descricao, imagem_url, destaque, em_promocao")
+				.select(
+					"categoria_id, nome, descricao, imagem_url, destaque, em_promocao, promocao_tipo, promocao_valor, promocao_inicio, promocao_fim",
+				)
 				.eq("id", id)
 				.single();
 
@@ -237,6 +247,10 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_ativo: ativo,
 				p_destaque: produto.destaque,
 				p_em_promocao: produto.em_promocao,
+				p_promocao_tipo: produto.promocao_tipo,
+				p_promocao_valor: produto.promocao_valor,
+				p_promocao_inicio: produto.promocao_inicio,
+				p_promocao_fim: produto.promocao_fim,
 				p_categoria_id: produto.categoria_id,
 			});
 

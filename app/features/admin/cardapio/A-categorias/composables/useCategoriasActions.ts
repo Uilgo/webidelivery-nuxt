@@ -45,6 +45,11 @@ export const useCategoriasActions = (): UseCategoriasActionsReturn => {
 				p_nome: data.nome,
 				p_descricao: data.descricao ?? null,
 				p_imagem_url: data.imagem_url ?? null,
+				p_em_promocao: data.em_promocao ?? false,
+				p_promocao_tipo: data.promocao_tipo ?? null,
+				p_promocao_valor: data.promocao_valor ?? null,
+				p_promocao_inicio: data.promocao_inicio ?? null,
+				p_promocao_fim: data.promocao_fim ?? null,
 			});
 
 			if (error) {
@@ -77,6 +82,11 @@ export const useCategoriasActions = (): UseCategoriasActionsReturn => {
 				p_imagem_url: data.imagem_url ?? null,
 				p_ativo: data.ativo ?? null,
 				p_ordem: data.ordem ?? null,
+				p_em_promocao: data.em_promocao ?? null,
+				p_promocao_tipo: data.promocao_tipo ?? null,
+				p_promocao_valor: data.promocao_valor ?? null,
+				p_promocao_inicio: data.promocao_inicio ?? null,
+				p_promocao_fim: data.promocao_fim ?? null,
 			});
 
 			if (error) {

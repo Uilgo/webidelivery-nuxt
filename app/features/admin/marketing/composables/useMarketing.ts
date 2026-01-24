@@ -17,7 +17,6 @@ export interface UseMarketingReturn {
 	tabCounts: ComputedRef<{
 		cuponsCount: number;
 		bannersCount: number;
-		promocoesCount: number;
 	}>;
 
 	// Modo de visualização
@@ -80,7 +79,7 @@ export const useMarketing = (): UseMarketingReturn => {
 	 */
 	const getInitialTab = (): MarketingTab => {
 		const queryTab = route.query.tab as string;
-		const validTabs: MarketingTab[] = ["cupons", "banners", "promocoes"];
+		const validTabs: MarketingTab[] = ["cupons", "banners"];
 
 		if (queryTab && validTabs.includes(queryTab as MarketingTab)) {
 			return queryTab as MarketingTab;
@@ -93,20 +92,18 @@ export const useMarketing = (): UseMarketingReturn => {
 	const viewMode = ref<MarketingViewMode>(viewModeCookie.value);
 
 	// ========================================
-	// ESTADOS DE LOADING E DADOS
+	// ESTADOS DE LOADING E DADOS (compartilhados globalmente)
 	// ========================================
 
-	const loadingStates = ref<Record<MarketingTab, boolean>>({
+	const loadingStates = useState<Record<MarketingTab, boolean>>("marketing-loading-states", () => ({
 		cupons: false,
 		banners: false,
-		promocoes: false,
-	});
+	}));
 
-	const tabData = ref<Record<MarketingTab, unknown[]>>({
+	const tabData = useState<Record<MarketingTab, unknown[]>>("marketing-tab-data", () => ({
 		cupons: [],
 		banners: [],
-		promocoes: [],
-	});
+	}));
 
 	// ========================================
 	// ESTADOS DE FILTROS
@@ -115,19 +112,16 @@ export const useMarketing = (): UseMarketingReturn => {
 	const searchValues = ref<Record<MarketingTab, string>>({
 		cupons: "",
 		banners: "",
-		promocoes: "",
 	});
 
 	const sortValues = ref<Record<MarketingTab, string>>({
 		cupons: "created_at",
 		banners: "ordem",
-		promocoes: "created_at",
 	});
 
 	const filterValues = ref<Record<MarketingTab, Record<string, unknown>>>({
 		cupons: {},
 		banners: {},
-		promocoes: {},
 	});
 
 	// ========================================
@@ -137,7 +131,6 @@ export const useMarketing = (): UseMarketingReturn => {
 	const tabCounts = computed(() => ({
 		cuponsCount: tabData.value.cupons.length,
 		bannersCount: tabData.value.banners.length,
-		promocoesCount: tabData.value.promocoes.length,
 	}));
 
 	const currentLoading = computed(() => loadingStates.value[activeTab.value]);
@@ -245,7 +238,7 @@ export const useMarketing = (): UseMarketingReturn => {
 	watch(
 		() => route.query.tab,
 		(newTab) => {
-			const validTabs: MarketingTab[] = ["cupons", "banners", "promocoes"];
+			const validTabs: MarketingTab[] = ["cupons", "banners"];
 			const validTab = validTabs.includes(newTab as MarketingTab)
 				? (newTab as MarketingTab)
 				: "cupons";

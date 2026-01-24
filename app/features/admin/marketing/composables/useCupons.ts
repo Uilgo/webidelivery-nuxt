@@ -12,6 +12,7 @@
 import { useToast } from "~/composables/ui/useToast";
 import type { CupomCompleto, CupomFormData, StatusCupom } from "#shared/types/marketing";
 import type { CupomFilters, ValidacaoCupom } from "../types/marketing";
+import { useMarketing } from "./useMarketing";
 
 /** Interface para dados brutos do Supabase */
 interface CupomRaw {
@@ -70,6 +71,9 @@ export interface UseCuponsReturn {
 export const useCupons = (): UseCuponsReturn => {
 	const toast = useToast();
 	const supabase = useSupabaseClient();
+
+	// Integração com useMarketing para atualizar contadores
+	const { setTabData } = useMarketing();
 
 	// ========================================
 	// ESTADO REATIVO
@@ -218,6 +222,9 @@ export const useCupons = (): UseCuponsReturn => {
 				status_cupom: calculateCupomStatus(cupom),
 				periodo_valido: checkPeriodoValido(cupom.data_expiracao),
 			}));
+
+			// Atualizar dados no useMarketing para contadores das tabs
+			setTabData("cupons", cupons.value);
 		} catch (err) {
 			error.value = "Erro ao carregar cupons";
 			console.error("Erro ao buscar cupons:", err);

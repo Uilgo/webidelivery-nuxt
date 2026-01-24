@@ -20,6 +20,10 @@ export interface Produto {
 	readonly ativo: boolean;
 	readonly destaque: boolean;
 	readonly em_promocao: boolean;
+	readonly promocao_tipo: "percentual" | "valor_fixo" | null;
+	readonly promocao_valor: number | null;
+	readonly promocao_inicio: TimestampTz | null;
+	readonly promocao_fim: TimestampTz | null;
 	readonly total_vendas: number;
 }
 
@@ -52,6 +56,10 @@ export interface ProdutoCreateData {
 	ativo?: boolean;
 	destaque?: boolean;
 	em_promocao?: boolean;
+	promocao_tipo?: "percentual" | "valor_fixo" | null;
+	promocao_valor?: number | null;
+	promocao_inicio?: string | null;
+	promocao_fim?: string | null;
 	variacoes?: ProdutoVariacaoCreateData[];
 	grupos_adicionais_ids?: UUID[];
 }
@@ -63,6 +71,10 @@ export interface ProdutoUpdateData {
 	ativo?: boolean;
 	destaque?: boolean;
 	em_promocao?: boolean;
+	promocao_tipo?: "percentual" | "valor_fixo" | null;
+	promocao_valor?: number | null;
+	promocao_inicio?: string | null;
+	promocao_fim?: string | null;
 	categoria_id?: UUID | null;
 	variacoes?: ProdutoVariacaoCreateData[];
 	grupos_adicionais_ids?: UUID[];

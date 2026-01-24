@@ -17,6 +17,11 @@ export interface Categoria {
 	readonly ordem: number;
 	readonly ativo: boolean;
 	readonly categoria_pai_id: UUID | null; // ✅ Campo para hierarquia de subcategorias
+	readonly em_promocao: boolean;
+	readonly promocao_tipo: "percentual" | "valor_fixo" | null;
+	readonly promocao_valor: number | null;
+	readonly promocao_inicio: TimestampTz | null;
+	readonly promocao_fim: TimestampTz | null;
 }
 
 export interface CategoriaCreateData {
@@ -25,6 +30,11 @@ export interface CategoriaCreateData {
 	imagem_url?: string;
 	ordem?: number;
 	categoria_pai_id?: UUID; // ✅ Permite criar subcategoria
+	em_promocao?: boolean;
+	promocao_tipo?: "percentual" | "valor_fixo" | null;
+	promocao_valor?: number | null;
+	promocao_inicio?: string | null;
+	promocao_fim?: string | null;
 }
 
 export interface CategoriaUpdateData {
@@ -34,6 +44,11 @@ export interface CategoriaUpdateData {
 	ordem?: number;
 	ativo?: boolean;
 	categoria_pai_id?: UUID; // ✅ Permite alterar hierarquia
+	em_promocao?: boolean;
+	promocao_tipo?: "percentual" | "valor_fixo" | null;
+	promocao_valor?: number | null;
+	promocao_inicio?: string | null;
+	promocao_fim?: string | null;
 }
 
 export interface CategoriaFilters {

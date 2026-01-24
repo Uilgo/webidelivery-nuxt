@@ -72,9 +72,9 @@ const drawerTitle = computed(() => {
 	return props.categoriaPai ? "Nova Subcategoria" : "Nova Categoria";
 });
 
-// Tamanho do drawer (sempre md para criação e edição)
-const drawerSize = computed((): "md" => {
-	return "md";
+// Tamanho do drawer (sempre lg para criação e edição, igual ao de produtos)
+const drawerSize = computed((): "lg" => {
+	return "lg";
 });
 
 /**

@@ -3,7 +3,7 @@
  * 📌 MarketingTabs
  *
  * Componente de navegação entre as abas do marketing.
- * Exibe cupons, banners e promoções com contadores.
+ * Exibe cupons e banners com contadores.
  */
 
 import type { MarketingTab } from "../types/marketing";
@@ -13,7 +13,6 @@ interface Props {
 	tabCounts: {
 		cuponsCount: number;
 		bannersCount: number;
-		promocoesCount: number;
 	};
 }
 
@@ -40,12 +39,6 @@ const tabItems = computed(() => [
 		label: "Banners",
 		icon: "lucide:image",
 		badge: props.tabCounts.bannersCount,
-	},
-	{
-		key: "promocoes",
-		label: "Promoções",
-		icon: "lucide:percent",
-		badge: props.tabCounts.promocoesCount,
 	},
 ]);
 

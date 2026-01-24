@@ -15,6 +15,7 @@ import {
 	type UpdateCategoriaFormData,
 } from "#shared/schemas/cardapio/categoria";
 import type { CategoriaComputada } from "../../../types/categoria";
+import PromocaoFields from "../../../cardapio/components/shared/PromocaoFields.vue";
 
 interface Props {
 	/** Modo do formulário - determina campos e validações */
@@ -91,6 +92,13 @@ const [descricao, descricaoAttrs] = defineField("descricao", { validateOnModelUp
 const [imagem_url, imagemUrlAttrs] = defineField("imagem_url", { validateOnModelUpdate: false });
 const [ativo] = defineField("ativo");
 
+// Campos de promoção
+const em_promocao = ref(false);
+const promocao_tipo = ref<"percentual" | "valor_fixo">("percentual");
+const promocao_valor = ref<number>(0);
+const promocao_inicio = ref<string | null>(null);
+const promocao_fim = ref<string | null>(null);
+
 /**
  * Computed para validação geral do formulário
  */
@@ -100,7 +108,24 @@ const isFormValid = computed(() => meta.value.valid);
  * Submit com validação automática
  */
 const onSubmit = handleSubmit((values) => {
-	emit("submit", values);
+	// Preparar dados de promoção se estiver ativo
+	const dadosPromocao = em_promocao.value
+		? {
+				em_promocao: true,
+				promocao_tipo: promocao_tipo.value,
+				promocao_valor: promocao_valor.value,
+				promocao_inicio: promocao_inicio.value,
+				promocao_fim: promocao_fim.value,
+			}
+		: {
+				em_promocao: false,
+				promocao_tipo: null,
+				promocao_valor: null,
+				promocao_inicio: null,
+				promocao_fim: null,
+			};
+
+	emit("submit", { ...values, ...dadosPromocao });
 });
 
 /**
@@ -118,6 +143,16 @@ watch(
 					ativo: newData.ativo,
 				},
 			});
+
+			// Atualizar campos de promoção
+			em_promocao.value = newData.em_promocao ?? false;
+			if (newData.em_promocao) {
+				promocao_tipo.value =
+					(newData.promocao_tipo as "percentual" | "valor_fixo") || "percentual";
+				promocao_valor.value = newData.promocao_valor || 0;
+				promocao_inicio.value = newData.promocao_inicio || null;
+				promocao_fim.value = newData.promocao_fim || null;
+			}
 		}
 	},
 );
@@ -204,5 +239,79 @@ defineExpose({
 		>
 			<UiCheckbox v-model="ativo" label="Categoria ativa" :disabled="loading" color="primary" />
 		</UiFormField>
+
+		<!-- Promoção -->
+		<div class="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-4">
+			<!-- Header com Toggle -->
+			<div class="flex items-center justify-between">
+				<div class="flex-1">
+					<h3 class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+						Categoria em Promoção
+					</h3>
+					<p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+						Aplicar desconto em todos os produtos desta categoria
+					</p>
+				</div>
+				<UiSwitch v-model="em_promocao" :disabled="loading" />
+			</div>
+
+			<!-- Campos de Promoção (aparecem quando toggle está ativo) -->
+			<div v-if="em_promocao" class="pt-2 border-t border-neutral-200 dark:border-neutral-800">
+				<PromocaoFields
+					:model-value="{
+						tipo: promocao_tipo,
+						valor: promocao_valor,
+						inicio: promocao_inicio,
+						fim: promocao_fim,
+					}"
+					@update:model-value="
+						(value) => {
+							promocao_tipo = value.tipo;
+							promocao_valor = value.valor;
+							promocao_inicio = value.inicio;
+							promocao_fim = value.fim;
+						}
+					"
+				/>
+			</div>
+		</div>
+
+		<!-- Card Informativo sobre Promoção em Categoria -->
+		<div
+			class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+		>
+			<div class="flex gap-3">
+				<Icon
+					name="lucide:info"
+					class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
+				/>
+				<div class="space-y-2">
+					<h4 class="text-sm font-medium text-blue-900 dark:text-blue-100">
+						Por que criar promoção em categoria?
+					</h4>
+					<p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+						Ao ativar promoção em uma categoria, <strong>todos os produtos</strong> dela receberão o
+						desconto automaticamente. Isso é ideal para:
+					</p>
+					<ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
+						<li><strong>Campanhas sazonais:</strong> "Todas as bebidas com 20% OFF no verão"</li>
+						<li>
+							<strong>Liquidação de estoque:</strong> Descontos em toda categoria de sobremesas
+						</li>
+						<li>
+							<strong>Economia de tempo:</strong> Aplica desconto em dezenas de produtos de uma vez
+						</li>
+						<li>
+							<strong>Consistência:</strong> Garante que todos os itens da categoria tenham o mesmo
+							desconto
+						</li>
+					</ul>
+					<p class="text-xs text-blue-600 dark:text-blue-400 italic mt-2">
+						💡 Dica: Promoções em categoria são aplicadas automaticamente a produtos novos
+						adicionados nela.
+					</p>
+				</div>
+			</div>
+		</div>
 	</form>
 </template>
