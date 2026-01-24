@@ -594,12 +594,10 @@ const tipoTaxaLabel = computed(
 								<!-- Configurações básicas para entrega grátis -->
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<UiFormField label="Pedido Mínimo (R$)">
-										<UiInput
+										<UiCurrencyInput
 											:model-value="values.valor_minimo_pedido"
-											type="number"
-											step="0.01"
 											placeholder="0,00"
-											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', Number(v))"
+											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', v)"
 										/>
 										<div class="mt-2 space-y-1">
 											<p class="text-xs text-gray-500 leading-relaxed">
@@ -715,18 +713,14 @@ const tipoTaxaLabel = computed(
 											: ''
 									"
 								>
-									<UiInput
+									<UiCurrencyInput
 										:model-value="values.taxa_entrega"
-										type="number"
-										step="0.01"
 										placeholder="5,00"
-										:class="[
+										:error="
 											!canSaveModality('taxa_unica') &&
 											(!values.taxa_entrega || values.taxa_entrega <= 0)
-												? 'border-amber-300 focus:border-amber-500 focus:ring-amber-500'
-												: '',
-										]"
-										@update:model-value="(v) => setFieldValue('taxa_entrega', Number(v))"
+										"
+										@update:model-value="(v) => setFieldValue('taxa_entrega', v)"
 									/>
 									<div class="mt-2 space-y-1">
 										<p class="text-xs text-gray-500 leading-relaxed">
@@ -735,12 +729,10 @@ const tipoTaxaLabel = computed(
 									</div>
 								</UiFormField>
 								<UiFormField label="Pedido Mínimo (R$)">
-									<UiInput
+									<UiCurrencyInput
 										:model-value="values.valor_minimo_pedido"
-										type="number"
-										step="0.01"
 										placeholder="0,00"
-										@update:model-value="(v) => setFieldValue('valor_minimo_pedido', Number(v))"
+										@update:model-value="(v) => setFieldValue('valor_minimo_pedido', v)"
 									/>
 									<div class="mt-2 space-y-1">
 										<p class="text-xs text-gray-500 leading-relaxed">
@@ -832,12 +824,10 @@ const tipoTaxaLabel = computed(
 								<!-- Configurações básicas -->
 								<div class="grid grid-cols-1 gap-6">
 									<UiFormField label="Pedido Mínimo (R$)">
-										<UiInput
+										<UiCurrencyInput
 											:model-value="values.valor_minimo_pedido"
-											type="number"
-											step="0.01"
 											placeholder="0,00"
-											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', Number(v))"
+											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', v)"
 										/>
 										<div class="mt-2 space-y-1">
 											<p class="text-xs text-gray-500 leading-relaxed">
@@ -868,11 +858,10 @@ const tipoTaxaLabel = computed(
 									</div>
 									<div class="col-span-2">
 										<UiFormField label="Taxa (R$)">
-											<UiInput
-												v-model="novaRegra.distancia.taxa_valor"
-												type="number"
-												step="0.01"
-												@update:model-value="(v) => (novaRegra.distancia.taxa_valor = Number(v))"
+											<UiCurrencyInput
+												:model-value="novaRegra.distancia.taxa_valor"
+												placeholder="5,00"
+												@update:model-value="(v) => (novaRegra.distancia.taxa_valor = v)"
 											/>
 										</UiFormField>
 									</div>
@@ -993,12 +982,10 @@ const tipoTaxaLabel = computed(
 								<!-- Configuração básica -->
 								<div class="grid grid-cols-1 md:grid-cols-1 gap-6">
 									<UiFormField label="Pedido Mínimo (R$)">
-										<UiInput
+										<UiCurrencyInput
 											:model-value="values.valor_minimo_pedido"
-											type="number"
-											step="0.01"
 											placeholder="0,00"
-											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', Number(v))"
+											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', v)"
 										/>
 										<div class="mt-2 space-y-1">
 											<p class="text-xs text-gray-500 leading-relaxed">
@@ -1026,10 +1013,10 @@ const tipoTaxaLabel = computed(
 									</div>
 									<div class="col-span-2">
 										<UiFormField label="Taxa">
-											<UiInput
-												v-model="novaRegra.localizacao.taxa_valor"
-												type="number"
-												step="0.01"
+											<UiCurrencyInput
+												:model-value="novaRegra.localizacao.taxa_valor"
+												placeholder="5,00"
+												@update:model-value="(v) => (novaRegra.localizacao.taxa_valor = v)"
 											/>
 										</UiFormField>
 									</div>

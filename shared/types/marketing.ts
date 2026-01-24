@@ -119,7 +119,7 @@ export interface PromocaoCompleta extends Promocao {
 export interface CupomFormData {
 	readonly codigo: string;
 	readonly tipo: TipoCupom;
-	readonly valor_desconto: number;
+	readonly valor_desconto?: number;
 	readonly valor_minimo?: number;
 	readonly limite_uso?: number;
 	readonly data_expiracao?: string;

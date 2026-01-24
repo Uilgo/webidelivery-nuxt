@@ -485,14 +485,12 @@ defineExpose({
 					>
 						Preço do Combo *
 					</label>
-					<UiInput
+					<UiCurrencyInput
 						id="preco_combo"
-						v-model.number="form.preco_combo"
-						type="number"
-						step="0.01"
-						min="0"
+						:model-value="form.preco_combo"
 						placeholder="0,00"
 						:error="errors.preco_combo ? true : undefined"
+						@update:model-value="form.preco_combo = $event"
 					/>
 					<p v-if="errors.preco_combo" class="text-xs text-red-600 mt-1">
 						{{ errors.preco_combo }}

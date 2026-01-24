@@ -101,17 +101,7 @@ const handleSubmit = () => {
 /**
  * Formata valor monetário enquanto digita
  */
-const formatarValor = (event: Event) => {
-	const input = event.target as HTMLInputElement;
-	let valor = input.value.replace(/\D/g, "");
-
-	if (valor) {
-		valor = (parseInt(valor) / 100).toFixed(2);
-		valor = valor.replace(".", ",");
-	}
-
-	trocoPara.value = valor;
-};
+// Função removida - agora usando CurrencyInput
 </script>
 
 <template>
@@ -161,19 +151,12 @@ const formatarValor = (event: Event) => {
 				<label for="troco" class="block text-sm font-medium text-[var(--text-primary)]">
 					Troco para quanto? <span class="text-xs text-[var(--text-muted)]">(opcional)</span>
 				</label>
-				<div class="relative">
-					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-						R$
-					</span>
-					<input
-						id="troco"
-						v-model="trocoPara"
-						type="text"
-						placeholder="0,00"
-						@input="formatarValor"
-						class="w-full pl-12 pr-4 py-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-primary"
-					/>
-				</div>
+				<UiCurrencyInput
+					id="troco"
+					:model-value="trocoPara ? parseCurrency(trocoPara) : 0"
+					placeholder="0,00"
+					@update:model-value="(v) => (trocoPara = v > 0 ? v.toString() : '')"
+				/>
 			</div>
 
 			<!-- Aviso importante para PIX -->

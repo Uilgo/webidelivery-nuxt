@@ -55,3 +55,36 @@ export const formatCurrencyInput = (value: number): string => {
 		maximumFractionDigits: 2,
 	}).format(value);
 };
+
+/**
+ * Formata valor monetário progressivamente conforme digita
+ * Fluxo intuitivo (Padrão Bancário): 1 → 0,01 | 12 → 0,12 | 123 → 1,23 | 1234 → 12,34
+ *
+ * @param input - String digitada pelo usuário (pode conter apenas dígitos)
+ * @returns String formatada progressivamente
+ *
+ * @example
+ * formatCurrencyProgressive("1") // "0,01"
+ * formatCurrencyProgressive("12") // "0,12"
+ * formatCurrencyProgressive("123") // "1,23"
+ * formatCurrencyProgressive("1234") // "12,34"
+ * formatCurrencyProgressive("12345") // "123,45"
+ */
+export const formatCurrencyProgressive = (input: string): string => {
+	// Remove tudo que não é dígito
+	const cleaned = input.replace(/\D/g, "");
+
+	// Se vazio, retorna vazio
+	if (!cleaned) {
+		return "";
+	}
+
+	// Converte para número (centavos)
+	const centavos = parseInt(cleaned, 10);
+
+	// Formata dividindo por 100
+	return new Intl.NumberFormat("pt-BR", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(centavos / 100);
+};

@@ -351,13 +351,12 @@ defineExpose({
 								<label class="block text-xs font-medium text-[var(--text-primary)] mb-1.5">
 									Preço *
 								</label>
-								<UiInput
-									v-model.number="variacao.preco"
-									type="number"
-									step="0.01"
-									min="0"
+								<UiCurrencyInput
+									:model-value="variacao.preco"
 									placeholder="0,00"
+									size="sm"
 									required
+									@update:model-value="variacao.preco = $event"
 								/>
 							</div>
 
@@ -366,13 +365,11 @@ defineExpose({
 								<label class="block text-xs font-medium text-[var(--text-primary)] mb-1.5">
 									Preço Promo
 								</label>
-								<UiInput
-									:model-value="variacao.preco_promocional ?? undefined"
-									type="number"
-									step="0.01"
-									min="0"
+								<UiCurrencyInput
+									:model-value="variacao.preco_promocional ?? 0"
 									placeholder="0,00"
-									@update:model-value="variacao.preco_promocional = $event ? Number($event) : null"
+									size="sm"
+									@update:model-value="variacao.preco_promocional = $event || null"
 								/>
 							</div>
 

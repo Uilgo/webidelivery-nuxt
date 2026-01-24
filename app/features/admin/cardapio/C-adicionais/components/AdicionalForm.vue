@@ -219,14 +219,12 @@ defineExpose({
 				help="Valor adicional cobrado ao cliente (pode ser R$ 0,00)"
 				required
 			>
-				<UiInput
-					v-model.number="preco"
+				<UiCurrencyInput
+					:model-value="preco"
 					v-bind="precoAttrs"
-					type="number"
-					step="0.01"
-					min="0"
 					placeholder="0,00"
 					:error="!!errors.preco"
+					@update:model-value="preco = $event"
 				/>
 			</UiFormField>
 		</div>
