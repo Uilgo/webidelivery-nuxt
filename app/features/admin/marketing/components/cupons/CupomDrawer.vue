@@ -78,6 +78,8 @@ const initialFormData = computed(() => {
 				? currentCupom.value.data_expiracao.split("T")[0]
 				: undefined,
 			descricao: currentCupom.value.descricao || undefined,
+			// Passar o ID do cupom para verificação de código
+			_cupomId: currentCupom.value.id,
 		};
 	}
 	// Para modo create, retornar undefined em vez de objeto vazio

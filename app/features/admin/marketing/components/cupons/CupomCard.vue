@@ -2,10 +2,10 @@
 /**
  * 📌 CupomCard
  *
- * Card de exibição de cupom com informações de uso e ações.
- * Suporta diferentes tipos de cupom e validação de status.
+ * Card compacto de cupom com desconto em destaque e ações rápidas.
  */
 
+import { formatCurrency } from "../../../../../../lib/formatters/currency";
 import type { CupomCompleto } from "#shared/types/marketing";
 
 interface Props {
@@ -16,8 +16,6 @@ interface Emits {
 	edit: [id: string];
 	delete: [id: string];
 	duplicate: [id: string];
-	"toggle-status": [id: string];
-	reorder: [id: string, newOrder: number];
 	validate: [codigo: string];
 }
 
@@ -33,7 +31,7 @@ const emit = defineEmits<Emits>();
  */
 const cupomIcon = computed(() => {
 	const icons = {
-		percentual: "lucide:percent",
+		percentual: "lucide:zap",
 		valor_fixo: "lucide:banknote",
 		frete_gratis: "lucide:truck",
 	};
@@ -41,40 +39,34 @@ const cupomIcon = computed(() => {
 });
 
 /**
- * Retorna a cor do badge baseado no tipo
- */
-const tipoBadgeColor = computed(() => {
-	const colors = {
-		percentual: "blue",
-		valor_fixo: "green",
-		frete_gratis: "purple",
-	};
-	return colors[props.cupom.tipo] || "gray";
-});
-
-/**
  * Retorna o texto do tipo do cupom
  */
 const tipoText = computed(() => {
-	const texts = {
+	const tipos = {
 		percentual: "Percentual",
 		valor_fixo: "Valor Fixo",
 		frete_gratis: "Frete Grátis",
 	};
-	return texts[props.cupom.tipo] || "Desconhecido";
+	return tipos[props.cupom.tipo] || "Desconhecido";
 });
 
 /**
- * Retorna o status do cupom com cor
+ * Status do cupom para badge
  */
 const cupomStatus = computed(() => {
-	const statusConfig = {
-		ativo: { text: "Ativo", color: "green" },
-		inativo: { text: "Inativo", color: "gray" },
-		expirado: { text: "Expirado", color: "red" },
-		esgotado: { text: "Esgotado", color: "orange" },
-	};
-	return statusConfig[props.cupom.status_cupom] || { text: "Desconhecido", color: "gray" };
+	if (!props.cupom.ativo) {
+		return { text: "Inativo", variant: "default" as const };
+	}
+
+	if (!props.cupom.periodo_valido) {
+		return { text: "Expirado", variant: "default" as const };
+	}
+
+	if (props.cupom.limite_uso && props.cupom.usos_realizados >= props.cupom.limite_uso) {
+		return { variant: "warning" as const, text: "Esgotado" };
+	}
+
+	return { text: "Ativo", variant: "success" as const };
 });
 
 /**
@@ -87,7 +79,7 @@ const descontoFormatado = computed(() => {
 		case "percentual":
 			return `${valor_desconto}%`;
 		case "valor_fixo":
-			return `R$ ${valor_desconto.toFixed(2)}`;
+			return formatCurrency(valor_desconto);
 		case "frete_gratis":
 			return "Grátis";
 		default:
@@ -96,61 +88,45 @@ const descontoFormatado = computed(() => {
 });
 
 /**
- * Informações sobre limite de uso
+ * Texto do desconto
  */
-const limiteUsoInfo = computed(() => {
-	const { limite_uso, usos_realizados, usos_restantes } = props.cupom;
+const descontoTexto = computed(() => {
+	const { tipo } = props.cupom;
 
-	if (!limite_uso) {
-		return { text: "Ilimitado", color: "blue" };
+	switch (tipo) {
+		case "percentual":
+			return "de desconto";
+		case "valor_fixo":
+			return "de desconto";
+		case "frete_gratis":
+			return "Frete grátis";
+		default:
+			return "de desconto";
 	}
-
-	if (usos_restantes === 0) {
-		return { text: "Esgotado", color: "red" };
-	}
-
-	if (usos_restantes && usos_restantes <= 5) {
-		return { text: `${usos_restantes} restantes`, color: "orange" };
-	}
-
-	return { text: `${usos_realizados}/${limite_uso}`, color: "green" };
 });
 
 /**
- * Informações sobre data de expiração
+ * Informações sobre uso
  */
-const expiracaoInfo = computed(() => {
-	const { data_expiracao } = props.cupom;
-
-	if (!data_expiracao) {
-		return { text: "Sem prazo", color: "blue" };
+const usoInfo = computed(() => {
+	if (!props.cupom.limite_uso) {
+		return `${props.cupom.usos_realizados} usos`;
 	}
-
-	const dataExp = new Date(data_expiracao);
-	const hoje = new Date();
-	const diffTime = dataExp.getTime() - hoje.getTime();
-	const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-	if (diffDays < 0) {
-		return { text: "Expirado", color: "red" };
-	}
-
-	if (diffDays === 0) {
-		return { text: "Expira hoje", color: "orange" };
-	}
-
-	if (diffDays <= 3) {
-		return { text: `${diffDays} dias`, color: "orange" };
-	}
-
-	return { text: dataExp.toLocaleDateString("pt-BR"), color: "green" };
+	return `${props.cupom.usos_realizados}/${props.cupom.limite_uso}`;
 });
 
 /**
- * Valor mínimo formatado
+ * Classes do wrapper
  */
-const valorMinimoFormatado = computed(() => {
-	return props.cupom.valor_minimo ? `R$ ${props.cupom.valor_minimo.toFixed(2)}` : "Sem mínimo";
+const wrapperClasses = computed(() => {
+	return [
+		"cupom-card-wrapper",
+		"relative",
+		"transition-all duration-200",
+		{
+			"opacity-60": !props.cupom.ativo,
+		},
+	];
 });
 
 // ========================================
@@ -161,197 +137,130 @@ const handleEdit = (): void => {
 	emit("edit", props.cupom.id);
 };
 
-const handleDelete = (): void => {
+const handleDelete = (event: Event): void => {
+	event.stopPropagation();
 	emit("delete", props.cupom.id);
 };
 
-const handleDuplicate = (): void => {
+const handleDuplicate = (event: Event): void => {
+	event.stopPropagation();
 	emit("duplicate", props.cupom.id);
 };
 
-const handleToggleStatus = (): void => {
-	emit("toggle-status", props.cupom.id);
-};
-
-const handleReorder = (direction: "up" | "down"): void => {
-	const currentOrder = props.cupom.ordem;
-	const newOrder = direction === "up" ? currentOrder - 1 : currentOrder + 1;
-
-	// Validar se a nova ordem é válida (será validada também no backend)
-	if (newOrder < 1) return;
-
-	emit("reorder", props.cupom.id, newOrder);
-};
-
-const handleValidate = (): void => {
+const handleValidate = (event: Event): void => {
+	event.stopPropagation();
 	emit("validate", props.cupom.codigo);
 };
 </script>
 
 <template>
-	<UiCard class="group hover:shadow-md transition-shadow duration-200">
-		<!-- Header do Card -->
-		<div class="p-4 border-b border-[var(--border-default)]">
-			<div class="flex items-start justify-between">
-				<div class="flex items-start gap-3 flex-1 min-w-0">
-					<!-- Ícone do tipo -->
+	<div :class="wrapperClasses">
+		<UiCard clickable fill-height size="md" class="cupom-card group" @click="handleEdit">
+			<template #content>
+				<div class="h-full flex flex-col">
+					<!-- Área do Desconto em Destaque (substitui a imagem) -->
 					<div
-						class="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--primary-light)] flex items-center justify-center"
+						class="aspect-[4/3] w-full overflow-hidden rounded-md bg-gradient-to-br from-orange-500 to-orange-600 mb-3 relative flex flex-col items-center justify-center text-white p-4"
 					>
-						<Icon :name="cupomIcon" class="w-5 h-5 text-[var(--primary)]" />
-					</div>
+						<!-- Ícone pequeno no topo -->
+						<Icon :name="cupomIcon" class="h-8 w-8 mb-2 opacity-90" />
 
-					<!-- Informações principais -->
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2 mb-1">
-							<h3 class="font-mono font-bold text-[var(--text-primary)] truncate">
-								{{ cupom.codigo }}
-							</h3>
-							<UiBadge :color="tipoBadgeColor" size="sm">
+						<!-- Desconto em destaque -->
+						<div class="text-4xl font-black leading-none mb-1">
+							{{ descontoFormatado }}
+						</div>
+						<div class="text-sm font-medium opacity-90">
+							{{ descontoTexto }}
+						</div>
+
+						<!-- Badge do Tipo (Overlay) -->
+						<div
+							class="absolute bottom-1.5 left-1.5 px-3 py-2 rounded-md bg-black/60 backdrop-blur-[2px] border border-white/10 shadow-sm flex items-center justify-center"
+						>
+							<span class="text-[10px] font-bold text-white uppercase tracking-wider leading-none">
 								{{ tipoText }}
-							</UiBadge>
+							</span>
 						</div>
 
-						<p v-if="cupom.descricao" class="text-sm text-[var(--text-muted)] line-clamp-2 mb-2">
-							{{ cupom.descricao }}
-						</p>
+						<!-- Ícones de ação (Overlay no canto superior direito) -->
+						<div
+							class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+						>
+							<!-- Validar -->
+							<button
+								type="button"
+								class="p-1.5 rounded-md bg-black/60 backdrop-blur-[2px] border border-white/10 hover:bg-black/80 transition-colors flex items-center justify-center"
+								title="Validar cupom"
+								@click="handleValidate"
+							>
+								<Icon name="lucide:shield-check" class="h-3.5 w-3.5 text-white" />
+							</button>
 
-						<div class="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-							<span>Ordem: {{ cupom.ordem }}</span>
-							<span>{{ valorMinimoFormatado }}</span>
+							<!-- Duplicar -->
+							<button
+								type="button"
+								class="p-1.5 rounded-md bg-black/60 backdrop-blur-[2px] border border-white/10 hover:bg-black/80 transition-colors flex items-center justify-center"
+								title="Duplicar"
+								@click="handleDuplicate"
+							>
+								<Icon name="lucide:copy" class="h-3.5 w-3.5 text-white" />
+							</button>
+
+							<!-- Excluir -->
+							<button
+								type="button"
+								class="p-1.5 rounded-md bg-red-600/80 backdrop-blur-[2px] border border-white/10 hover:bg-red-700 transition-colors flex items-center justify-center"
+								title="Excluir"
+								@click="handleDelete"
+							>
+								<Icon name="lucide:trash-2" class="h-3.5 w-3.5 text-white" />
+							</button>
+						</div>
+					</div>
+
+					<!-- Conteúdo que cresce -->
+					<div class="flex-1 flex flex-col justify-between">
+						<!-- Informações do cupom -->
+						<div class="space-y-2">
+							<!-- Cabeçalho com código e status -->
+							<div class="flex items-start justify-between gap-2">
+								<h3
+									class="truncate font-medium text-[var(--text-primary)] text-base flex-1 leading-tight"
+								>
+									{{ cupom.codigo }}
+								</h3>
+								<UiBadge :variant="cupomStatus.variant" class="text-xs px-2 py-1 scale-90 shrink-0">
+									{{ cupomStatus.text }}
+								</UiBadge>
+							</div>
+
+							<!-- Layout Flexível de Rodapé -->
+							<div class="flex items-end justify-between gap-2 mt-1">
+								<!-- Lado Esquerdo: Uso -->
+								<div
+									class="flex items-center gap-2 text-sm text-[var(--text-muted)] truncate min-w-0"
+								>
+									<span class="flex items-center gap-1 truncate">
+										<Icon name="lucide:users" class="h-3.5 w-3.5 shrink-0" />
+										<span class="truncate">{{ usoInfo }}</span>
+									</span>
+								</div>
+
+								<!-- Lado Direito: Ícone de edição -->
+								<div class="shrink-0 flex items-center justify-end leading-none">
+									<Icon name="lucide:pencil" class="h-3.5 w-3.5 text-[var(--text-muted)]" />
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
-
-				<!-- Status Toggle -->
-				<UiSwitch :model-value="cupom.ativo" size="sm" @update:model-value="handleToggleStatus" />
-			</div>
-		</div>
-
-		<!-- Informações do Cupom -->
-		<div class="p-4">
-			<div class="grid grid-cols-2 gap-4 mb-4">
-				<!-- Desconto -->
-				<div class="text-center">
-					<div class="text-2xl font-bold text-[var(--primary)]">
-						{{ descontoFormatado }}
-					</div>
-					<div class="text-xs text-[var(--text-muted)]">Desconto</div>
-				</div>
-
-				<!-- Status -->
-				<div class="text-center">
-					<UiBadge :color="cupomStatus.color" size="sm">
-						{{ cupomStatus.text }}
-					</UiBadge>
-					<div class="text-xs text-[var(--text-muted)] mt-1">Status</div>
-				</div>
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<!-- Limite de Uso -->
-				<div class="text-center">
-					<UiBadge :color="limiteUsoInfo.color" size="sm">
-						{{ limiteUsoInfo.text }}
-					</UiBadge>
-					<div class="text-xs text-[var(--text-muted)] mt-1">Uso</div>
-				</div>
-
-				<!-- Expiração -->
-				<div class="text-center">
-					<UiBadge :color="expiracaoInfo.color" size="sm">
-						{{ expiracaoInfo.text }}
-					</UiBadge>
-					<div class="text-xs text-[var(--text-muted)] mt-1">Expira</div>
-				</div>
-			</div>
-
-			<!-- Barra de progresso do uso (se tiver limite) -->
-			<div v-if="cupom.limite_uso" class="mt-4">
-				<div class="w-full bg-gray-200 rounded-full h-2">
-					<div
-						class="h-2 rounded-full transition-all duration-300"
-						:class="{
-							'bg-green-500': cupom.percentual_uso < 70,
-							'bg-orange-500': cupom.percentual_uso >= 70 && cupom.percentual_uso < 90,
-							'bg-red-500': cupom.percentual_uso >= 90,
-						}"
-						:style="{
-							width: `${Math.min(100, cupom.percentual_uso)}%`,
-						}"
-					></div>
-				</div>
-				<div class="text-xs text-[var(--text-muted)] mt-1 text-center">
-					{{ cupom.percentual_uso }}% usado
-				</div>
-			</div>
-		</div>
-
-		<!-- Footer com ações -->
-		<div class="px-4 pb-4">
-			<div class="flex items-center justify-between">
-				<!-- Controles de ordem -->
-				<div class="flex items-center gap-1">
-					<UiButton variant="ghost" size="sm" class="!w-8 !h-8 !p-0" @click="handleReorder('up')">
-						<Icon name="lucide:chevron-up" class="w-4 h-4" />
-					</UiButton>
-					<UiButton variant="ghost" size="sm" class="!w-8 !h-8 !p-0" @click="handleReorder('down')">
-						<Icon name="lucide:chevron-down" class="w-4 h-4" />
-					</UiButton>
-				</div>
-
-				<!-- Ações principais -->
-				<div class="flex items-center gap-1">
-					<!-- Botão validar -->
-					<UiButton
-						variant="ghost"
-						size="sm"
-						class="!w-8 !h-8 !p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-						@click="handleValidate"
-					>
-						<Icon name="lucide:shield-check" class="w-4 h-4" />
-					</UiButton>
-
-					<UiButton variant="ghost" size="sm" class="!w-8 !h-8 !p-0" @click="handleDuplicate">
-						<Icon name="lucide:copy" class="w-4 h-4" />
-					</UiButton>
-					<UiButton variant="ghost" size="sm" class="!w-8 !h-8 !p-0" @click="handleEdit">
-						<Icon name="lucide:edit" class="w-4 h-4" />
-					</UiButton>
-					<UiButton
-						variant="ghost"
-						size="sm"
-						class="!w-8 !h-8 !p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-						@click="handleDelete"
-					>
-						<Icon name="lucide:trash" class="w-4 h-4" />
-					</UiButton>
-				</div>
-			</div>
-		</div>
-
-		<!-- Indicador de status inativo -->
-		<div
-			v-if="!cupom.ativo"
-			class="absolute inset-0 bg-black/10 flex items-center justify-center rounded-lg"
-		>
-			<UiBadge color="gray">Inativo</UiBadge>
-		</div>
-
-		<!-- Indicador de expirado -->
-		<div
-			v-else-if="cupom.status_cupom === 'expirado'"
-			class="absolute inset-0 bg-red-500/10 flex items-center justify-center rounded-lg"
-		>
-			<UiBadge color="red">Expirado</UiBadge>
-		</div>
-
-		<!-- Indicador de esgotado -->
-		<div
-			v-else-if="cupom.status_cupom === 'esgotado'"
-			class="absolute inset-0 bg-orange-500/10 flex items-center justify-center rounded-lg"
-		>
-			<UiBadge color="orange">Esgotado</UiBadge>
-		</div>
-	</UiCard>
+			</template>
+		</UiCard>
+	</div>
 </template>
+
+<style scoped>
+.cupom-card-wrapper:hover .cupom-card {
+	transform: translateY(-1px);
+}
+</style>

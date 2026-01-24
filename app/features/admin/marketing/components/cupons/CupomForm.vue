@@ -9,10 +9,11 @@
 import { toTypedSchema } from "@vee-validate/zod";
 import { cupomSchema } from "#shared/schemas/marketing";
 import { useCupons } from "../../composables/useCupons";
+import { formatCurrency } from "../../../../../../lib/formatters/currency";
 import type { CupomFormData, TipoCupom } from "#shared/types/marketing";
 
 interface Props {
-	initialData?: Partial<CupomFormData>;
+	initialData?: Partial<CupomFormData> & { _cupomId?: string };
 	loading?: boolean;
 }
 
@@ -114,8 +115,8 @@ const validacaoNegocio = computed(() => {
 		return {
 			tipo: "erro",
 			titulo: "⚠️ Desconto muito alto!",
-			mensagem: `O desconto de R$ ${desconto.toFixed(2)} é ${desconto >= minimo ? "maior ou igual" : "muito próximo"} ao valor mínimo de R$ ${minimo.toFixed(2)}. O cliente pagaria ${desconto >= minimo ? "zero ou negativo" : "quase nada"}.`,
-			sugestao: `Reduza o desconto para no máximo R$ ${(minimo * 0.5).toFixed(2)} (50% do valor mínimo).`,
+			mensagem: `O desconto de ${formatCurrency(desconto)} é ${desconto >= minimo ? "maior ou igual" : "muito próximo"} ao valor mínimo de ${formatCurrency(minimo)}. O cliente pagaria ${desconto >= minimo ? "zero ou negativo" : "quase nada"}.`,
+			sugestao: `Reduza o desconto para no máximo ${formatCurrency(minimo * 0.5)} (50% do valor mínimo).`,
 		};
 	}
 
@@ -124,7 +125,7 @@ const validacaoNegocio = computed(() => {
 		return {
 			tipo: "erro",
 			titulo: "⚠️ Promoção muito agressiva!",
-			mensagem: `${desconto}% de desconto em pedidos de apenas R$ ${minimo.toFixed(2)} pode comprometer sua margem de lucro. Cliente pagaria apenas R$ ${(minimo * (1 - desconto / 100)).toFixed(2)}.`,
+			mensagem: `${desconto}% de desconto em pedidos de apenas ${formatCurrency(minimo)} pode comprometer sua margem de lucro. Cliente pagaria apenas ${formatCurrency(minimo * (1 - desconto / 100))}.`,
 			sugestao: `Aumente o valor mínimo para pelo menos R$ 100,00 ou reduza o percentual para 50%.`,
 		};
 	}
@@ -141,7 +142,7 @@ const validacaoNegocio = computed(() => {
 		return {
 			tipo: "aviso",
 			titulo: "⚠️ Atenção à margem de lucro",
-			mensagem: `${desconto}% de desconto em pedidos de R$ ${minimo.toFixed(2)} significa que o cliente pagará apenas R$ ${(minimo * (1 - desconto / 100)).toFixed(2)}. Verifique se isso é sustentável para seu negócio.`,
+			mensagem: `${desconto}% de desconto em pedidos de ${formatCurrency(minimo)} significa que o cliente pagará apenas ${formatCurrency(minimo * (1 - desconto / 100))}. Verifique se isso é sustentável para seu negócio.`,
 			sugestao: `Considere aumentar o valor mínimo para R$ 80,00 ou reduzir o percentual.`,
 		};
 	}
@@ -171,8 +172,8 @@ const validacaoNegocio = computed(() => {
 		return {
 			tipo: "aviso",
 			titulo: "💡 Recomendação: Defina um valor mínimo",
-			mensagem: `Desconto de R$ ${desconto.toFixed(2)} sem valor mínimo pode ser usado em pedidos pequenos, reduzindo muito sua receita.`,
-			sugestao: `Recomendamos definir um valor mínimo de pelo menos R$ ${(desconto * 3).toFixed(2)}.`,
+			mensagem: `Desconto de ${formatCurrency(desconto)} sem valor mínimo pode ser usado em pedidos pequenos, reduzindo muito sua receita.`,
+			sugestao: `Recomendamos definir um valor mínimo de pelo menos ${formatCurrency(desconto * 3)}.`,
 		};
 	}
 
@@ -228,7 +229,7 @@ const descontoPreview = computed(() => {
 		case "percentual":
 			return valor ? `${valor}% de desconto` : "";
 		case "valor_fixo":
-			return valor ? `R$ ${valor.toFixed(2)} de desconto` : "";
+			return valor ? `${formatCurrency(valor)} de desconto` : "";
 		case "frete_gratis":
 			return `Frete grátis (valor calculado automaticamente)`;
 		default:
@@ -327,7 +328,9 @@ const handleCheckCodigo = async (): Promise<void> => {
 
 	try {
 		checkingCodigo.value = true;
-		const disponivel = await checkCodigoDisponivel(values.codigo, props.initialData?.codigo);
+		// Usar o _cupomId se estiver editando
+		const cupomId = props.initialData?._cupomId;
+		const disponivel = await checkCodigoDisponivel(values.codigo, cupomId);
 		codigoDisponivel.value = disponivel;
 	} catch (error) {
 		console.error("Erro ao verificar código:", error);
@@ -392,11 +395,17 @@ watch(
 	},
 );
 
-// Verificar código quando mudar
+// Verificar código quando mudar (apenas se não estiver vazio)
 let debounceTimer: NodeJS.Timeout | null = null;
 watch(
 	() => values.codigo,
-	() => {
+	(newCodigo) => {
+		// Só verificar se tiver código e tiver mais de 3 caracteres
+		if (!newCodigo || newCodigo.length < 3) {
+			codigoDisponivel.value = null;
+			return;
+		}
+
 		if (debounceTimer) {
 			clearTimeout(debounceTimer);
 		}
@@ -410,13 +419,35 @@ watch(
 // INICIALIZAÇÃO
 // ========================================
 
-onMounted(() => {
-	// Se tem dados iniciais, configurar toggles
+/**
+ * Inicializa o formulário com os dados fornecidos
+ */
+const initializeForm = (): void => {
+	// Configurar valores do formulário
+	if (props.initialData?.codigo) {
+		setFieldValue("codigo", props.initialData.codigo);
+	}
+	if (props.initialData?.tipo) {
+		setFieldValue("tipo", props.initialData.tipo);
+	}
+	if (props.initialData?.valor_desconto !== undefined) {
+		setFieldValue("valor_desconto", props.initialData.valor_desconto);
+	}
+	if (props.initialData?.descricao) {
+		setFieldValue("descricao", props.initialData.descricao);
+	}
+	if (props.initialData?.data_expiracao) {
+		setFieldValue("data_expiracao", props.initialData.data_expiracao);
+	}
+
+	// Configurar toggles
 	if (props.initialData?.valor_minimo) {
 		temValorMinimo.value = true;
+		setFieldValue("valor_minimo", props.initialData.valor_minimo);
 	}
 	if (props.initialData?.limite_uso) {
 		temLimiteUso.value = true;
+		setFieldValue("limite_uso", props.initialData.limite_uso);
 	}
 	if (props.initialData?.data_expiracao) {
 		temDataExpiracao.value = true;
@@ -426,6 +457,21 @@ onMounted(() => {
 	if (props.initialData?.codigo) {
 		handleCheckCodigo();
 	}
+};
+
+// Reagir a mudanças no initialData (quando abre drawer para editar)
+watch(
+	() => props.initialData,
+	(newData) => {
+		if (newData && Object.keys(newData).length > 0) {
+			initializeForm();
+		}
+	},
+	{ immediate: true, deep: true },
+);
+
+onMounted(() => {
+	initializeForm();
 });
 </script>
 
@@ -439,6 +485,7 @@ onMounted(() => {
 			<UiFormField name="codigo" label="Código do Cupom" required>
 				<div class="relative">
 					<UiInput
+						:model-value="values.codigo"
 						name="codigo"
 						placeholder="Ex: DESCONTO15"
 						maxlength="20"
@@ -595,7 +642,11 @@ onMounted(() => {
 			<!-- Preview do Desconto -->
 			<div v-if="descontoPreview" class="p-3 bg-[var(--primary-light)] rounded-lg">
 				<div class="flex items-center gap-2">
-					<Icon :name="cupomIcon" class="w-5 h-5 text-[var(--primary)]" />
+					<Icon
+						v-if="values.tipo !== 'percentual'"
+						:name="cupomIcon"
+						class="w-5 h-5 text-[var(--primary)]"
+					/>
 					<span class="font-medium text-[var(--primary)]">{{ descontoPreview }}</span>
 				</div>
 			</div>
@@ -849,7 +900,15 @@ onMounted(() => {
 					<div class="flex items-center justify-between">
 						<span class="text-sm text-[var(--text-muted)]">Desconto:</span>
 						<div class="text-right">
-							<span class="font-medium text-[var(--primary)]">{{ descontoPreview }}</span>
+							<span class="font-medium text-[var(--primary)]">
+								{{
+									values.tipo === "percentual"
+										? `${values.valor_desconto}% de desconto`
+										: values.tipo === "valor_fixo"
+											? `${formatCurrency(values.valor_desconto || 0)} de desconto`
+											: "Frete grátis"
+								}}
+							</span>
 							<div
 								v-if="values.tipo === 'frete_gratis'"
 								class="text-xs text-[var(--text-muted)] mt-1"
@@ -869,7 +928,7 @@ onMounted(() => {
 							}}
 						</span>
 						<div class="text-right">
-							<span class="font-medium">R$ {{ values.valor_minimo.toFixed(2) }}</span>
+							<span class="font-medium">{{ formatCurrency(values.valor_minimo) }}</span>
 							<div
 								v-if="values.tipo === 'frete_gratis'"
 								class="text-xs text-[var(--text-muted)] mt-1"

@@ -41,7 +41,6 @@ const {
 	deleteCupom,
 	toggleCupomStatus,
 	duplicateCupom,
-	reorderCupom,
 	validateCupom,
 	refreshCupons,
 } = useCupons();
@@ -143,17 +142,6 @@ const handleToggleStatus = async (cupomId: string): Promise<void> => {
 };
 
 /**
- * Handler para reordenar cupom
- */
-const handleReorder = async (cupomId: string, newOrder: number): Promise<void> => {
-	try {
-		await reorderCupom(cupomId, newOrder);
-	} catch (error) {
-		console.error("Erro ao reordenar cupom:", error);
-	}
-};
-
-/**
  * Handler para validar cupom
  */
 const handleValidate = async (codigo: string): Promise<void> => {
@@ -226,7 +214,7 @@ const handleExecuteValidation = async (): Promise<void> => {
 			<!-- Visualização em cards -->
 			<div
 				v-if="currentViewMode === 'card'"
-				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
 			>
 				<CupomCard
 					v-for="cupom in cupons"
@@ -236,7 +224,6 @@ const handleExecuteValidation = async (): Promise<void> => {
 					@delete="handleDelete"
 					@duplicate="handleDuplicate"
 					@toggle-status="handleToggleStatus"
-					@reorder="handleReorder"
 					@validate="handleValidate"
 				/>
 			</div>
@@ -249,7 +236,6 @@ const handleExecuteValidation = async (): Promise<void> => {
 					@delete="handleDelete"
 					@duplicate="handleDuplicate"
 					@toggle-status="handleToggleStatus"
-					@reorder="handleReorder"
 					@validate="handleValidate"
 				/>
 			</div>

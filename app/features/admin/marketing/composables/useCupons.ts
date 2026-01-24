@@ -520,6 +520,14 @@ export const useCupons = (): UseCuponsReturn => {
 	 */
 	const checkCodigoDisponivel = async (codigo: string, cupomId?: string): Promise<boolean> => {
 		try {
+			// Se estiver editando e o código for o mesmo, considerar disponível
+			if (cupomId) {
+				const cupomAtual = cupons.value.find((c) => c.id === cupomId);
+				if (cupomAtual && cupomAtual.codigo.toUpperCase() === codigo.toUpperCase()) {
+					return true;
+				}
+			}
+
 			const query = supabase.from("cupons").select("id").ilike("codigo", codigo);
 
 			// Se estiver editando, excluir o próprio cupom da verificação

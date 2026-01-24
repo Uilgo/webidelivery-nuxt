@@ -2,10 +2,11 @@
 /**
  * 📌 CupomsList
  *
- * Lista de cupons em formato de cards horizontais (seguindo padrão do projeto).
- * Mesmo padrão usado em CardapioList e PedidoListaItem.
+ * Lista de cupons em formato HORIZONTAL (cards em linha).
+ * Mesmo padrão usado em PedidoListaItem - layout horizontal com ações.
  */
 
+import { formatCurrency } from "../../../../../../lib/formatters/currency";
 import type { CupomCompleto } from "#shared/types/marketing";
 
 interface Props {
@@ -32,7 +33,7 @@ const emit = defineEmits<Emits>();
  */
 const getCupomIcon = (tipo: string): string => {
 	const icons = {
-		percentual: "lucide:percent",
+		percentual: "lucide:zap",
 		valor_fixo: "lucide:banknote",
 		frete_gratis: "lucide:truck",
 	};
@@ -61,7 +62,7 @@ const getDescontoFormatado = (cupom: CupomCompleto): string => {
 		case "percentual":
 			return `${valor_desconto}%`;
 		case "valor_fixo":
-			return `R$ ${valor_desconto.toFixed(2).replace(".", ",")}`;
+			return formatCurrency(valor_desconto);
 		case "frete_gratis":
 			return "Grátis";
 		default:
@@ -101,9 +102,9 @@ const getUsoInfo = (cupom: CupomCompleto): string => {
 /**
  * Retorna informações sobre expiração
  */
-const getExpiracaoInfo = (cupom: CupomCompleto) => {
+const getExpiracaoInfo = (cupom: CupomCompleto): string => {
 	if (!cupom.data_expiracao) {
-		return { text: "Sem expiração", color: "default" as const };
+		return "Sem prazo";
 	}
 
 	const dataExpiracao = new Date(cupom.data_expiracao);
@@ -111,14 +112,14 @@ const getExpiracaoInfo = (cupom: CupomCompleto) => {
 	const diffDias = Math.ceil((dataExpiracao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
 	if (diffDias < 0) {
-		return { text: "Expirado", color: "error" as const };
+		return "Expirado";
 	}
 
 	if (diffDias <= 7) {
-		return { text: `${diffDias}d restantes`, color: "warning" as const };
+		return `${diffDias}d restantes`;
 	}
 
-	return { text: dataExpiracao.toLocaleDateString("pt-BR"), color: "default" as const };
+	return dataExpiracao.toLocaleDateString("pt-BR");
 };
 
 // ========================================
@@ -154,17 +155,13 @@ const handleValidate = (codigo: string): void => {
 			:key="cupom.id"
 			class="group relative flex items-center gap-4 p-4 rounded-xl bg-[var(--bg-surface)] hover:opacity-95 cursor-pointer transition-all duration-200 border border-[var(--border-muted)]"
 			:class="{ 'opacity-60': !cupom.ativo }"
+			@click="handleEdit(cupom.id)"
 		>
 			<!-- Ícone do Tipo (Esquerda) -->
 			<div
-				class="w-12 h-12 shrink-0 flex items-center justify-center rounded-lg border border-[var(--border-muted)]"
-				:class="{
-					'bg-blue-50 text-blue-600 border-blue-200': cupom.tipo === 'percentual',
-					'bg-green-50 text-green-600 border-green-200': cupom.tipo === 'valor_fixo',
-					'bg-orange-50 text-orange-600 border-orange-200': cupom.tipo === 'frete_gratis',
-				}"
+				class="w-12 h-12 shrink-0 flex items-center justify-center rounded-lg bg-[var(--bg-muted)]"
 			>
-				<Icon :name="getCupomIcon(cupom.tipo)" class="h-6 w-6" />
+				<Icon :name="getCupomIcon(cupom.tipo)" class="h-6 w-6 text-[var(--text-muted)]" />
 			</div>
 
 			<!-- Conteúdo Principal (Centro) -->
@@ -189,7 +186,7 @@ const handleValidate = (codigo: string): void => {
 					<!-- Valor Mínimo -->
 					<span v-if="cupom.valor_minimo" class="flex items-center gap-1">
 						<Icon name="lucide:shopping-cart" class="h-3.5 w-3.5" />
-						<span>Min: R$ {{ cupom.valor_minimo.toFixed(2).replace(".", ",") }}</span>
+						<span>Min: {{ formatCurrency(cupom.valor_minimo) }}</span>
 					</span>
 
 					<!-- Uso -->
@@ -201,7 +198,7 @@ const handleValidate = (codigo: string): void => {
 					<!-- Expiração -->
 					<span class="flex items-center gap-1">
 						<Icon name="lucide:calendar" class="h-3.5 w-3.5" />
-						<span>{{ getExpiracaoInfo(cupom).text }}</span>
+						<span>{{ getExpiracaoInfo(cupom) }}</span>
 					</span>
 				</div>
 			</div>
