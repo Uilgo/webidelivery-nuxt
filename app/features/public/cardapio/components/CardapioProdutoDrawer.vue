@@ -15,7 +15,7 @@ import type {
 } from "../types/cardapio-publico";
 import { useCarrinhoStore } from "~/stores/carrinho";
 import { useProdutosSabores } from "../composables/useProdutosSabores";
-import { formatCurrency } from "../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
 	modelValue: boolean;

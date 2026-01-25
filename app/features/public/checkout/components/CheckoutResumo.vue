@@ -7,7 +7,7 @@
 
 import type { CheckoutData } from "~/features/public/checkout/types/checkout";
 import { useCarrinhoStore } from "~/stores/carrinho";
-import { formatCEP } from "../../../../../lib/formatters/address";
+import { formatCEP } from "~/lib/formatters/cep";
 
 interface Props {
 	dados: Partial<CheckoutData>;

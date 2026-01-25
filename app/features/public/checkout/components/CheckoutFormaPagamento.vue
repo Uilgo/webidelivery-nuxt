@@ -6,7 +6,7 @@
  */
 
 import type { FormaPagamento, DadosPagamento } from "~/features/public/checkout/types/checkout";
-import { parseCurrency } from "../../../../../lib/formatters/currency";
+import { parseCurrency } from "~/lib/formatters/currency";
 
 interface Props {
 	dadosIniciais?: DadosPagamento;

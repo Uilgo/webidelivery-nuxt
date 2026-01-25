@@ -5,7 +5,7 @@
  * Baseado no mesmo padrão dos formatters de CEP e telefone.
  */
 
-import { formatCurrencyProgressive, parseCurrency } from "../../../lib/formatters/currency";
+import { formatCurrencyProgressive, parseCurrency } from "~/lib/formatters/currency";
 
 export interface UseCurrencyInputOptions {
 	/** Valor inicial */

@@ -9,8 +9,8 @@
  * @example GET /api/cep/01001000
  */
 
-import { isValidCEP } from "../../../lib/validators/cep";
-import { parseCEP } from "../../../lib/formatters/cep";
+import { isValidCEP } from "~/lib/validators/cep";
+import { parseCEP } from "~/lib/formatters/cep";
 
 /**
  * Interface padronizada para resposta da API de CEP

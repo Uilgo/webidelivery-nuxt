@@ -9,7 +9,7 @@
 import { toTypedSchema } from "@vee-validate/zod";
 import { cupomSchema } from "#shared/schemas/marketing";
 import { useCupons } from "../../composables/useCupons";
-import { formatCurrency } from "../../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 import type { CupomFormData, TipoCupom } from "#shared/types/marketing";
 
 interface Props {

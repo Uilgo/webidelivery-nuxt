@@ -7,9 +7,9 @@
 
 import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
-import { formatDateTime } from "../../../../../lib/formatters/date";
-import { formatPhone } from "../../../../../lib/formatters/phone";
-import { formatCEP } from "../../../../../lib/formatters/address";
+import { formatDateTime } from "~/lib/formatters/date";
+import { formatPhone } from "~/lib/formatters/phone";
+import { formatCEP } from "~/lib/formatters/cep";
 
 interface Props {
 	pedido: PedidoCompleto;

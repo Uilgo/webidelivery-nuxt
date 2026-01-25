@@ -8,7 +8,7 @@
 import type { ComboCreateData, ComboUpdateData } from "../../../types/combo";
 import { useCombosFetch } from "./useCombosFetch";
 import { useToast } from "~/composables/ui/useToast";
-import { parseCurrency } from "../../../../../../lib/formatters/currency";
+import { parseCurrency } from "~/lib/formatters/currency";
 
 export const useCombosActions = () => {
 	const supabase = useSupabaseClient();

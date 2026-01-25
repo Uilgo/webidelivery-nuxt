@@ -8,7 +8,7 @@
  * - Descrição (opcional)
  */
 
-import { formatSlug } from "../../../../../lib/formatters/slug";
+import { formatSlug } from "~/lib/formatters/slug";
 import type { Step1InfoBasica } from "../../types/onboarding";
 
 /**

@@ -13,7 +13,7 @@ import {
 	formatarFormaPagamento,
 	formatarTempoDecorrido,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
-import { formatarCodigoRastreamento } from "../../../../../lib/formatters/codigo-rastreamento";
+import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 
 interface Props {
 	pedido: PedidoCompleto;

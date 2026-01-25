@@ -9,7 +9,7 @@ import { usePedido } from "~/features/public/pedido/composables/usePedido";
 import { useCancelarPedido } from "~/features/public/pedido/composables/useCancelarPedido";
 import { useAvaliacaoPedido } from "~/composables/ui/useAvaliacaoPedido";
 import { useToast } from "~/composables/ui/useToast";
-import { formatarCodigoRastreamento } from "../../../../../lib/formatters/codigo-rastreamento";
+import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 import {
 	clientePodeCancelar,
 	getAvisoCancelamento,

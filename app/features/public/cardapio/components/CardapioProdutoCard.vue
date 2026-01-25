@@ -8,7 +8,7 @@
 
 import { useProdutoDrawer } from "../composables/useProdutoDrawer";
 import type { ProdutoPublico } from "../types/cardapio-publico";
-import { formatCurrency } from "../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
 	produto: ProdutoPublico;

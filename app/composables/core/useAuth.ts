@@ -19,7 +19,7 @@ import type {
 	TeamMemberRegisterFormData,
 } from "#shared/schemas/auth";
 import { useUserStore } from "~/stores/user";
-import { clearAllCache } from "../../../lib/utils/cache";
+import { clearAllCache } from "~/lib/utils/cache";
 
 // ========================================
 // TIPOS E INTERFACES

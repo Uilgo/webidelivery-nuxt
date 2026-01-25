@@ -5,7 +5,7 @@
  * Card compacto de cupom com desconto em destaque e ações rápidas.
  */
 
-import { formatCurrency } from "../../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 import type { CupomCompleto } from "#shared/types/marketing";
 
 interface Props {

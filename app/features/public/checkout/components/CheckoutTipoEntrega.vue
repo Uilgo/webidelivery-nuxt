@@ -7,7 +7,7 @@
  */
 
 import type { TipoEntrega, EnderecoEntrega } from "~/features/public/checkout/types/checkout";
-import { formatCEP, parseCEP } from "../../../../../lib/formatters/cep";
+import { formatCEP, parseCEP } from "~/lib/formatters/cep";
 import { useCEP } from "../../../../composables/useCEP";
 import { useHorarioFuncionamento } from "../composables/useHorarioFuncionamento";
 import { useCalculoEntrega } from "../composables/useCalculoEntrega";

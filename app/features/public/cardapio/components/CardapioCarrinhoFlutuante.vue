@@ -7,7 +7,7 @@
  */
 
 import { useCarrinhoStore } from "~/stores/carrinho";
-import { formatCurrency } from "../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Emits {
 	(e: "abrir"): void;

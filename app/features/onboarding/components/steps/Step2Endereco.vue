@@ -9,7 +9,7 @@
  */
 
 import type { Step2Endereco } from "../../types/onboarding";
-import { formatCEP } from "../../../../../lib/formatters/cep";
+import { formatCEP } from "~/lib/formatters/cep";
 import { ESTADOS_BRASIL, ESTADOS_LABELS } from "#shared/constants/estabelecimento";
 
 /**

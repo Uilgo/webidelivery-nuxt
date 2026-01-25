@@ -21,7 +21,7 @@ import {
 	enderecoEntregaSchema,
 	dadosPagamentoSchema,
 	checkoutDataComValidacaoSchema,
-} from "../../../../../shared/schemas/checkout";
+} from "#shared/schemas/checkout";
 
 export const useCheckout = () => {
 	const { salvarDadosCliente, carregarDadosCliente, salvarEndereco, carregarEndereco } =

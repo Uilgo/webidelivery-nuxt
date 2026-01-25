@@ -6,9 +6,9 @@
  */
 
 import type { DadosCliente } from "~/features/public/checkout/types/checkout";
-import { formatPhone, parsePhone } from "../../../../../lib/formatters/phone";
-import { formatCPF, parseCPF } from "../../../../../lib/formatters/document";
-import { isValidCPF } from "../../../../../lib/validators/document";
+import { formatPhone, parsePhone } from "~/lib/formatters/phone";
+import { formatCPF, parseCPF } from "~/lib/formatters/document";
+import { isValidCPF } from "~/lib/validators/document";
 
 interface Props {
 	dadosIniciais?: DadosCliente;

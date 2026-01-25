@@ -5,8 +5,8 @@
  * Os formatadores são importados de lib/formatters para centralização.
  */
 
-import { formatCurrency } from "../../lib/formatters/currency";
-import { formatNumber, formatPercent } from "../../lib/formatters/number";
+import { formatCurrency } from "~/lib/formatters/currency";
+import { formatNumber, formatPercent } from "~/lib/formatters/number";
 
 export default defineNuxtPlugin(() => {
 	return {

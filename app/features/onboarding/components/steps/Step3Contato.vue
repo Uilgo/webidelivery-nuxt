@@ -6,8 +6,8 @@
  * - WhatsApp (obrigatório)
  */
 
-import { formatWhatsApp, parsePhone } from "../../../../../lib/formatters/phone";
-import { isValidWhatsApp } from "../../../../../lib/validators/phone";
+import { formatWhatsApp, parsePhone } from "~/lib/formatters/phone";
+import { isValidWhatsApp } from "~/lib/validators/phone";
 import type { Step3Contato } from "../../types/onboarding";
 
 /**

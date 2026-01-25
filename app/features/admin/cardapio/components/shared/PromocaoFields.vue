@@ -7,7 +7,7 @@
  */
 
 import { ref, computed, watch } from "vue";
-import { formatCurrency } from "../../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
 	/** Tipo de promoção: 'percentual' ou 'valor_fixo' */

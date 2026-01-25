@@ -113,6 +113,10 @@ export default defineNuxtConfig({
 				},
 			},
 		},
+		// Configurar alias para o Nitro resolver corretamente
+		alias: {
+			"#shared": "./shared",
+		},
 	},
 
 	// Futuro (Nuxt 4 features)

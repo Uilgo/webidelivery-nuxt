@@ -6,7 +6,7 @@
  * Mesmo padrão usado em PedidoListaItem - layout horizontal com ações.
  */
 
-import { formatCurrency } from "../../../../../../lib/formatters/currency";
+import { formatCurrency } from "~/lib/formatters/currency";
 import type { CupomCompleto } from "#shared/types/marketing";
 
 interface Props {

@@ -6,7 +6,7 @@
  */
 
 import type { StatusPedido } from "~/features/admin/pedidos/types/pedidos-admin";
-import { formatDateTime, formatTime, formatRelativeTime } from "../../../../../lib/formatters/date";
+import { formatDateTime, formatTime, formatRelativeTime } from "~/lib/formatters/date";
 
 /**
  * Informações de exibição do status
