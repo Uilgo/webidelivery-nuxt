@@ -109,20 +109,23 @@ export const useMarketing = (): UseMarketingReturn => {
 	// ESTADOS DE FILTROS
 	// ========================================
 
-	const searchValues = ref<Record<MarketingTab, string>>({
+	const searchValues = useState<Record<MarketingTab, string>>("marketing-search-values", () => ({
 		cupons: "",
 		banners: "",
-	});
+	}));
 
-	const sortValues = ref<Record<MarketingTab, string>>({
-		cupons: "created_at",
-		banners: "ordem",
-	});
+	const sortValues = useState<Record<MarketingTab, string>>("marketing-sort-values", () => ({
+		cupons: "",
+		banners: "",
+	}));
 
-	const filterValues = ref<Record<MarketingTab, Record<string, unknown>>>({
-		cupons: {},
-		banners: {},
-	});
+	const filterValues = useState<Record<MarketingTab, Record<string, unknown>>>(
+		"marketing-filter-values",
+		() => ({
+			cupons: {},
+			banners: {},
+		}),
+	);
 
 	// ========================================
 	// COMPUTADAS

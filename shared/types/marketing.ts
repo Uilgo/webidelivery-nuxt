@@ -77,9 +77,9 @@ export interface Promocao {
 
 export type TipoCupom = "percentual" | "valor_fixo" | "frete_gratis";
 
-export type TipoBanner = "carrossel" | "destaque" | "popup";
+export type TipoBanner = "carrossel";
 
-export type TipoConteudoBanner = "imagem" | "texto" | "misto";
+export type TipoConteudoBanner = "imagem" | "texto";
 
 export type TipoPosicaoTexto = "centro" | "esquerda" | "direita" | "superior" | "inferior";
 
@@ -284,13 +284,9 @@ export const TIPOS_CUPOM: readonly TipoCupom[] = [
 	"frete_gratis",
 ] as const;
 
-export const TIPOS_BANNER: readonly TipoBanner[] = ["carrossel", "destaque", "popup"] as const;
+export const TIPOS_BANNER: readonly TipoBanner[] = ["carrossel"] as const;
 
-export const TIPOS_CONTEUDO_BANNER: readonly TipoConteudoBanner[] = [
-	"imagem",
-	"texto",
-	"misto",
-] as const;
+export const TIPOS_CONTEUDO_BANNER: readonly TipoConteudoBanner[] = ["imagem", "texto"] as const;
 
 export const POSICOES_TEXTO: readonly TipoPosicaoTexto[] = [
 	"centro",

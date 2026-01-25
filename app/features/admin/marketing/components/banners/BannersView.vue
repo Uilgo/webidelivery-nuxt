@@ -13,10 +13,12 @@ import BannerDrawer from "./BannerDrawer.vue";
 
 // Imports dos composables
 import { useBanners } from "../../composables/useBanners";
-import { useMarketing } from "../../composables/useMarketing";
+// useMarketing removido pois o filtro é interno no useBanners
+import type { MarketingViewMode } from "../../types/marketing";
 
 interface Props {
 	showCreateDrawer?: boolean;
+	viewMode?: MarketingViewMode;
 }
 
 interface Emits {
@@ -25,6 +27,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
 	showCreateDrawer: false,
+	viewMode: "card",
 });
 
 const emit = defineEmits<Emits>();
@@ -32,6 +35,7 @@ const emit = defineEmits<Emits>();
 // Composables
 const {
 	banners,
+	filteredBanners,
 	loading,
 	error,
 	createBanner,
@@ -43,7 +47,11 @@ const {
 	refreshBanners,
 } = useBanners();
 
-const { viewMode } = useMarketing();
+// Filtros sincronizados internamente no useBanners
+// watch removido
+
+// Usar viewMode da prop em vez do composable
+const currentViewMode = computed(() => props.viewMode);
 
 // ========================================
 // ESTADO LOCAL
@@ -67,6 +75,14 @@ const showCreateDrawerComputed = computed({
 		showCreateDrawerLocal.value = value;
 		emit("update:showCreateDrawer", value);
 	},
+});
+
+/**
+ * Obtém o banner selecionado completo
+ */
+const selectedBannerData = computed(() => {
+	if (!selectedBanner.value) return null;
+	return banners.value.find((b) => b.id === selectedBanner.value);
 });
 
 // ========================================
@@ -162,8 +178,8 @@ const handleReorder = async (bannerId: string, newOrder: number): Promise<void> 
 			</div>
 		</UiCard>
 
-		<!-- Estado vazio -->
-		<UiCard v-else-if="banners.length === 0" class="p-12">
+		<!-- Estado vazio (sem nenhum banner criado) -->
+		<UiCard v-else-if="banners.length === 0 && !loading" class="p-12">
 			<div class="text-center">
 				<Icon name="lucide:image" class="w-16 h-16 mx-auto mb-4 text-[var(--text-muted)]" />
 				<h3 class="text-lg font-medium text-[var(--text-primary)] mb-2">Nenhum banner criado</h3>
@@ -177,12 +193,28 @@ const handleReorder = async (bannerId: string, newOrder: number): Promise<void> 
 			</div>
 		</UiCard>
 
+		<!-- Estado sem resultados (filtro retornou vazio) -->
+		<UiCard v-else-if="filteredBanners.length === 0" class="p-12">
+			<div class="text-center">
+				<Icon name="lucide:search-x" class="w-16 h-16 mx-auto mb-4 text-[var(--text-muted)]" />
+				<h3 class="text-lg font-medium text-[var(--text-primary)] mb-2">
+					Nenhum banner encontrado
+				</h3>
+				<p class="text-[var(--text-muted)] mb-6">
+					Tente ajustar seus filtros ou busca para encontrar o que procura
+				</p>
+			</div>
+		</UiCard>
+
 		<!-- Lista de banners -->
 		<div v-else>
 			<!-- Visualização em cards -->
-			<div v-if="viewMode === 'card'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div
+				v-if="currentViewMode === 'card'"
+				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
+			>
 				<BannerCard
-					v-for="banner in banners"
+					v-for="banner in filteredBanners"
 					:key="banner.id"
 					:banner="banner"
 					@edit="handleEdit"
@@ -196,7 +228,7 @@ const handleReorder = async (bannerId: string, newOrder: number): Promise<void> 
 			<!-- Visualização em lista -->
 			<div v-else>
 				<BannersList
-					:banners="banners"
+					:banners="filteredBanners"
 					@edit="handleEdit"
 					@delete="handleDelete"
 					@duplicate="handleDuplicate"
@@ -218,16 +250,76 @@ const handleReorder = async (bannerId: string, newOrder: number): Promise<void> 
 		/>
 
 		<!-- Modal de confirmação de exclusão -->
+		<!-- Modal de Exclusão -->
 		<UiModal v-model="showDeleteModal">
 			<template #header>
 				<h3 class="text-lg font-semibold">Excluir Banner</h3>
 			</template>
 
-			<template #content>
-				<p class="text-[var(--text-muted)]">
+			<div class="space-y-4">
+				<p class="text-[var(--text-secondary)]">
 					Tem certeza que deseja excluir este banner? Esta ação não pode ser desfeita.
 				</p>
-			</template>
+
+				<!-- Informações do banner a ser excluído -->
+				<div
+					v-if="selectedBannerData"
+					class="p-4 rounded-lg bg-[var(--bg-muted)] border border-[var(--border-default)]"
+				>
+					<div class="flex items-center gap-3">
+						<!-- Preview do banner -->
+						<div
+							class="w-16 h-12 shrink-0 rounded-lg overflow-hidden border border-[var(--border-default)]"
+						>
+							<div
+								v-if="
+									selectedBannerData.imagem_url && selectedBannerData.tipo_conteudo === 'imagem'
+								"
+								class="relative h-full"
+							>
+								<img
+									:src="selectedBannerData.imagem_url"
+									:alt="selectedBannerData.titulo || 'Banner'"
+									class="w-full h-full object-cover"
+								/>
+							</div>
+							<div
+								v-else
+								class="h-full flex items-center justify-center text-center p-1"
+								:style="{
+									backgroundColor: selectedBannerData.cor_fundo || '#3b82f6',
+									color: selectedBannerData.cor_texto || '#ffffff',
+								}"
+							>
+								<div class="text-xs font-medium truncate">
+									{{ selectedBannerData.titulo || "Banner" }}
+								</div>
+							</div>
+						</div>
+
+						<!-- Informações -->
+						<div class="flex-1 min-w-0">
+							<p class="font-semibold text-[var(--text-primary)] truncate">
+								{{ selectedBannerData.titulo || "Banner sem título" }}
+							</p>
+							<p
+								v-if="selectedBannerData.descricao"
+								class="text-sm text-[var(--text-muted)] truncate"
+							>
+								{{ selectedBannerData.descricao }}
+							</p>
+							<div class="flex items-center gap-2 mt-1">
+								<UiBadge size="sm" variant="outline">
+									Ordem: {{ selectedBannerData.ordem }}
+								</UiBadge>
+								<UiBadge size="sm" :variant="selectedBannerData.ativo ? 'success' : 'error'">
+									{{ selectedBannerData.ativo ? "Ativo" : "Inativo" }}
+								</UiBadge>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 
 			<template #footer>
 				<div class="flex gap-3 justify-end">

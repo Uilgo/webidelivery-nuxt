@@ -14,6 +14,8 @@ import BannersView from "./banners/BannersView.vue";
 
 // Imports dos composables
 import { useMarketing } from "../composables/useMarketing";
+import { useCupons } from "../composables/useCupons";
+import { useBanners } from "../composables/useBanners";
 
 // Composables
 const {
@@ -28,8 +30,11 @@ const {
 	handleSearch,
 	handleSort,
 	handleFilter,
-	handleRefresh,
 } = useMarketing();
+
+// Composables específicos para refresh
+const { refreshCupons } = useCupons();
+const { refreshBanners } = useBanners();
 
 // ========================================
 // ESTADO DOS DRAWERS
@@ -41,6 +46,20 @@ const showCreateBannerDrawer = ref(false);
 // ========================================
 // HANDLERS
 // ========================================
+
+/**
+ * Handler para refresh baseado na aba ativa
+ */
+const handleRefresh = async (): Promise<void> => {
+	switch (activeTab.value) {
+		case "cupons":
+			await refreshCupons();
+			break;
+		case "banners":
+			await refreshBanners();
+			break;
+	}
+};
 
 /**
  * Handler para criar baseado na aba ativa
@@ -86,7 +105,7 @@ const handleCreate = (): void => {
 
 			<!-- Aba Banners -->
 			<div v-if="activeTab === 'banners'" class="w-full">
-				<BannersView v-model:show-create-drawer="showCreateBannerDrawer" />
+				<BannersView v-model:show-create-drawer="showCreateBannerDrawer" :view-mode="viewMode" />
 			</div>
 		</div>
 	</div>

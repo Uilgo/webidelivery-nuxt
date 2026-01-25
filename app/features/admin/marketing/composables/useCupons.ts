@@ -72,17 +72,22 @@ export const useCupons = (): UseCuponsReturn => {
 	const toast = useToast();
 	const supabase = useSupabaseClient();
 
-	// Integração com useMarketing para atualizar contadores
-	const { setTabData } = useMarketing();
+	// Integração com useMarketing para atualizar contadores e acessar filtros globais
+	const {
+		setTabData,
+		currentFilters: globalFilters,
+		currentSearchValue: globalSearch,
+		currentSortValue: globalSort,
+	} = useMarketing();
 
 	// ========================================
-	// ESTADO REATIVO
+	// ESTADO REATIVO (usando useState para SSR)
 	// ========================================
 
-	const cupons = ref<CupomCompleto[]>([]);
-	const loading = ref(false);
+	const cupons = useState<CupomCompleto[]>("marketing-cupons", () => []);
+	const loading = useState<boolean>("marketing-cupons-loading", () => false);
 	const error = ref<string | null>(null);
-	const currentFilters = ref<CupomFilters>({});
+	const cacheLoaded = useState<boolean>("marketing-cupons-cache-loaded", () => false);
 
 	// ========================================
 	// COMPUTADAS - ESTATÍSTICAS
@@ -108,33 +113,43 @@ export const useCupons = (): UseCuponsReturn => {
 
 	const filteredCupons = computed(() => {
 		let result = [...cupons.value];
+		const filters = globalFilters.value as Record<string, unknown>;
+		const search = globalSearch.value;
+		const sort = globalSort.value;
 
 		// Filtro por tipo
-		if (currentFilters.value.tipo) {
-			result = result.filter((cupom) => cupom.tipo === currentFilters.value.tipo);
+		if (filters.tipo) {
+			result = result.filter((cupom) => cupom.tipo === filters.tipo);
 		}
 
 		// Filtro por status
-		if (currentFilters.value.status) {
-			result = result.filter((cupom) => cupom.status_cupom === currentFilters.value.status);
+		if (filters.status) {
+			result = result.filter((cupom) => cupom.status_cupom === filters.status);
 		}
 
 		// Filtro por período
-		if (currentFilters.value.periodo) {
-			const { inicio, fim } = currentFilters.value.periodo;
+		if (filters.periodo) {
+			// Periodo em CupomFilters é { inicio, fim }, mas aqui estamos fazendo cast para Record<string, unknown>
+			// Se vier do MarketingFilters, ele não envia periodo (não tem na config).
+			// Mas se fosse enviado, precisamos garantir o tipo.
+			const periodo = filters.periodo as { inicio?: string; fim?: string } | undefined;
 
-			if (inicio) {
-				result = result.filter((cupom) => new Date(cupom.created_at) >= new Date(inicio));
-			}
+			if (periodo) {
+				const { inicio, fim } = periodo;
 
-			if (fim) {
-				result = result.filter((cupom) => new Date(cupom.created_at) <= new Date(fim));
+				if (inicio) {
+					result = result.filter((cupom) => new Date(cupom.created_at) >= new Date(inicio));
+				}
+
+				if (fim) {
+					result = result.filter((cupom) => new Date(cupom.created_at) <= new Date(fim));
+				}
 			}
 		}
 
 		// Busca por código ou descrição
-		if (currentFilters.value.search) {
-			const searchTerm = currentFilters.value.search.toLowerCase();
+		if (search) {
+			const searchTerm = search.toLowerCase();
 			result = result.filter(
 				(cupom) =>
 					cupom.codigo.toLowerCase().includes(searchTerm) ||
@@ -142,8 +157,41 @@ export const useCupons = (): UseCuponsReturn => {
 			);
 		}
 
-		// Ordenar por ordem
-		return result.sort((a, b) => a.ordem - b.ordem);
+		// Ordenação customizada
+		if (sort) {
+			switch (sort) {
+				case "created_at_desc":
+					result.sort(
+						(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+					);
+					break;
+				case "created_at_asc":
+					result.sort(
+						(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+					);
+					break;
+				case "codigo_asc":
+					result.sort((a, b) => a.codigo.localeCompare(b.codigo));
+					break;
+				case "codigo_desc":
+					result.sort((a, b) => b.codigo.localeCompare(a.codigo));
+					break;
+				case "usos_desc":
+					result.sort((a, b) => b.usos_realizados - a.usos_realizados);
+					break;
+				case "usos_asc":
+					result.sort((a, b) => a.usos_realizados - b.usos_realizados);
+					break;
+				default:
+					// Padrão por ordem
+					result.sort((a, b) => a.ordem - b.ordem);
+			}
+		} else {
+			// Ordenar por ordem (padrão)
+			result.sort((a, b) => a.ordem - b.ordem);
+		}
+
+		return result;
 	});
 
 	// ========================================
@@ -197,6 +245,13 @@ export const useCupons = (): UseCuponsReturn => {
 	 * Busca todos os cupons via RLS
 	 */
 	const fetchCupons = async (): Promise<void> => {
+		// Se já carregou do cache, não buscar novamente
+		if (cacheLoaded.value && cupons.value.length > 0) {
+			// Atualizar dados no useMarketing para contadores das tabs
+			setTabData("cupons", cupons.value);
+			return;
+		}
+
 		try {
 			loading.value = true;
 			error.value = null;
@@ -562,8 +617,10 @@ export const useCupons = (): UseCuponsReturn => {
 	/**
 	 * Aplica filtros aos cupons
 	 */
-	const applyFilters = (filters: CupomFilters): void => {
-		currentFilters.value = filters;
+	const applyFilters = (_filters: CupomFilters): void => {
+		// Esta função agora é apenas um wrapper ou pode ser removida se não for usada externamente
+		// O ideal seria que quem chama use o useMarketing diretamente
+		console.warn("Use handleFilter do useMarketing para aplicar filtros");
 	};
 
 	// ========================================
@@ -581,9 +638,14 @@ export const useCupons = (): UseCuponsReturn => {
 	// INICIALIZAÇÃO
 	// ========================================
 
-	// Carregar cupons na inicialização
+	// Carregar cupons na inicialização (apenas se não veio do cache)
 	onMounted(() => {
-		fetchCupons();
+		if (!cacheLoaded.value) {
+			fetchCupons();
+		} else {
+			// Se veio do cache, atualizar contadores
+			setTabData("cupons", cupons.value);
+		}
 	});
 
 	// ========================================

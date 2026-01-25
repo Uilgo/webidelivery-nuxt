@@ -3,7 +3,13 @@
  * 📌 CardapioBanners
  *
  * Carrossel de banners promocionais do cardápio público.
- * Usa dados mockados até implementar no banco.
+ *
+ * FUNCIONALIDADES:
+ * - Banners com link_url são clicáveis (cursor pointer + hover effects)
+ * - Links externos (http/https) abrem em nova aba
+ * - Banners sem link são apenas visuais
+ * - Auto-play a cada 5 segundos
+ * - Navegação por setas (desktop) e indicadores (todos os dispositivos)
  */
 
 // Banners mockados
@@ -14,13 +20,16 @@ const banners = [
 		descricao: "Compre uma pizza grande e ganhe 1L de refrigerante",
 		imagem_url: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=300&fit=crop",
 		cor_fundo: "#FF6B6B",
+		tipo_conteudo: "imagem" as const, // apenas imagem
+		link_url: "https://www.ifood.com.br/promocoes", // link externo
 	},
 	{
 		id: "2",
 		titulo: "Combo Família",
 		descricao: "2 Pizzas grandes + 2L de refrigerante por apenas R$ 89,90",
-		imagem_url: "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=800&h=300&fit=crop",
 		cor_fundo: "#4ECDC4",
+		tipo_conteudo: "texto" as const, // apenas texto
+		link_url: "https://wa.me/5511999999999?text=Quero%20saber%20mais%20sobre%20o%20combo", // link externo WhatsApp
 	},
 	{
 		id: "3",
@@ -28,6 +37,8 @@ const banners = [
 		descricao: "Todas as pizzas com 30% de desconto",
 		imagem_url: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=300&fit=crop",
 		cor_fundo: "#FFD93D",
+		tipo_conteudo: "imagem" as const, // apenas imagem
+		// sem link_url - banner apenas visual
 	},
 ];
 
@@ -72,6 +83,33 @@ const rolarParaBanner = (index: number): void => {
 	});
 };
 
+/**
+ * Verifica se um link é externo (http/https)
+ */
+const isExternalLink = (url: string): boolean => {
+	return url.startsWith("http://") || url.startsWith("https://");
+};
+
+/**
+ * Handler para clique no banner
+ */
+const handleBannerClick = (banner: (typeof banners)[0]): void => {
+	// Se não tem link, não faz nada
+	if (!banner.link_url) return;
+
+	// Apenas links externos são suportados - abre em nova aba
+	if (isExternalLink(banner.link_url)) {
+		window.open(banner.link_url, "_blank", "noopener,noreferrer");
+	}
+};
+
+/**
+ * Verifica se o banner é clicável
+ */
+const isBannerClickable = (banner: (typeof banners)[0]): boolean => {
+	return !!banner.link_url;
+};
+
 // Auto-play do carrossel (a cada 5 segundos)
 let intervalo: NodeJS.Timeout | null = null;
 
@@ -99,28 +137,53 @@ onUnmounted(() => {
 					class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
 					style="scroll-behavior: smooth"
 				>
-					<div
+					<!-- Banner Container (clicável se tiver link) -->
+					<component
+						:is="isBannerClickable(banner) ? 'button' : 'div'"
 						v-for="(banner, index) in banners"
 						:key="banner.id"
-						class="min-w-full snap-start relative h-32 sm:h-36 md:h-40 lg:h-44 flex items-center justify-center"
+						class="min-w-full snap-start relative h-36 sm:h-40 md:h-44 lg:h-48 flex items-center justify-center overflow-hidden transition-all duration-200 group"
+						:class="{
+							'cursor-pointer hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50':
+								isBannerClickable(banner),
+							'cursor-default': !isBannerClickable(banner),
+						}"
 						:style="{ backgroundColor: banner.cor_fundo }"
+						:type="isBannerClickable(banner) ? 'button' : undefined"
+						@click="isBannerClickable(banner) ? handleBannerClick(banner) : undefined"
 					>
-						<!-- Imagem de fundo com overlay -->
+						<!-- Overlay para banners clicáveis (melhora contraste no hover) -->
 						<div
+							v-if="isBannerClickable(banner)"
+							class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 z-[1]"
+						></div>
+
+						<!-- Imagem de fundo -->
+						<div
+							v-if="banner.imagem_url && banner.tipo_conteudo === 'imagem'"
 							class="absolute inset-0 bg-cover bg-center"
 							:style="{ backgroundImage: `url(${banner.imagem_url})` }"
-						>
-							<div class="absolute inset-0 bg-black/40"></div>
-						</div>
+						></div>
 
-						<!-- Conteúdo -->
-						<div class="relative z-10 text-center px-4 sm:px-6">
-							<h3 class="text-base sm:text-lg md:text-xl font-bold text-white mb-1">
+						<!-- Conteúdo de texto (apenas para tipo "texto") -->
+						<div
+							v-if="banner.tipo_conteudo === 'texto'"
+							class="relative z-10 text-center px-4 sm:px-6"
+						>
+							<h3 class="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1.5">
 								{{ banner.titulo }}
 							</h3>
-							<p class="text-xs sm:text-sm text-white/90">{{ banner.descricao }}</p>
+							<p class="text-xs sm:text-sm md:text-base text-white/90">{{ banner.descricao }}</p>
 						</div>
-					</div>
+
+						<!-- Indicador de Link Externo (apenas se for clicável) -->
+						<div
+							v-if="isBannerClickable(banner)"
+							class="absolute top-2 right-2 w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20"
+						>
+							<Icon name="lucide:external-link" class="w-3 h-3 text-white" />
+						</div>
+					</component>
 				</div>
 
 				<!-- Botões de navegação (apenas desktop) -->

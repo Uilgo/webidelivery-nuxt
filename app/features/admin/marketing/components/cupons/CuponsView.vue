@@ -34,6 +34,7 @@ const emit = defineEmits<Emits>();
 // Composables
 const {
 	cupons,
+	filteredCupons,
 	loading,
 	error,
 	createCupom,
@@ -194,8 +195,8 @@ const handleExecuteValidation = async (): Promise<void> => {
 			</div>
 		</UiCard>
 
-		<!-- Estado vazio -->
-		<UiCard v-else-if="cupons.length === 0" class="p-12">
+		<!-- Estado vazio (sem nenhum cupom criado) -->
+		<UiCard v-else-if="cupons.length === 0 && !loading" class="p-12">
 			<div class="text-center">
 				<Icon name="lucide:ticket" class="w-16 h-16 mx-auto mb-4 text-[var(--text-muted)]" />
 				<h3 class="text-lg font-medium text-[var(--text-primary)] mb-2">Nenhum cupom criado</h3>
@@ -209,6 +210,17 @@ const handleExecuteValidation = async (): Promise<void> => {
 			</div>
 		</UiCard>
 
+		<!-- Estado sem resultados (filtro retornou vazio) -->
+		<UiCard v-else-if="filteredCupons.length === 0" class="p-12">
+			<div class="text-center">
+				<Icon name="lucide:search-x" class="w-16 h-16 mx-auto mb-4 text-[var(--text-muted)]" />
+				<h3 class="text-lg font-medium text-[var(--text-primary)] mb-2">Nenhum cupom encontrado</h3>
+				<p class="text-[var(--text-muted)] mb-6">
+					Tente ajustar seus filtros ou busca para encontrar o que procura
+				</p>
+			</div>
+		</UiCard>
+
 		<!-- Lista de cupons -->
 		<div v-else>
 			<!-- Visualização em cards -->
@@ -217,7 +229,7 @@ const handleExecuteValidation = async (): Promise<void> => {
 				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
 			>
 				<CupomCard
-					v-for="cupom in cupons"
+					v-for="cupom in filteredCupons"
 					:key="cupom.id"
 					:cupom="cupom"
 					@edit="handleEdit"
@@ -231,7 +243,7 @@ const handleExecuteValidation = async (): Promise<void> => {
 			<!-- Visualização em lista -->
 			<div v-else>
 				<CupomsList
-					:cupons="cupons"
+					:cupons="filteredCupons"
 					@edit="handleEdit"
 					@delete="handleDelete"
 					@duplicate="handleDuplicate"

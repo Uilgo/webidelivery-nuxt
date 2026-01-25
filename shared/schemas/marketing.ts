@@ -64,31 +64,56 @@ export const cupomSchema = z
 /**
  * Schema: Banner
  */
-export const bannerSchema = z.object({
-	titulo: z
-		.string()
-		.min(3, "Título deve ter no mínimo 3 caracteres")
-		.max(100, "Título deve ter no máximo 100 caracteres"),
-	descricao: z.string().max(200, "Descrição deve ter no máximo 200 caracteres").optional(),
-	tipo: z.enum(["carrossel", "destaque", "popup"]),
-	tipo_conteudo: z.enum(["imagem", "texto", "misto"]),
-	imagem_url: z.string().url("URL inválida").optional(),
-	link_url: z.string().url("URL inválida").optional(),
-	cor_fundo: z
-		.string()
-		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
-		.optional(),
-	cor_texto: z
-		.string()
-		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
-		.optional(),
-	texto_cta: z.string().max(50, "CTA deve ter no máximo 50 caracteres").optional(),
-	texto_posicao: z.enum(["centro", "esquerda", "direita", "superior", "inferior"]).optional(),
-	texto_cor_fundo: z
-		.string()
-		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
-		.optional(),
-});
+export const bannerSchema = z
+	.object({
+		titulo: z.string().max(100, "Título deve ter no máximo 100 caracteres").optional(),
+		descricao: z.string().max(200, "Descrição deve ter no máximo 200 caracteres").optional(),
+		tipo: z.enum(["carrossel"]),
+		tipo_conteudo: z.enum(["imagem", "texto"]),
+		imagem_url: z.string().url("URL inválida").optional().or(z.literal("")),
+		link_url: z.string().url("URL inválida").optional().or(z.literal("")),
+		cor_fundo: z
+			.string()
+			.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+			.optional(),
+		cor_texto: z
+			.string()
+			.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+			.optional(),
+		texto_cta: z.string().max(50, "CTA deve ter no máximo 50 caracteres").optional(),
+		texto_posicao: z.enum(["centro", "esquerda", "direita", "superior", "inferior"]).optional(),
+		texto_cor_fundo: z
+			.string()
+			.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+			.optional(),
+	})
+	.refine(
+		(data) => {
+			// Título é obrigatório APENAS para tipo "texto"
+			if (data.tipo_conteudo === "texto") {
+				return !!data.titulo && data.titulo.trim().length >= 3;
+			}
+			// Para tipo "imagem", título é opcional
+			return true;
+		},
+		{
+			message: "Título é obrigatório para banners com texto",
+			path: ["titulo"],
+		},
+	)
+	.refine(
+		(data) => {
+			// Imagem é obrigatória para tipo "imagem"
+			if (data.tipo_conteudo === "imagem") {
+				return !!data.imagem_url && data.imagem_url.trim() !== "";
+			}
+			return true;
+		},
+		{
+			message: "Imagem é obrigatória para este tipo de banner",
+			path: ["imagem_url"],
+		},
+	);
 
 /**
  * Schema: Promoção
@@ -136,8 +161,8 @@ export const cupomFiltersSchema = z.object({
  * Schema: Filtros de Banner
  */
 export const bannerFiltersSchema = z.object({
-	tipo: z.enum(["carrossel", "destaque", "popup"]).optional(),
-	tipo_conteudo: z.enum(["imagem", "texto", "misto"]).optional(),
+	tipo: z.enum(["carrossel"]).optional(),
+	tipo_conteudo: z.enum(["imagem", "texto"]).optional(),
 	status: z.enum(["ativo", "inativo"]).optional(),
 });
 
