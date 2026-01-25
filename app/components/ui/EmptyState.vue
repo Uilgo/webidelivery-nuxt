@@ -69,13 +69,17 @@ const displayIcon = computed(() => {
 
 // Classes computadas para o container
 const containerClasses = computed(() => {
-	const baseClasses = ["flex flex-col items-center justify-center text-center", "py-12"];
+	const baseClasses = [
+		"flex flex-col items-center justify-center text-center",
+		"min-h-[400px] w-full",
+		"py-12",
+	];
 
 	// Classes de tamanho
 	const sizeClasses = {
-		sm: "px-4 max-w-sm",
-		md: "px-6 max-w-md",
-		lg: "px-8 max-w-lg",
+		sm: "px-4 max-w-sm mx-auto",
+		md: "px-6 max-w-md mx-auto",
+		lg: "px-8 max-w-lg mx-auto",
 	};
 
 	return [...baseClasses, sizeClasses[props.size]].join(" ");

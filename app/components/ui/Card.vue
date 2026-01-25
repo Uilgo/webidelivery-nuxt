@@ -10,7 +10,7 @@
 // Tipos para as props do componente
 interface Props {
 	/** Variante visual do card */
-	variant?: "default" | "outlined" | "elevated" | "ghost";
+	variant?: "default" | "outlined" | "elevated" | "shadow" | "ghost";
 	/** Tamanho do padding interno */
 	size?: "sm" | "md" | "lg";
 	/** Card clicável com efeitos de hover */
@@ -65,6 +65,7 @@ const cardClasses = computed(() => {
 		default: ["shadow-[var(--card-shadow)]"],
 		outlined: ["border-2"],
 		elevated: ["shadow-lg"],
+		shadow: ["border-transparent", "shadow-lg"],
 		ghost: ["border-transparent", "bg-transparent"],
 	};
 
