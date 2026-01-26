@@ -62,7 +62,10 @@ const handleAbaChange = (aba: AbaRelatorio) => {
 };
 
 // Handler de refresh
+const refreshing = ref(false);
+
 const handleRefresh = async () => {
+	refreshing.value = true;
 	try {
 		switch (abaAtiva.value) {
 			case "pedidos":
@@ -93,6 +96,8 @@ const handleRefresh = async () => {
 			color: "error",
 		});
 		console.error(error);
+	} finally {
+		refreshing.value = false;
 	}
 };
 
@@ -280,7 +285,7 @@ const prepararDadosFinanceiro = () => {
 		<RelatoriosTabs :aba-ativa="abaAtiva" @change="handleAbaChange" />
 
 		<!-- Filtros globais -->
-		<RelatoriosFiltros @refresh="handleRefresh" @exportar="handleExportar" />
+		<RelatoriosFiltros :loading="refreshing" @refresh="handleRefresh" @exportar="handleExportar" />
 
 		<!-- Conteúdo do relatório ativo -->
 		<div class="relatorio-content">

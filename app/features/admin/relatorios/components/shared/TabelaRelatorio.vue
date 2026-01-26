@@ -2,12 +2,14 @@
 /**
  * 📊 TabelaRelatorio
  *
- * Wrapper do componente Table.vue com funcionalidades específicas para relatórios:
- * - Paginação integrada
- * - Busca/filtro rápido
- * - Ordenação persistente
- * - Integração com exportação
- * - Estados de loading otimizados
+ * Wrapper moderno para tabelas de relatórios.
+ * Funcionalidades:
+ * - Paginação integrada com design moderno
+ * - Busca rápida com input estilizado
+ * - Seletor de itens por página discreto
+ * - Ordenação visual
+ * - Loading states otimizados
+ * - Exportação (slot opcional)
  */
 
 import { useDebounceFn } from "@vueuse/core";
@@ -34,7 +36,7 @@ interface Props {
 	buscaPlaceholder?: string;
 	/** Habilitar paginação */
 	paginacao?: boolean;
-	/** Itens por página */
+	/** Itens por página inicial */
 	itensPorPagina?: number;
 	/** Opções de itens por página */
 	opcoesItensPorPagina?: number[];
@@ -125,9 +127,11 @@ const totalPaginas = computed(() => {
 
 // Informações de paginação
 const infoPaginacao = computed(() => {
-	const inicio = (paginaAtual.value - 1) * itensPorPaginaAtual.value + 1;
-	const fim = Math.min(paginaAtual.value * itensPorPaginaAtual.value, dadosOrdenados.value.length);
 	const total = dadosOrdenados.value.length;
+	if (total === 0) return { inicio: 0, fim: 0, total: 0 };
+
+	const inicio = (paginaAtual.value - 1) * itensPorPaginaAtual.value + 1;
+	const fim = Math.min(paginaAtual.value * itensPorPaginaAtual.value, total);
 	return { inicio, fim, total };
 });
 
@@ -182,34 +186,61 @@ const formatarValor = (valor: unknown, coluna: Coluna): string => {
 </script>
 
 <template>
-	<div class="tabela-relatorio space-y-4">
-		<!-- Barra de controles -->
-		<div class="flex items-center justify-between gap-4 flex-wrap">
+	<div
+		class="tabela-relatorio bg-white dark:bg-gray-800 rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-black/20 border border-gray-100 dark:border-gray-700/50 overflow-hidden"
+	>
+		<!-- Barra de Controles (Toolbar) -->
+		<div
+			class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex flex-col sm:flex-row items-center gap-4 justify-between bg-gray-50/50 dark:bg-gray-800/50"
+		>
 			<!-- Busca -->
-			<div v-if="busca" class="flex-1 min-w-[200px] max-w-md">
-				<UiInput
+			<div v-if="busca" class="relative w-full sm:w-72 group">
+				<div
+					class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary-500 transition-colors"
+				>
+					<Icon name="lucide:search" class="h-4 w-4" />
+				</div>
+				<input
 					v-model="termoBusca"
-					type="search"
+					type="text"
 					:placeholder="buscaPlaceholder"
-					size="md"
+					class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all sm:text-sm"
 					@input="handleBusca"
 				/>
 			</div>
 
-			<!-- Itens por página -->
-			<div v-if="paginacao" class="flex items-center gap-2">
-				<span class="text-sm text-gray-600 dark:text-gray-400">Mostrar:</span>
-				<UiSelect
-					v-model="itensPorPaginaAtual"
-					:options="opcoesItensPorPagina.map((o) => ({ value: o, label: String(o) }))"
-					size="sm"
-					@update:model-value="(value) => mudarItensPorPagina(Number(value))"
-				/>
+			<!-- Ações Extras (Exportar, Filtros) -->
+			<div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+				<slot name="actions"></slot>
+
+				<!-- Seletor de Itens por Página -->
+				<div v-if="paginacao" class="flex items-center gap-2">
+					<span
+						class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+						>Mostrar:</span
+					>
+					<div class="relative">
+						<select
+							:value="itensPorPaginaAtual"
+							class="appearance-none block w-full pl-3 pr-8 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:text-sm transition-colors cursor-pointer"
+							@change="(e) => mudarItensPorPagina(Number((e.target as HTMLSelectElement).value))"
+						>
+							<option v-for="opt in opcoesItensPorPagina" :key="opt" :value="opt">
+								{{ opt }}
+							</option>
+						</select>
+						<div
+							class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"
+						>
+							<Icon name="lucide:chevron-down" class="h-3 w-3" />
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 
 		<!-- Tabela -->
-		<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+		<div class="overflow-x-auto custom-scrollbar">
 			<UiTable
 				:columns="colunasTable"
 				:data="dadosPaginados"
@@ -219,76 +250,104 @@ const formatarValor = (valor: unknown, coluna: Coluna): string => {
 				:empty-text="emptyText"
 				:empty-icon="emptyIcon"
 				size="md"
-				variant="striped"
+				novariant
+				class="w-full"
 				@sort="handleSort"
 			>
 				<!-- Slots customizados para células -->
 				<template v-for="coluna in colunas" :key="coluna.key" #[`cell-${coluna.key}`]="{ value }">
 					<slot :name="`cell-${coluna.key}`" :value="value">
-						{{ formatarValor(value, coluna) }}
+						<span class="text-sm text-gray-700 dark:text-gray-300">
+							{{ formatarValor(value, coluna) }}
+						</span>
 					</slot>
 				</template>
 			</UiTable>
 		</div>
 
-		<!-- Paginação -->
+		<!-- Footer / Paginação -->
 		<div
-			v-if="paginacao && totalPaginas > 1"
-			class="flex items-center justify-between flex-wrap gap-4"
+			v-if="paginacao && totalPaginas > 0"
+			class="px-4 py-3 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/30 flex flex-col sm:flex-row items-center justify-between gap-4"
 		>
 			<!-- Info -->
-			<div class="text-sm text-gray-600 dark:text-gray-400">
-				Mostrando {{ infoPaginacao.inicio }} até {{ infoPaginacao.fim }} de
-				{{ infoPaginacao.total }} resultados
+			<div class="text-sm text-gray-500 dark:text-gray-400">
+				Mostrando
+				<span class="font-medium text-gray-900 dark:text-white">{{ infoPaginacao.inicio }}</span> a
+				<span class="font-medium text-gray-900 dark:text-white">{{ infoPaginacao.fim }}</span> de
+				<span class="font-medium text-gray-900 dark:text-white">{{ infoPaginacao.total }}</span>
+				resultados
 			</div>
 
 			<!-- Controles -->
-			<div class="flex items-center gap-2">
-				<!-- Primeira página -->
+			<div class="flex items-center gap-1">
 				<UiButton
-					variant="outline"
+					variant="ghost"
 					size="sm"
 					:disabled="paginaAtual === 1"
+					icon="lucide:chevrons-left"
+					title="Primeira página"
 					@click="irParaPagina(1)"
-				>
-					<Icon name="lucide:chevrons-left" class="w-4 h-4" />
-				</UiButton>
+				/>
 
-				<!-- Página anterior -->
 				<UiButton
-					variant="outline"
+					variant="ghost"
 					size="sm"
 					:disabled="paginaAtual === 1"
+					icon="lucide:chevron-left"
+					title="Página anterior"
 					@click="irParaPagina(paginaAtual - 1)"
+				/>
+
+				<!-- Indicador de Página -->
+				<div
+					class="flex items-center mx-2 px-3 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
 				>
-					<Icon name="lucide:chevron-left" class="w-4 h-4" />
-				</UiButton>
+					<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+						{{ paginaAtual }}
+					</span>
+					<span class="text-gray-400 mx-1">/</span>
+					<span class="text-sm text-gray-500 dark:text-gray-400">
+						{{ totalPaginas }}
+					</span>
+				</div>
 
-				<!-- Número da página -->
-				<span class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-					Página {{ paginaAtual }} de {{ totalPaginas }}
-				</span>
-
-				<!-- Próxima página -->
 				<UiButton
-					variant="outline"
+					variant="ghost"
 					size="sm"
 					:disabled="paginaAtual === totalPaginas"
+					icon="lucide:chevron-right"
+					title="Próxima página"
 					@click="irParaPagina(paginaAtual + 1)"
-				>
-					<Icon name="lucide:chevron-right" class="w-4 h-4" />
-				</UiButton>
+				/>
 
-				<!-- Última página -->
 				<UiButton
-					variant="outline"
+					variant="ghost"
 					size="sm"
 					:disabled="paginaAtual === totalPaginas"
+					icon="lucide:chevrons-right"
+					title="Última página"
 					@click="irParaPagina(totalPaginas)"
-				>
-					<Icon name="lucide:chevrons-right" class="w-4 h-4" />
-				</UiButton>
+				/>
 			</div>
 		</div>
 	</div>
 </template>
+
+<style scoped>
+/* Custom Scrollbar for heavy tables */
+.custom-scrollbar::-webkit-scrollbar {
+	height: 8px;
+	width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background-color: rgba(156, 163, 175, 0.3);
+	border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(156, 163, 175, 0.5);
+}
+</style>
