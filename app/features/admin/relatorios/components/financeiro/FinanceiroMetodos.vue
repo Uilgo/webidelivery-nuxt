@@ -9,45 +9,49 @@ import type { MetodosPagamento } from "../../types/financeiro";
 import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
-	metodos: MetodosPagamento;
+	metodos?: MetodosPagamento;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	metodos: undefined,
 	loading: false,
 });
 
 // Calcular percentuais
-const metodosComPercentual = computed(() => [
-	{
-		nome: "Dinheiro",
-		valor: props.metodos.dinheiro.valor_total,
-		percentual: props.metodos.dinheiro.percentual_total,
-		icone: "lucide:banknote",
-		cor: "green",
-	},
-	{
-		nome: "PIX",
-		valor: props.metodos.pix.valor_total,
-		percentual: props.metodos.pix.percentual_total,
-		icone: "lucide:smartphone",
-		cor: "blue",
-	},
-	{
-		nome: "Crédito",
-		valor: props.metodos.credito.valor_total,
-		percentual: props.metodos.credito.percentual_total,
-		icone: "lucide:credit-card",
-		cor: "orange",
-	},
-	{
-		nome: "Débito",
-		valor: props.metodos.debito.valor_total,
-		percentual: props.metodos.debito.percentual_total,
-		icone: "lucide:credit-card",
-		cor: "purple",
-	},
-]);
+const metodosComPercentual = computed(() => {
+	if (!props.metodos) return [];
+	return [
+		{
+			nome: "Dinheiro",
+			valor: props.metodos.dinheiro.valor_total,
+			percentual: props.metodos.dinheiro.percentual_total,
+			icone: "lucide:banknote",
+			cor: "green",
+		},
+		{
+			nome: "PIX",
+			valor: props.metodos.pix.valor_total,
+			percentual: props.metodos.pix.percentual_total,
+			icone: "lucide:smartphone",
+			cor: "blue",
+		},
+		{
+			nome: "Crédito",
+			valor: props.metodos.credito.valor_total,
+			percentual: props.metodos.credito.percentual_total,
+			icone: "lucide:credit-card",
+			cor: "orange",
+		},
+		{
+			nome: "Débito",
+			valor: props.metodos.debito.valor_total,
+			percentual: props.metodos.debito.percentual_total,
+			icone: "lucide:credit-card",
+			cor: "purple",
+		},
+	];
+});
 
 // Cores dos ícones
 const coresIcone: Record<string, string> = {

@@ -10,11 +10,12 @@ import { formatCurrency } from "~/lib/formatters/currency";
 import { formatDateTime } from "~/lib/formatters/date";
 
 interface Props {
-	tabela: readonly TransacaoFinanceira[];
+	tabela?: readonly TransacaoFinanceira[];
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	tabela: undefined,
 	loading: false,
 });
 
@@ -33,6 +34,7 @@ const colunas = [
 
 // Formatar dados para tabela
 const dadosTabela = computed(() => {
+	if (!props.tabela) return [];
 	return [...props.tabela].map((transacao) => ({
 		...transacao,
 		data: formatDateTime(transacao.data),
@@ -58,7 +60,7 @@ const dadosTabela = computed(() => {
 			<UiSkeleton class="h-96 w-full" />
 		</div>
 
-		<div v-else-if="tabela.length === 0" class="py-8">
+		<div v-else-if="!tabela || tabela.length === 0" class="py-8">
 			<UiEmptyState
 				title="Nenhuma transação"
 				description="Não há transações para o período selecionado."

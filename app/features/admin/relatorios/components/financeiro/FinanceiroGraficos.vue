@@ -11,34 +11,40 @@
 import type { GraficosFinanceiro } from "../../types/financeiro";
 
 interface Props {
-	graficos: GraficosFinanceiro;
+	graficos?: GraficosFinanceiro;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	graficos: undefined,
 	loading: false,
 });
 
 /**
  * Converte dados de gráfico readonly para mutável (compatível com Chart.js)
  */
-const dadosFluxoCaixa = computed(() => ({
-	labels: [...props.graficos.fluxo_caixa.labels],
-	datasets: props.graficos.fluxo_caixa.datasets.map((ds) => ({
-		label: ds.label,
-		data: [...ds.data],
-		borderColor: ds.borderColor,
-		backgroundColor: typeof ds.backgroundColor === "string" ? ds.backgroundColor : undefined,
-		fill: ds.fill,
-		tension: ds.tension,
-	})),
-}));
+const dadosFluxoCaixa = computed(() => {
+	if (!props.graficos) return null;
+	return {
+		labels: [...props.graficos.fluxo_caixa.labels],
+		datasets: props.graficos.fluxo_caixa.datasets.map((ds) => ({
+			label: ds.label,
+			data: [...ds.data],
+			borderColor: ds.borderColor,
+			backgroundColor: typeof ds.backgroundColor === "string" ? ds.backgroundColor : undefined,
+			fill: ds.fill,
+			tension: ds.tension,
+		})),
+	};
+});
 
 /**
  * Converte dados de gráfico de linha para gráfico de pizza
  * Extrai o primeiro dataset e suas cores de backgroundColor
  */
 const dadosGraficoPizza = computed(() => {
+	if (!props.graficos) return null;
+
 	const grafico = props.graficos.receita_por_metodo;
 	const primeiroDataset = grafico.datasets[0];
 
@@ -63,17 +69,20 @@ const dadosGraficoPizza = computed(() => {
 /**
  * Converte dados de evolução do lucro para formato mutável
  */
-const dadosEvolucaoLucro = computed(() => ({
-	labels: [...props.graficos.evolucao_lucro.labels],
-	datasets: props.graficos.evolucao_lucro.datasets.map((ds) => ({
-		label: ds.label,
-		data: [...ds.data],
-		borderColor: ds.borderColor,
-		backgroundColor: typeof ds.backgroundColor === "string" ? ds.backgroundColor : undefined,
-		fill: ds.fill,
-		tension: ds.tension,
-	})),
-}));
+const dadosEvolucaoLucro = computed(() => {
+	if (!props.graficos) return null;
+	return {
+		labels: [...props.graficos.evolucao_lucro.labels],
+		datasets: props.graficos.evolucao_lucro.datasets.map((ds) => ({
+			label: ds.label,
+			data: [...ds.data],
+			borderColor: ds.borderColor,
+			backgroundColor: typeof ds.backgroundColor === "string" ? ds.backgroundColor : undefined,
+			fill: ds.fill,
+			tension: ds.tension,
+		})),
+	};
+});
 </script>
 
 <template>
@@ -91,7 +100,7 @@ const dadosEvolucaoLucro = computed(() => ({
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.fluxo_caixa.labels.length === 0" class="py-8">
+			<div v-else-if="!dadosFluxoCaixa || dadosFluxoCaixa.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de fluxo de caixa."
@@ -116,7 +125,7 @@ const dadosEvolucaoLucro = computed(() => ({
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.receita_por_metodo.labels.length === 0" class="py-8">
+			<div v-else-if="!dadosGraficoPizza || dadosGraficoPizza.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de receita por método."
@@ -141,7 +150,7 @@ const dadosEvolucaoLucro = computed(() => ({
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.evolucao_lucro.labels.length === 0" class="py-8">
+			<div v-else-if="!dadosEvolucaoLucro || dadosEvolucaoLucro.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de evolução do lucro."

@@ -10,53 +10,58 @@ import { formatCurrency } from "~/lib/formatters/currency";
 import { formatNumber } from "~/lib/formatters/number";
 
 interface Props {
-	resumo: ResumoMarketing;
+	resumo?: ResumoMarketing;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	resumo: undefined,
 	loading: false,
 });
 
 // Estatísticas formatadas
-const estatisticas = computed(() => [
-	{
-		label: "Total de Cupons Ativos",
-		valor: formatNumber(props.resumo.total_cupons_ativos),
-		icone: "lucide:ticket",
-		cor: "blue",
-	},
-	{
-		label: "Total de Cupons Usados",
-		valor: formatNumber(props.resumo.total_cupons_usados),
-		icone: "lucide:check-circle",
-		cor: "green",
-	},
-	{
-		label: "Desconto Total Concedido",
-		valor: formatCurrency(props.resumo.desconto_total_concedido),
-		icone: "lucide:percent",
-		cor: "red",
-	},
-	{
-		label: "Receita com Cupons",
-		valor: formatCurrency(props.resumo.receita_com_cupons),
-		icone: "lucide:dollar-sign",
-		cor: "green",
-	},
-	{
-		label: "Economia Média por Cliente",
-		valor: formatCurrency(props.resumo.economia_media_cliente),
-		icone: "lucide:piggy-bank",
-		cor: "purple",
-	},
-	{
-		label: "Taxa de Conversão Geral",
-		valor: `${props.resumo.taxa_conversao_geral.toFixed(1)}%`,
-		icone: "lucide:trending-up",
-		cor: "blue",
-	},
-]);
+const estatisticas = computed(() => {
+	if (!props.resumo) return [];
+
+	return [
+		{
+			label: "Total de Cupons Ativos",
+			valor: formatNumber(props.resumo.total_cupons_ativos),
+			icone: "lucide:ticket",
+			cor: "blue",
+		},
+		{
+			label: "Total de Cupons Usados",
+			valor: formatNumber(props.resumo.total_cupons_usados),
+			icone: "lucide:check-circle",
+			cor: "green",
+		},
+		{
+			label: "Desconto Total Concedido",
+			valor: formatCurrency(props.resumo.desconto_total_concedido),
+			icone: "lucide:percent",
+			cor: "red",
+		},
+		{
+			label: "Receita com Cupons",
+			valor: formatCurrency(props.resumo.receita_com_cupons),
+			icone: "lucide:dollar-sign",
+			cor: "green",
+		},
+		{
+			label: "Economia Média por Cliente",
+			valor: formatCurrency(props.resumo.economia_media_cliente),
+			icone: "lucide:piggy-bank",
+			cor: "purple",
+		},
+		{
+			label: "Taxa de Conversão Geral",
+			valor: `${props.resumo.taxa_conversao_geral.toFixed(1)}%`,
+			icone: "lucide:trending-up",
+			cor: "blue",
+		},
+	];
+});
 
 // Cores dos ícones
 const coresIcone: Record<string, string> = {
@@ -102,7 +107,7 @@ const coresIcone: Record<string, string> = {
 			</div>
 
 			<!-- Cupom Mais Usado -->
-			<div v-if="resumo.cupom_mais_usado" class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+			<div v-if="resumo?.cupom_mais_usado" class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
 				<div class="flex items-center gap-3">
 					<div
 						class="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full"

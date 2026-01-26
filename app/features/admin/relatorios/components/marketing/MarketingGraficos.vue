@@ -11,16 +11,68 @@
 import type { GraficosMarketing } from "../../types/marketing";
 
 interface Props {
-	graficos: GraficosMarketing;
+	graficos?: GraficosMarketing;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	graficos: undefined,
 	loading: false,
 });
 
-// Usar props para evitar warning
-const _ = props;
+// Transformar dados para ChartPie (precisa de data: number[] ao invés de datasets)
+const dadosCuponsPorTipo = computed(() => {
+	if (!props.graficos) return null;
+
+	const grafico = props.graficos.cupons_por_tipo;
+	return {
+		labels: [...grafico.labels] as string[],
+		data: grafico.datasets[0]?.data ? ([...grafico.datasets[0].data] as number[]) : [],
+		colors: grafico.datasets[0]?.backgroundColor
+			? Array.isArray(grafico.datasets[0].backgroundColor)
+				? ([...grafico.datasets[0].backgroundColor] as string[])
+				: [grafico.datasets[0].backgroundColor as string]
+			: undefined,
+	};
+});
+
+// Transformar dados para ChartLine (remover readonly)
+const dadosUsoAoLongoTempo = computed(() => {
+	if (!props.graficos) return null;
+
+	const grafico = props.graficos.uso_ao_longo_tempo;
+	return {
+		labels: [...grafico.labels] as string[],
+		datasets: grafico.datasets.map((dataset) => ({
+			label: dataset.label,
+			data: [...dataset.data] as number[],
+			backgroundColor:
+				typeof dataset.backgroundColor === "string" ? dataset.backgroundColor : undefined,
+			borderColor: dataset.borderColor,
+			fill: dataset.fill,
+			tension: dataset.tension,
+		})),
+	};
+});
+
+// Transformar dados para ChartLine (remover readonly)
+const dadosEconomiaGerada = computed(() => {
+	if (!props.graficos) return null;
+
+	const grafico = props.graficos.economia_gerada;
+	return {
+		labels: [...grafico.labels] as string[],
+		datasets: grafico.datasets.map((dataset) => ({
+			label: dataset.label,
+			data: [...dataset.data] as number[],
+			backgroundColor:
+				typeof dataset.backgroundColor === "string" ? dataset.backgroundColor : undefined,
+			borderColor: dataset.borderColor,
+			fill: dataset.fill,
+			tension: dataset.tension,
+		})),
+	};
+});
 </script>
 
 <template>
@@ -38,7 +90,7 @@ const _ = props;
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.cupons_por_tipo.labels.length === 0" class="py-8">
+			<div v-else-if="!graficos || graficos.cupons_por_tipo.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de cupons por tipo."
@@ -47,7 +99,7 @@ const _ = props;
 				/>
 			</div>
 
-			<UiChartPie v-else :data="graficos.cupons_por_tipo" />
+			<UiChartPie v-else-if="dadosCuponsPorTipo" v-bind="dadosCuponsPorTipo" />
 		</UiCard>
 
 		<!-- Uso ao Longo do Tempo -->
@@ -63,7 +115,7 @@ const _ = props;
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.uso_ao_longo_tempo.labels.length === 0" class="py-8">
+			<div v-else-if="!graficos || graficos.uso_ao_longo_tempo.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de uso ao longo do tempo."
@@ -72,7 +124,7 @@ const _ = props;
 				/>
 			</div>
 
-			<UiChartLine v-else :data="graficos.uso_ao_longo_tempo" />
+			<UiChartLine v-else-if="dadosUsoAoLongoTempo" v-bind="dadosUsoAoLongoTempo" />
 		</UiCard>
 
 		<!-- Economia Gerada -->
@@ -88,7 +140,7 @@ const _ = props;
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="graficos.economia_gerada.labels.length === 0" class="py-8">
+			<div v-else-if="!graficos || graficos.economia_gerada.labels.length === 0" class="py-8">
 				<UiEmptyState
 					title="Sem dados"
 					description="Não há dados de economia gerada."
@@ -97,7 +149,7 @@ const _ = props;
 				/>
 			</div>
 
-			<UiChartLine v-else :data="graficos.economia_gerada" />
+			<UiChartLine v-else-if="dadosEconomiaGerada" v-bind="dadosEconomiaGerada" />
 		</UiCard>
 	</div>
 </template>

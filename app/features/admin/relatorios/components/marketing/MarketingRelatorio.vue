@@ -37,27 +37,19 @@ const isInitialLoad = computed(() => loading.value && !dados.value);
 			variant="error"
 		/>
 
-		<!-- Dados carregados -->
-		<template v-else-if="dados">
+		<!-- Conteúdo (sempre renderiza, componentes internos gerenciam empty states) -->
+		<template v-else>
 			<!-- KPIs -->
-			<MarketingKpis :kpis="dados.kpis" :loading="loading" />
+			<MarketingKpis :kpis="dados?.kpis" :loading="loading" />
 
 			<!-- Desempenho de Cupons -->
-			<MarketingCupons :cupons="dados.cupons" :loading="loading" />
+			<MarketingCupons :cupons="dados?.cupons" :loading="loading" />
 
 			<!-- Gráficos -->
-			<MarketingGraficos :graficos="dados.graficos" :loading="loading" />
+			<MarketingGraficos :graficos="dados?.graficos" :loading="loading" />
 
 			<!-- Resumo -->
-			<MarketingResumo :resumo="dados.resumo" :loading="loading" />
+			<MarketingResumo :resumo="dados?.resumo" :loading="loading" />
 		</template>
-
-		<!-- Estado vazio -->
-		<UiEmptyState
-			v-else
-			title="Nenhum dado de marketing"
-			description="Não há dados de cupons ou campanhas para o período selecionado."
-			icon="lucide:ticket"
-		/>
 	</div>
 </template>

@@ -38,30 +38,22 @@ const isInitialLoad = computed(() => loading.value && !dados.value);
 			variant="error"
 		/>
 
-		<!-- Dados carregados -->
-		<template v-else-if="dados">
+		<!-- Conteúdo (sempre renderiza, componentes internos gerenciam empty states) -->
+		<template v-else>
 			<!-- KPIs -->
-			<FinanceiroKpis :kpis="dados.kpis" :loading="loading" />
+			<FinanceiroKpis :kpis="dados?.kpis" :loading="loading" />
 
 			<!-- Métodos de Pagamento -->
-			<FinanceiroMetodos :metodos="dados.metodos_pagamento" :loading="loading" />
+			<FinanceiroMetodos :metodos="dados?.metodos_pagamento" :loading="loading" />
 
 			<!-- Gráficos -->
-			<FinanceiroGraficos :graficos="dados.graficos" :loading="loading" />
+			<FinanceiroGraficos :graficos="dados?.graficos" :loading="loading" />
 
 			<!-- Tabela de Transações -->
-			<FinanceiroTabela :tabela="dados.tabela" :loading="loading" />
+			<FinanceiroTabela :tabela="dados?.tabela" :loading="loading" />
 
 			<!-- Resumo -->
-			<FinanceiroResumo :resumo="dados.resumo" :loading="loading" />
+			<FinanceiroResumo :resumo="dados?.resumo" :loading="loading" />
 		</template>
-
-		<!-- Estado vazio -->
-		<UiEmptyState
-			v-else
-			title="Nenhum dado financeiro"
-			description="Não há transações para o período selecionado."
-			icon="lucide:dollar-sign"
-		/>
 	</div>
 </template>

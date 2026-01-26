@@ -9,16 +9,18 @@
 import type { KpisFinanceiro } from "../../types/financeiro";
 
 interface Props {
-	kpis: KpisFinanceiro;
+	kpis?: KpisFinanceiro;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	kpis: undefined,
 	loading: false,
 });
 
 // Converter KPIs para array
 const kpisArray = computed(() => {
+	if (!props.kpis) return [];
 	return [
 		props.kpis.receita_bruta,
 		props.kpis.receita_liquida,

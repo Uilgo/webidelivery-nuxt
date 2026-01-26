@@ -9,11 +9,12 @@ import type { DadosCupons } from "../../types/marketing";
 import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
-	cupons: DadosCupons;
+	cupons?: DadosCupons;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	cupons: undefined,
 	loading: false,
 });
 
@@ -30,6 +31,8 @@ const colunas = [
 
 // Formatar dados para tabela
 const dadosTabela = computed(() => {
+	if (!props.cupons) return [];
+
 	return [...props.cupons.desempenho].map((cupom) => ({
 		...cupom,
 		desconto_total: formatCurrency(cupom.desconto_total),
@@ -55,7 +58,7 @@ const dadosTabela = computed(() => {
 				<UiSkeleton v-for="i in 5" :key="i" class="h-16 w-full" />
 			</div>
 
-			<div v-else-if="cupons.mais_usados.length === 0" class="py-8">
+			<div v-else-if="!cupons || cupons.mais_usados.length === 0" class="py-8">
 				<UiEmptyState
 					title="Nenhum cupom usado"
 					description="Não há cupons utilizados no período selecionado."
@@ -102,7 +105,7 @@ const dadosTabela = computed(() => {
 				<UiSkeleton class="h-64 w-full" />
 			</div>
 
-			<div v-else-if="cupons.desempenho.length === 0" class="py-8">
+			<div v-else-if="!cupons || cupons.desempenho.length === 0" class="py-8">
 				<UiEmptyState
 					title="Nenhum dado disponível"
 					description="Não há dados de desempenho para exibir."

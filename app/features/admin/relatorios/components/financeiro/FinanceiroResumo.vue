@@ -10,68 +10,73 @@ import { formatCurrency } from "~/lib/formatters/currency";
 import { formatNumber } from "~/lib/formatters/number";
 
 interface Props {
-	resumo: ResumoFinanceiro;
+	resumo?: ResumoFinanceiro;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	resumo: undefined,
 	loading: false,
 });
 
 // Estatísticas formatadas
-const estatisticas = computed(() => [
-	{
-		label: "Total de Transações",
-		valor: formatNumber(props.resumo.total_transacoes),
-		icone: "lucide:hash",
-		cor: "blue",
-	},
-	{
-		label: "Receita Bruta",
-		valor: formatCurrency(props.resumo.receita_bruta),
-		icone: "lucide:dollar-sign",
-		cor: "blue",
-	},
-	{
-		label: "Receita Líquida",
-		valor: formatCurrency(props.resumo.receita_liquida),
-		icone: "lucide:trending-up",
-		cor: "green",
-	},
-	{
-		label: "Total Descontos",
-		valor: formatCurrency(props.resumo.total_descontos),
-		icone: "lucide:percent",
-		cor: "red",
-	},
-	{
-		label: "Taxas de Entrega",
-		valor: formatCurrency(props.resumo.total_taxas_entrega),
-		icone: "lucide:truck",
-		cor: "blue",
-	},
-	{
-		label: "Lucro Estimado",
-		valor: formatCurrency(props.resumo.lucro_estimado),
-		icone: "lucide:piggy-bank",
-		cor: "purple",
-	},
-	{
-		label: "Margem de Lucro",
-		valor: `${props.resumo.margem_lucro.toFixed(1)}%`,
-		icone: "lucide:percent",
-		cor: "green",
-	},
-	{
-		label: "Ticket Médio",
-		valor: formatCurrency(props.resumo.ticket_medio),
-		icone: "lucide:trending-up",
-		cor: "green",
-	},
-]);
+const estatisticas = computed(() => {
+	if (!props.resumo) return [];
+	return [
+		{
+			label: "Total de Transações",
+			valor: formatNumber(props.resumo.total_transacoes),
+			icone: "lucide:hash",
+			cor: "blue",
+		},
+		{
+			label: "Receita Bruta",
+			valor: formatCurrency(props.resumo.receita_bruta),
+			icone: "lucide:dollar-sign",
+			cor: "blue",
+		},
+		{
+			label: "Receita Líquida",
+			valor: formatCurrency(props.resumo.receita_liquida),
+			icone: "lucide:trending-up",
+			cor: "green",
+		},
+		{
+			label: "Total Descontos",
+			valor: formatCurrency(props.resumo.total_descontos),
+			icone: "lucide:percent",
+			cor: "red",
+		},
+		{
+			label: "Taxas de Entrega",
+			valor: formatCurrency(props.resumo.total_taxas_entrega),
+			icone: "lucide:truck",
+			cor: "blue",
+		},
+		{
+			label: "Lucro Estimado",
+			valor: formatCurrency(props.resumo.lucro_estimado),
+			icone: "lucide:piggy-bank",
+			cor: "purple",
+		},
+		{
+			label: "Margem de Lucro",
+			valor: `${props.resumo.margem_lucro.toFixed(1)}%`,
+			icone: "lucide:percent",
+			cor: "green",
+		},
+		{
+			label: "Ticket Médio",
+			valor: formatCurrency(props.resumo.ticket_medio),
+			icone: "lucide:trending-up",
+			cor: "green",
+		},
+	];
+});
 
 // Método mais usado
 const metodoMaisUsado = computed(() => {
+	if (!props.resumo) return "";
 	const distribuicao = props.resumo.distribuicao_pagamentos;
 	let metodo = "";
 	let quantidade = 0;

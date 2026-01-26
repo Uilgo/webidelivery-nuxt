@@ -9,16 +9,19 @@
 import type { KpisMarketing } from "../../types/marketing";
 
 interface Props {
-	kpis: KpisMarketing;
+	kpis?: KpisMarketing;
 	loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+	kpis: undefined,
 	loading: false,
 });
 
 // Converter KPIs para array
 const kpisArray = computed(() => {
+	if (!props.kpis) return [];
+
 	return [
 		props.kpis.cupons_usados,
 		props.kpis.desconto_total,
