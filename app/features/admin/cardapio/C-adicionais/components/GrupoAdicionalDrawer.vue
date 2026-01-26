@@ -6,10 +6,19 @@
  * Usa prop isEdicao para alternar entre modos.
  */
 
-import type { GrupoAdicionalComputado } from "../../../types/adicional";
+import type {
+	GrupoAdicionalComputado,
+	GrupoAdicionalUpdateData,
+	GrupoAdicionalCreateData,
+} from "../../../types/adicional";
 import { useGruposAdicionaisActions } from "../composables/useGruposAdicionaisActions";
 import { useToast } from "~/composables/ui/useToast";
 import GrupoAdicionalForm from "./GrupoAdicionalForm.vue";
+
+import type {
+	CreateGrupoAdicionalFormData,
+	UpdateGrupoAdicionalFormData,
+} from "#shared/schemas/cardapio/grupo-adicional";
 
 // Props do componente
 interface Props {
@@ -61,19 +70,35 @@ const handleSubmit = async (): Promise<void> => {
 };
 
 // Handler do formulário (chamado após validação)
-const handleFormSubmit = async (data: {
-	nome: string;
-	descricao: string;
-	min_selecao: number;
-	max_selecao: number;
-	obrigatorio: boolean;
-	ativo: boolean;
-}): Promise<void> => {
+const handleFormSubmit = async (
+	data: CreateGrupoAdicionalFormData | UpdateGrupoAdicionalFormData,
+): Promise<void> => {
 	let success = false;
+
+	// Sanitização dos dados
+	const payload = {
+		...data,
+		max_selecao: data.max_selecao || undefined,
+	};
 
 	if (props.isEdicao && props.grupo) {
 		// Modo edição
-		success = await update(props.grupo.id, data);
+		if (!data.nome || data.min_selecao === undefined || data.max_selecao === undefined) {
+			toast.add({ title: "Erro", description: "Dados incompletos", color: "error" });
+			return;
+		}
+
+		// Payload explícito para satisfazer a interface estrita
+		const updatePayload: GrupoAdicionalUpdateData = {
+			nome: data.nome,
+			descricao: data.descricao,
+			min_selecao: data.min_selecao,
+			max_selecao: payload.max_selecao, // Já sanitizado no payload acima
+			obrigatorio: data.obrigatorio ?? false,
+			ativo: data.ativo ?? true,
+		};
+
+		success = await update(props.grupo.id, updatePayload);
 
 		if (success) {
 			toast.add({
@@ -84,8 +109,7 @@ const handleFormSubmit = async (data: {
 		}
 	} else {
 		// Modo criação
-		const id = await create(data);
-		success = !!id;
+		success = !!(await create(payload as GrupoAdicionalCreateData));
 
 		if (success) {
 			toast.add({

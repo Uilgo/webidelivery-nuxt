@@ -73,7 +73,10 @@ export default defineNuxtPlugin(() => {
 				`,
 				)
 				.eq("id", userId)
-				.single()) as { data: PerfilComEstabelecimento | null; error: unknown | null };
+				.single()) as {
+				data: PerfilComEstabelecimento | null;
+				error: unknown | null;
+			};
 
 			if (error) {
 				const errorMessage =

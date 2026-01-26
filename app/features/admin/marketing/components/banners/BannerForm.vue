@@ -337,7 +337,7 @@ const handleCancel = (): void => {
 					:model-value="values.titulo"
 					placeholder="Ex: Promoção de Verão"
 					maxlength="100"
-					@update:model-value="setFieldValue('titulo', $event)"
+					@update:model-value="setFieldValue('titulo', $event as string)"
 				/>
 			</UiFormField>
 
@@ -361,7 +361,7 @@ const handleCancel = (): void => {
 				:model-value="values.imagem_url || ''"
 				label="Imagem do Banner"
 				:disabled="props.loading"
-				@update:model-value="setFieldValue('imagem_url', $event)"
+				@update:model-value="setFieldValue('imagem_url', $event as string)"
 			/>
 
 			<!-- Link do Banner -->
@@ -379,16 +379,16 @@ const handleCancel = (): void => {
 				<!-- Cor de Fundo do Banner (APENAS para tipo "texto") -->
 				<UiColorPicker
 					v-if="showColorCustomization"
-					:model-value="values.cor_fundo"
+					:model-value="values.cor_fundo || '#ffffff'"
 					label="Cor de Fundo do Banner"
-					@update:model-value="setFieldValue('cor_fundo', $event)"
+					@update:model-value="setFieldValue('cor_fundo', $event as string)"
 				/>
 
 				<!-- Cor do Texto -->
 				<UiColorPicker
-					:model-value="values.cor_texto"
+					:model-value="values.cor_texto || '#ffffff'"
 					label="Cor do Texto"
-					@update:model-value="setFieldValue('cor_texto', $event)"
+					@update:model-value="setFieldValue('cor_texto', $event as string)"
 				/>
 			</div>
 
@@ -400,9 +400,9 @@ const handleCancel = (): void => {
 			<!-- Posição do Texto -->
 			<UiFormField name="texto_posicao" label="Posição do Texto">
 				<UiSelect
-					:model-value="values.texto_posicao"
+					:model-value="values.texto_posicao || 'centro'"
 					:options="posicaoTextoOptions"
-					@update:model-value="setFieldValue('texto_posicao', $event)"
+					@update:model-value="setFieldValue('texto_posicao', $event as any)"
 				/>
 			</UiFormField>
 		</div>

@@ -80,11 +80,21 @@ const drawerSize = computed((): "lg" => {
 /**
  * Handler para submissão do formulário
  */
-const handleSubmit = async (data: CategoriaCreateData | CategoriaUpdateData): Promise<void> => {
+const handleSubmit = async (
+	data:
+		| (Omit<CategoriaCreateData, "categoria_pai_id"> & { categoria_pai_id?: string | null })
+		| (Omit<CategoriaUpdateData, "categoria_pai_id"> & { categoria_pai_id?: string | null }),
+): Promise<void> => {
 	try {
+		// Sanitização dos dados para garantir compatibilidade de tipos
+		const payload = {
+			...data,
+			categoria_pai_id: data.categoria_pai_id || undefined,
+		};
+
 		if (isCreateMode.value) {
 			// Criar nova categoria
-			const categoriaId = await create(data as CategoriaCreateData);
+			const categoriaId = await create(payload as CategoriaCreateData);
 
 			if (categoriaId) {
 				toast.add({
@@ -111,7 +121,7 @@ const handleSubmit = async (data: CategoriaCreateData | CategoriaUpdateData): Pr
 			}
 		} else if (isEditMode.value && props.categoria) {
 			// Atualizar categoria existente
-			const success = await update(props.categoria.id, data as CategoriaUpdateData);
+			const success = await update(props.categoria.id, payload as CategoriaUpdateData);
 
 			if (success) {
 				toast.add({

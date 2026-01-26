@@ -3,6 +3,8 @@
  *
  * Composable para gerenciar exportação de relatórios (PDF, Excel, CSV).
  * Suporta exportação de dados tabulares e gráficos.
+ *
+ * Excel é gerado via API server-side para evitar problemas com módulos Node.js no browser.
  */
 
 import type { OpcoesExportacao } from "../types/relatorios";
@@ -134,93 +136,110 @@ export const useRelatoriosExportar = () => {
 		doc.save(nomeArquivo);
 	};
 
+	// ========================================
+	// MÉTODOS DE EXPORTAÇÃO EXCEL
+	// ========================================
+
 	/**
-	 * Exporta dados para Excel
+	 * Exporta dados para Excel via API server-side
+	 *
+	 * Usa API route para gerar Excel no servidor, evitando problemas
+	 * com módulos Node.js (fs, crypto, stream) no browser.
 	 */
 	const exportarExcel = async (dados: DadosExportacao, opcoes: OpcoesExportacao): Promise<void> => {
-		// Import dinâmico de xlsx-populate (apenas quando necessário)
-		// Isso evita erro "Buffer is not defined" no browser durante inicialização
-		const XlsxPopulate = await import("xlsx-populate");
+		try {
+			exportando.value = true;
+			erro.value = null;
 
-		// Criar workbook
-		const workbook = await XlsxPopulate.default.fromBlankAsync();
-		const sheet = workbook.sheet(0);
+			// Preparar dados para enviar à API
+			const colunas: Array<{ key: string; label: string; width?: number }> = [];
+			const linhasFormatadas: Array<Record<string, unknown>> = [];
 
-		// Renomear sheet
-		sheet.name(dados.titulo.substring(0, 31)); // Excel limita a 31 caracteres
+			// Processar primeira tabela (se houver)
+			if (dados.tabelas && dados.tabelas.length > 0) {
+				const tabela = dados.tabelas[0];
 
-		let currentRow = 1;
+				// Verificar se a tabela existe
+				if (!tabela) {
+					throw new Error("Tabela inválida para exportação");
+				}
 
-		// Adicionar título
-		sheet.cell(`A${currentRow}`).value(dados.titulo).style({
-			bold: true,
-			fontSize: 16,
-		});
-		currentRow += 2;
-
-		// Adicionar período
-		if (dados.periodo) {
-			sheet.cell(`A${currentRow}`).value(`Período: ${dados.periodo}`).style({
-				italic: true,
-			});
-			currentRow += 2;
-		}
-
-		// Adicionar tabelas
-		if (opcoes.incluir_tabelas && dados.tabelas && dados.tabelas.length > 0) {
-			for (const tabela of dados.tabelas) {
-				// Cabeçalhos
+				// Criar colunas
 				tabela.colunas.forEach((coluna, index) => {
-					const cellAddress = `${String.fromCharCode(65 + index)}${currentRow}`;
-					const cell = sheet.cell(cellAddress);
-					cell.value(coluna);
-					cell.style({
-						bold: true,
-						fill: "3b82f6", // Azul primário
-						fontColor: "ffffff",
-						horizontalAlignment: "center",
+					colunas.push({
+						key: `col_${index}`,
+						label: coluna,
+						width: 15,
 					});
 				});
-				currentRow++;
 
-				// Dados
+				// Criar linhas
 				tabela.linhas.forEach((linha) => {
+					const linhaObj: Record<string, unknown> = {};
 					linha.forEach((valor, index) => {
-						const cellAddress = `${String.fromCharCode(65 + index)}${currentRow}`;
-						sheet.cell(cellAddress).value(valor);
+						linhaObj[`col_${index}`] = valor;
 					});
-					currentRow++;
-				});
-
-				currentRow += 2; // Espaço entre tabelas
-			}
-		}
-
-		// Ajustar largura das colunas
-		if (dados.tabelas && dados.tabelas.length > 0) {
-			const primeiraTabela = dados.tabelas[0];
-			if (primeiraTabela) {
-				primeiraTabela.colunas.forEach((_, index) => {
-					const colLetter = String.fromCharCode(65 + index);
-					sheet.column(colLetter).width(15);
+					linhasFormatadas.push(linhaObj);
 				});
 			}
-		}
 
-		// Salvar arquivo
-		const nomeArquivo = opcoes.nome_arquivo || gerarNomeArquivo("excel");
-		const blob = await workbook.outputAsync();
+			// Chamar API para gerar Excel
+			const nomeArquivo = opcoes.nome_arquivo?.replace(".xlsx", "") || gerarNomeArquivo("excel");
 
-		// Download no browser
-		if (import.meta.client) {
-			const url = URL.createObjectURL(blob as Blob);
+			const response = await $fetch("/api/relatorios/exportar-excel", {
+				method: "POST",
+				body: {
+					titulo: dados.titulo,
+					colunas,
+					dados: linhasFormatadas,
+					nomeArquivo,
+				},
+			});
+
+			// Converter resposta para Blob
+			// A API retorna um Buffer que precisa ser convertido
+			let blob: Blob;
+
+			if (response instanceof Blob) {
+				blob = response;
+			} else if (response instanceof ArrayBuffer) {
+				blob = new Blob([response], {
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				});
+			} else {
+				// Se vier como objeto com data array (Buffer serializado)
+				const bufferData = (response as { type?: string; data?: number[] }).data;
+				if (bufferData) {
+					const uint8Array = new Uint8Array(bufferData);
+					blob = new Blob([uint8Array], {
+						type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					});
+				} else {
+					throw new Error("Formato de resposta inválido");
+				}
+			}
+
+			// Criar link para download
+			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = nomeArquivo;
+			link.download = `${nomeArquivo}.xlsx`;
+			document.body.appendChild(link);
 			link.click();
-			URL.revokeObjectURL(url);
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Erro ao exportar Excel:", error);
+			erro.value = "Erro ao exportar para Excel";
+			throw error;
+		} finally {
+			exportando.value = false;
 		}
 	};
+
+	// ========================================
+	// MÉTODOS DE EXPORTAÇÃO CSV
+	// ========================================
 
 	/**
 	 * Exporta dados para CSV

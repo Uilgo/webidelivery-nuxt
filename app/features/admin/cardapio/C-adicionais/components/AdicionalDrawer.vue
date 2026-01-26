@@ -6,10 +6,18 @@
  * Usa prop isEdicao para alternar entre modos.
  */
 
-import type { AdicionalComputado } from "../../../types/adicional";
+import type {
+	AdicionalComputado,
+	AdicionalUpdateData,
+	AdicionalCreateData,
+} from "../../../types/adicional";
 import { useAdicionaisActions } from "../composables/useAdicionaisActions";
 import { useToast } from "~/composables/ui/useToast";
 import AdicionalForm from "./AdicionalForm.vue";
+import type {
+	CreateAdicionalFormData,
+	UpdateAdicionalFormData,
+} from "#shared/schemas/cardapio/adicional";
 
 // Props do componente
 interface Props {
@@ -63,18 +71,25 @@ const handleSubmit = async (): Promise<void> => {
 };
 
 // Handler do formulário (chamado após validação)
-const handleFormSubmit = async (data: {
-	grupo_id: string;
-	nome: string;
-	descricao: string;
-	preco: number;
-	ativo: boolean;
-}): Promise<void> => {
+const handleFormSubmit = async (
+	data: CreateAdicionalFormData | UpdateAdicionalFormData,
+): Promise<void> => {
 	let success = false;
 
 	if (props.isEdicao && props.adicional) {
-		// Modo edição
-		success = await update(props.adicional.id, data);
+		// Modo edição: validar campos obrigatórios para update
+		if (!data.nome || data.preco === undefined) {
+			toast.add({ title: "Erro", description: "Dados incompletos", color: "error" });
+			return;
+		}
+
+		// Payload explícito usando interface do backend
+		const payload: AdicionalUpdateData = {
+			...data,
+			nome: data.nome!,
+			preco: data.preco!,
+		};
+		success = await update(props.adicional.id, payload);
 
 		if (success) {
 			toast.add({
@@ -85,8 +100,24 @@ const handleFormSubmit = async (data: {
 		}
 	} else {
 		// Modo criação
-		const id = await create(data);
-		success = !!id;
+		const payload = {
+			...data,
+			nome: data.nome!,
+			preco: data.preco!,
+			grupo_id: "grupo_id" in data ? (data.grupo_id as string) : props.grupoIdPadrao || undefined,
+		};
+
+		if (!payload.grupo_id) {
+			toast.add({
+				title: "Erro",
+				description: "Grupo de adicionais não identificado",
+				color: "error",
+			});
+			return;
+		}
+
+		// Cast payload para backend type
+		success = !!(await create(payload as AdicionalCreateData));
 
 		if (success) {
 			toast.add({

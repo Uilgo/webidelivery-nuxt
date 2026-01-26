@@ -223,6 +223,15 @@ export const onboardingHorariosSchema = z.object({
 						const [aberturaH, aberturaM] = periodo.horario_abertura.split(":").map(Number);
 						const [fechamentoH, fechamentoM] = periodo.horario_fechamento.split(":").map(Number);
 
+						if (
+							aberturaH === undefined ||
+							aberturaM === undefined ||
+							fechamentoH === undefined ||
+							fechamentoM === undefined
+						) {
+							return false;
+						}
+
 						const aberturaMinutos = aberturaH * 60 + aberturaM;
 						const fechamentoMinutos = fechamentoH * 60 + fechamentoM;
 

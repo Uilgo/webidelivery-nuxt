@@ -376,16 +376,13 @@ export const useOnboarding = (): UseOnboardingReturn => {
 		if (!finalizeSuccess) return;
 
 		// Atualizar store local com dados completos + status do onboarding
-		if (estabelecimentoStore.estabelecimento) {
-			estabelecimentoStore.$patch({
-				estabelecimento: {
-					...estabelecimentoStore.estabelecimento,
-					nome: formData.value.step1.nome,
-					slug: formData.value.step1.slug,
-					onboarding: true, // ✅ MARCAR ONBOARDING COMO CONCLUÍDO
-				},
-			});
-		}
+		estabelecimentoStore.$patch((state) => {
+			if (state.estabelecimento) {
+				state.estabelecimento.nome = formData.value.step1.nome;
+				state.estabelecimento.slug = formData.value.step1.slug;
+				state.estabelecimento.onboarding = true; // ✅ MARCAR ONBOARDING COMO CONCLUÍDO
+			}
+		});
 
 		// Limpar dados do localStorage após conclusão bem-sucedida
 		clearFormData();

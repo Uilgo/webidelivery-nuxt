@@ -45,7 +45,9 @@ const validationSchema = computed(() =>
 /**
  * Valores iniciais do formulário
  */
-const initialValues = computed(() => {
+const initialValues = computed<
+	Partial<CreateGrupoAdicionalFormData & UpdateGrupoAdicionalFormData>
+>(() => {
 	if (props.grupo && props.isEdicao) {
 		return {
 			nome: props.grupo.nome,
@@ -72,7 +74,9 @@ const initialValues = computed(() => {
  */
 const { handleSubmit, errors, defineField, resetForm, meta } = useForm({
 	validationSchema,
-	initialValues,
+	initialValues: initialValues as unknown as Partial<
+		CreateGrupoAdicionalFormData & UpdateGrupoAdicionalFormData
+	>,
 });
 
 /**
@@ -151,11 +155,12 @@ defineExpose({
 			<!-- Descrição -->
 			<UiFormField label="Descrição" :error="errors.descricao" help="Descrição opcional do grupo">
 				<UiTextarea
-					v-model="descricao"
+					:model-value="descricao || ''"
 					v-bind="descricaoAttrs"
 					placeholder="Descreva o grupo de adicionais..."
 					:rows="3"
 					:max-length="500"
+					@update:model-value="descricao = $event"
 				/>
 			</UiFormField>
 		</div>
@@ -174,12 +179,13 @@ defineExpose({
 					help="Quantidade mínima que o cliente deve selecionar"
 				>
 					<UiInput
-						v-model.number="min_selecao"
+						:model-value="min_selecao ?? undefined"
 						v-bind="minSelecaoAttrs"
 						type="number"
 						min="0"
 						placeholder="0"
 						:error="!!errors.min_selecao"
+						@update:model-value="min_selecao = $event === '' ? undefined : Number($event)"
 					/>
 				</UiFormField>
 
@@ -190,12 +196,13 @@ defineExpose({
 					help="Quantidade máxima que o cliente pode selecionar"
 				>
 					<UiInput
-						v-model.number="max_selecao"
+						:model-value="max_selecao ?? undefined"
 						v-bind="maxSelecaoAttrs"
 						type="number"
 						min="1"
 						placeholder="1"
 						:error="!!errors.max_selecao"
+						@update:model-value="max_selecao = $event === '' ? undefined : Number($event)"
 					/>
 				</UiFormField>
 			</div>
@@ -218,7 +225,11 @@ defineExpose({
 							</label>
 							<p class="text-xs text-[var(--text-muted)]">Cliente deve escolher</p>
 						</div>
-						<UiSwitch id="obrigatorio" v-model="obrigatorio" />
+						<UiSwitch
+							id="obrigatorio"
+							:model-value="obrigatorio || false"
+							@update:model-value="obrigatorio = $event"
+						/>
 					</div>
 				</div>
 
@@ -231,7 +242,11 @@ defineExpose({
 							</label>
 							<p class="text-xs text-[var(--text-muted)]">Disponível para uso</p>
 						</div>
-						<UiSwitch id="ativo" v-model="ativo" />
+						<UiSwitch
+							id="ativo"
+							:model-value="ativo || false"
+							@update:model-value="ativo = $event"
+						/>
 					</div>
 				</div>
 			</div>

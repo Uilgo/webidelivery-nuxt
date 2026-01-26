@@ -320,9 +320,9 @@ defineExpose({
 						Pelo menos uma variação é obrigatória
 					</p>
 					<p class="mt-1 text-sm text-info-700 dark:text-info-300">
-						As variações definem os preços do produto. Exemplos: <strong>Pizza</strong> (Pequena ou "P",
-						Média ou "M", Grande ou "G", Gigante ou "GG") ou <strong>Açaí</strong> (300ml, 500ml, 700ml, 1L). Se o produto
-						tiver preço único, use apenas uma variação "Padrão".
+						As variações definem os preços do produto. Exemplos: <strong>Pizza</strong> (Pequena ou
+						"P", Média ou "M", Grande ou "G", Gigante ou "GG") ou <strong>Açaí</strong> (300ml,
+						500ml, 700ml, 1L). Se o produto tiver preço único, use apenas uma variação "Padrão".
 					</p>
 				</div>
 			</div>

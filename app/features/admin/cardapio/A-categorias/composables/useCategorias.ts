@@ -201,7 +201,7 @@ export const useCategorias = (): UseCategoriasReturn => {
 		isModalOpen: modalComposable.isOpen,
 		modalMode: modalComposable.mode,
 		selectedCategoria: modalComposable.selected,
-		categoriaPai: readonly(categoriaPai), // ✅ NOVO: expõe categoria pai
+		categoriaPai, // ✅ NOVO: expõe categoria pai
 		openCreate: modalComposable.openCreate,
 		openEdit: modalComposable.openEdit,
 		openView: modalComposable.openView,

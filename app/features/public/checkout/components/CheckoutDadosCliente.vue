@@ -70,7 +70,7 @@ const formatarTelefone = (event: Event) => {
 /**
  * Formata CPF enquanto digita usando formatter centralizado
  */
-const formatarCPFInput = (event: Event) => {
+const formatarCPF = (event: Event) => {
 	const input = event.target as HTMLInputElement;
 	const apenasNumeros = parseCPF(input.value);
 	form.cpf = formatCPF(apenasNumeros);

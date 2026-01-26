@@ -42,7 +42,12 @@ export const isValidEmail = (email: string): boolean => {
 		return false;
 	}
 
+	// Valida comprimento das partes
 	const [localPart, domain] = parts;
+
+	if (!localPart || !domain) {
+		return false;
+	}
 
 	// Local part não pode ter mais de 64 caracteres
 	if (localPart.length > 64) {
@@ -57,7 +62,7 @@ export const isValidEmail = (email: string): boolean => {
 	// Domain parts não podem ter mais de 63 caracteres
 	const domainParts = domain.split(".");
 	for (const part of domainParts) {
-		if (part.length > 63) {
+		if (part && part.length > 63) {
 			return false;
 		}
 	}
@@ -70,10 +75,6 @@ export const isValidEmail = (email: string): boolean => {
  *
  * @param email - Email a ser validado
  * @returns null se válido, mensagem de erro se inválido
- *
- * @example
- * validateEmail("usuario@exemplo.com") // null
- * validateEmail("usuario") // "Formato de e-mail inválido"
  */
 export const validateEmail = (email: string): string | null => {
 	if (!email || email.length === 0) {
@@ -94,6 +95,10 @@ export const validateEmail = (email: string): string | null => {
 	}
 
 	const [localPart, domain] = parts;
+
+	if (!localPart || !domain) {
+		return "Formato de e-mail inválido";
+	}
 
 	if (localPart.length > 64) {
 		return "Parte local do e-mail deve ter no máximo 64 caracteres";
@@ -130,7 +135,7 @@ export const normalizeEmail = (email: string): string => {
  */
 export const getEmailDomain = (email: string): string | null => {
 	const parts = email.split("@");
-	return parts.length === 2 ? parts[1] : null;
+	return parts.length === 2 && parts[1] ? parts[1] : null;
 };
 
 /**
