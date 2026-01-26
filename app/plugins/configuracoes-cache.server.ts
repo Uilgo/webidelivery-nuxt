@@ -4,6 +4,8 @@
  * Carrega e cacheia os dados de configurações do estabelecimento no servidor.
  * Garante que todas as tabs tenham acesso aos dados sem múltiplas requisições.
  *
+ * ⚡ OTIMIZAÇÃO: Cache com TTL de 10 minutos (configurações mudam raramente)
+ *
  * Dados carregados:
  * - Dados da empresa (nome, slug, descrição, logo, whatsapp)
  * - Horários de funcionamento
@@ -11,6 +13,8 @@
  * - Configurações de frete e entrega
  * - Personalização (tema/cores)
  */
+
+import { createCacheWithTTL } from "~/lib/utils/cache";
 
 export default defineNuxtPlugin(async () => {
 	// Só executa em rotas de configurações
@@ -36,11 +40,20 @@ export default defineNuxtPlugin(async () => {
 	}
 
 	try {
-		// Buscar dados completos do estabelecimento
-		const { data: estabelecimento, error } = await supabase
-			.from("estabelecimentos")
-			.select(
-				`
+		const estabelecimentoId = estabelecimentoStore.estabelecimento.id;
+
+		// ⚡ Cache para configurações (TTL: 10 minutos - mudam raramente)
+		const configCache = createCacheWithTTL<typeof estabelecimento>(
+			`config-${estabelecimentoId}`,
+			10 * 60 * 1000, // 10 minutos
+		);
+
+		// Buscar dados completos do estabelecimento com cache
+		const estabelecimento = await configCache.get(async () => {
+			const { data, error } = await supabase
+				.from("estabelecimentos")
+				.select(
+					`
 				id,
 				nome,
 				slug,
@@ -53,19 +66,22 @@ export default defineNuxtPlugin(async () => {
 				config_tema,
 				onboarding
 			`,
-			)
-			.eq("id", estabelecimentoStore.estabelecimento.id)
-			.single();
+				)
+				.eq("id", estabelecimentoId)
+				.single();
 
-		if (error) {
-			console.error("[configuracoes-cache] Erro ao buscar configurações:", error);
-			return;
-		}
+			if (error) {
+				console.error("[configuracoes-cache] Erro ao buscar configurações:", error);
+				throw error;
+			}
 
-		if (!estabelecimento) {
-			console.warn("[configuracoes-cache] Estabelecimento não encontrado");
-			return;
-		}
+			if (!data) {
+				console.warn("[configuracoes-cache] Estabelecimento não encontrado");
+				throw new Error("Estabelecimento não encontrado");
+			}
+
+			return data;
+		});
 
 		// Atualizar store com dados completos
 		estabelecimentoStore.$patch((state) => {

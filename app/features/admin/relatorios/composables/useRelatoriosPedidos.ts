@@ -26,7 +26,12 @@ export const useRelatoriosPedidos = () => {
 	/**
 	 * Buscar dados de pedidos do período
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
+	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
+		// Se já tem dados e não é refresh forçado, não buscar novamente
+		if (dados.value && !forceRefresh) {
+			return;
+		}
+
 		try {
 			loading.value = true;
 			error.value = null;
@@ -414,11 +419,11 @@ export const useRelatoriosPedidos = () => {
 	};
 
 	/**
-	 * Refresh dos dados
+	 * Refresh dos dados (força nova busca)
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value);
+		await fetchDados(filtros.periodo.value, true);
 	};
 
 	return {

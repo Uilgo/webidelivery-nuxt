@@ -10,7 +10,7 @@
  * NOTA: Auto-refresh temporal removido intencionalmente.
  * Dados são atualizados apenas:
  * 1. No carregamento inicial da página
- * 2. Quando filtros mudam (watch automático)
+ * 2. Quando filtros mudam (watch automático com debounce)
  * 3. Quando usuário clica no botão refresh manual
  */
 
@@ -21,6 +21,7 @@ import type {
 	DashboardNotificacao,
 } from "~/features/admin/dashboard/types/dashboard";
 import type { DashboardPeriodo } from "~/features/admin/dashboard/types/filters";
+import { useDebounceFn } from "@vueuse/core";
 import { useDashboardFilters } from "./useDashboardFilters";
 import { useDashboardKpis } from "./useDashboardKpis";
 import { useDashboardCharts } from "./useDashboardCharts";
@@ -302,38 +303,40 @@ export const useDashboard = (): UseDashboardReturn => {
 	const dashboardCacheLoaded = useState<boolean>("admin-dashboard-cache-loaded", () => false);
 
 	if (!isInitialized.value) {
-		// Só roda no lado do cliente
+		// Só roda no lado do cliente E apenas na rota do dashboard
 		if (import.meta.client) {
-			isInitialized.value = true;
+			const route = useRoute();
 
-			// Carrega dados iniciais APENAS se não vieram do servidor
-			onMounted(async () => {
-				// Se o cache já foi carregado (mesmo que vazio), não mostrar loading
-				if (dashboardCacheLoaded.value) {
-					loading.value = false;
-					return;
-				}
+			// ✅ CORREÇÃO: Só inicializar watchers se estiver na rota do dashboard
+			if (route.path.includes("/admin/dashboard")) {
+				isInitialized.value = true;
 
-				// Caso contrário (SPA puro), carrega
-				await carregarDados();
-			});
+				// Carrega dados iniciais APENAS se não vieram do servidor
+				onMounted(async () => {
+					// Se o cache já foi carregado (mesmo que vazio), não mostrar loading
+					if (dashboardCacheLoaded.value) {
+						loading.value = false;
+						return;
+					}
 
-			// Watchers globais para filtros - recarrega quando filtros mudam
-			watch(
-				() => filtersComposableKpis.filters.value,
-				async () => {
+					// Caso contrário (SPA puro), carrega
+					await carregarDados();
+				});
+
+				// Watchers globais para filtros com debounce - recarrega quando filtros mudam
+				// Debounce de 300ms evita requisições excessivas durante digitação
+				const debouncedCarregarKpis = useDebounceFn(async () => {
 					await carregarKpis();
-				},
-				{ deep: true },
-			);
+				}, 300);
 
-			watch(
-				() => filtersComposableCharts.filters.value,
-				async () => {
+				const debouncedCarregarCharts = useDebounceFn(async () => {
 					await carregarCharts();
-				},
-				{ deep: true },
-			);
+				}, 300);
+
+				watch(() => filtersComposableKpis.filters.value, debouncedCarregarKpis, { deep: true });
+
+				watch(() => filtersComposableCharts.filters.value, debouncedCarregarCharts, { deep: true });
+			}
 		}
 	}
 

@@ -4,10 +4,13 @@
  * Busca os dados de marketing (cupons e banners) NO SERVIDOR e popula o useState.
  * Quando o cliente hidrata, os dados já estão disponíveis = carregamento instantâneo.
  *
+ * ⚡ OTIMIZAÇÃO: Cache com TTL de 3 minutos (cupons/banners mudam ocasionalmente)
+ *
  * IMPORTANTE: Os dados são protegidos por RLS, então só carrega se o usuário estiver autenticado.
  */
 
 import type { CupomCompleto, BannerCompleto } from "#shared/types/marketing";
+import { createCacheWithTTL } from "~/lib/utils/cache";
 
 export default defineNuxtPlugin(async () => {
 	// Só executar no server-side
@@ -61,55 +64,69 @@ export default defineNuxtPlugin(async () => {
 
 		const estabelecimentoId = perfil.estabelecimento_id;
 
-		// Buscar cupons e banners em paralelo
-		const [cuponsRes, bannersRes] = await Promise.all([
-			// Cupons com estatísticas de uso
-			supabase
-				.from("cupons")
-				.select(
-					`
-					*,
-					estabelecimentos!inner(nome)
-				`,
-				)
-				.eq("estabelecimento_id", estabelecimentoId)
-				.order("created_at", { ascending: false }),
+		// ⚡ Cache para cupons e banners (TTL: 3 minutos)
+		const cuponsCache = createCacheWithTTL<CupomCompleto[]>(
+			`cupons-${estabelecimentoId}`,
+			3 * 60 * 1000, // 3 minutos
+		);
 
-			// Banners ordenados por ordem
-			supabase
-				.from("banners")
-				.select(
-					`
+		const bannersCache = createCacheWithTTL<BannerCompleto[]>(
+			`banners-${estabelecimentoId}`,
+			3 * 60 * 1000, // 3 minutos
+		);
+
+		// Buscar cupons e banners em paralelo com cache
+		const [processedCupons, processedBanners] = await Promise.all([
+			// Cupons com cache
+			cuponsCache.get(async () => {
+				const { data, error } = await supabase
+					.from("cupons")
+					.select(
+						`
 					*,
 					estabelecimentos!inner(nome)
 				`,
-				)
-				.eq("estabelecimento_id", estabelecimentoId)
-				.order("ordem", { ascending: true }),
+					)
+					.eq("estabelecimento_id", estabelecimentoId)
+					.order("created_at", { ascending: false });
+
+				if (error) throw error;
+
+				return (data || []).map((cupom) => ({
+					...cupom,
+					estabelecimento_nome: cupom.estabelecimentos.nome,
+				})) as CupomCompleto[];
+			}),
+
+			// Banners com cache
+			bannersCache.get(async () => {
+				const { data, error } = await supabase
+					.from("banners")
+					.select(
+						`
+					*,
+					estabelecimentos!inner(nome)
+				`,
+					)
+					.eq("estabelecimento_id", estabelecimentoId)
+					.order("ordem", { ascending: true });
+
+				if (error) throw error;
+
+				return (data || []).map((banner) => ({
+					...banner,
+					estabelecimento_nome: banner.estabelecimentos.nome,
+				})) as BannerCompleto[];
+			}),
 		]);
 
-		// Processar cupons
-		if (!cuponsRes.error && cuponsRes.data) {
-			const processedCupons = cuponsRes.data.map((cupom) => ({
-				...cupom,
-				estabelecimento_nome: cupom.estabelecimentos.nome,
-			})) as CupomCompleto[];
-			cupons.value = processedCupons;
-			// Atualizar tabData para contadores
-			tabData.value.cupons = processedCupons;
-		}
+		// Atualizar estados
+		cupons.value = processedCupons;
+		tabData.value.cupons = processedCupons;
 		cuponsCacheLoaded.value = true;
 
-		// Processar banners
-		if (!bannersRes.error && bannersRes.data) {
-			const processedBanners = bannersRes.data.map((banner) => ({
-				...banner,
-				estabelecimento_nome: banner.estabelecimentos.nome,
-			})) as BannerCompleto[];
-			banners.value = processedBanners;
-			// Atualizar tabData para contadores
-			tabData.value.banners = processedBanners;
-		}
+		banners.value = processedBanners;
+		tabData.value.banners = processedBanners;
 		bannersCacheLoaded.value = true;
 
 		// Marcar cache geral como carregado

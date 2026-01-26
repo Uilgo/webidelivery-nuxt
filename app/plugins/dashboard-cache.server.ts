@@ -114,12 +114,15 @@ export default defineNuxtPlugin({
 			const dataFim = hoje.toISOString().split("T")[0];
 
 			// Buscar TODOS os pedidos de hoje (para KPIs e Charts) - FILTRADO POR ESTABELECIMENTO
+			// Limitado a 100 pedidos mais recentes para performance
 			const { data: pedidosHoje, error: pedidosError } = await supabase
 				.from("pedidos")
 				.select("*")
 				.eq("estabelecimento_id", estabelecimentoId)
 				.gte("created_at", `${dataInicio}T00:00:00-03:00`)
-				.lte("created_at", `${dataFim}T23:59:59.999-03:00`);
+				.lte("created_at", `${dataFim}T23:59:59.999-03:00`)
+				.order("created_at", { ascending: false })
+				.limit(100);
 
 			if (pedidosError) throw pedidosError;
 

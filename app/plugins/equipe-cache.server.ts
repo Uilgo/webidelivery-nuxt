@@ -64,10 +64,15 @@ export default defineNuxtPlugin(async () => {
 				.eq("estabelecimento_id", estabelecimentoId)
 				.order("created_at", { ascending: false }),
 
-			// Convites pendentes
+			// Convites pendentes com JOIN para buscar criador em uma única query
 			supabase
 				.from("codigos_convite")
-				.select("*")
+				.select(
+					`
+					*,
+					criador:perfis!criado_por(id, nome, sobrenome)
+				`,
+				)
 				.eq("estabelecimento_id", estabelecimentoId)
 				.eq("tipo", "membro_equipe")
 				.eq("usado", false)
@@ -80,33 +85,14 @@ export default defineNuxtPlugin(async () => {
 		}
 		membrosCacheLoaded.value = true;
 
-		// Processar convites
+		// Processar convites (agora com criador já incluído via JOIN)
 		if (!convitesRes.error && convitesRes.data) {
-			// Buscar nomes dos criadores dos convites
-			const criadoresIds = [...new Set(convitesRes.data.map((c) => c.criado_por).filter(Boolean))];
-
-			if (criadoresIds.length > 0) {
-				const { data: criadoresData } = await supabase
-					.from("perfis")
-					.select("id, nome, sobrenome")
-					.in("id", criadoresIds);
-
-				// Criar mapa de criadores
-				const criadoresMap = new Map(
-					(criadoresData || []).map((criador) => [
-						criador.id,
-						`${criador.nome} ${criador.sobrenome}`,
-					]),
-				);
-
-				// Mapear convites com nomes dos criadores
-				convites.value = convitesRes.data.map((convite) => ({
-					...convite,
-					criador_nome: convite.criado_por ? criadoresMap.get(convite.criado_por) : undefined,
-				})) as Convite[];
-			} else {
-				convites.value = convitesRes.data as Convite[];
-			}
+			convites.value = convitesRes.data.map((convite) => ({
+				...convite,
+				criador_nome: convite.criador
+					? `${convite.criador.nome} ${convite.criador.sobrenome}`
+					: undefined,
+			})) as Convite[];
 		}
 		convitesCacheLoaded.value = true;
 

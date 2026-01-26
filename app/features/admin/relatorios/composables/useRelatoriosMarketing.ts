@@ -27,7 +27,12 @@ export const useRelatoriosMarketing = () => {
 	/**
 	 * Busca dados do relatório de marketing
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
+	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
+		// Se já tem dados e não é refresh forçado, não buscar novamente
+		if (dados.value && !forceRefresh) {
+			return;
+		}
+
 		loading.value = true;
 		error.value = null;
 
@@ -374,11 +379,11 @@ export const useRelatoriosMarketing = () => {
 	};
 
 	/**
-	 * Refresh dos dados
+	 * Refresh dos dados (força nova busca)
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value);
+		await fetchDados(filtros.periodo.value, true);
 	};
 
 	return {
