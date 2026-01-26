@@ -166,21 +166,6 @@ async function handleLogout(): Promise<void> {
 }
 
 /**
- * Handler para navegação otimizada
- */
-const handleNavigation = async (targetRoute: string): Promise<void> => {
-	// Fechar sidebar no mobile antes da navegação
-	emit("close");
-
-	// Navegação otimizada - não esperar se já estamos na rota
-	const currentPath = route.path;
-	if (currentPath === targetRoute) return;
-
-	// Usar navigateTo com replace para evitar adicionar ao histórico desnecessariamente
-	await navigateTo(targetRoute, { replace: false });
-};
-
-/**
  * Handler para fechar sidebar (mobile)
  */
 const handleCloseSidebar = (): void => {
@@ -240,11 +225,11 @@ const handleCloseSidebar = (): void => {
 
 			<!-- Menu de Navegação -->
 			<nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-				<button
+				<NuxtLink
 					v-for="item in menuItems"
 					:key="item.route"
 					v-memo="[route.path, isCollapsed]"
-					type="button"
+					:to="item.route"
 					class="w-full flex items-center gap-4 px-4 py-3 text-left rounded-lg transition-colors duration-200"
 					:class="[
 						route.path === item.route
@@ -253,7 +238,7 @@ const handleCloseSidebar = (): void => {
 						isCollapsed ? 'justify-center' : '',
 					]"
 					:title="isCollapsed ? item.label : undefined"
-					@click="handleNavigation(item.route)"
+					@click="emit('close')"
 				>
 					<Icon
 						:name="item.icon"
@@ -261,7 +246,7 @@ const handleCloseSidebar = (): void => {
 						class="flex-shrink-0"
 					/>
 					<span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
-				</button>
+				</NuxtLink>
 			</nav>
 
 			<!-- Rodapé: Card do Usuário -->

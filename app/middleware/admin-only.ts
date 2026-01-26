@@ -4,12 +4,11 @@
  * Garante que apenas usuários com cargos administrativos
  * possam acessar o painel admin.
  *
- * IMPORTANTE:
- * - Deve ser aplicado em TODAS as rotas /admin/*
- * - Verifica cargo do usuário no banco de dados
- * - Bloqueia acesso de entregadores ao painel
- * - Permite: admin, gerente, staff
+ * OTIMIZAÇÃO: Usa Pinia Store para cache e evita requisições
+ * duplicadas ao banco de dados em cada navegação.
  */
+
+import { useUserStore } from "~/stores/user";
 
 export default defineNuxtRouteMiddleware(async (to) => {
 	// Só aplicar em rotas /admin/*
@@ -18,30 +17,32 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	}
 
 	const user = useSupabaseUser();
-	const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
+	const userStore = useUserStore();
 
-	// Se não há usuário, deixar o middleware global lidar
-	if (!userId) {
-		return;
+	// Se não há usuário autenticado no Supabase
+	if (!user.value) {
+		return navigateTo("/login");
 	}
 
-	const supabase = useSupabaseClient();
+	// Sincronizar usuário do Supabase com o Store se necessário
+	if (!userStore.authUser || userStore.authUser.id !== user.value.id) {
+		userStore.setAuthUser(user.value);
+	}
 
 	try {
-		// Buscar cargo do usuário
-		const { data: perfil, error } = await supabase
-			.from("perfis")
-			.select("cargo")
-			.eq("id", userId)
-			.single();
-
-		if (error) {
-			console.error("[AdminOnly] ❌ Erro ao buscar perfil:", error);
-			return navigateTo("/login");
+		// Verificar se precisa carregar/atualizar o perfil
+		if (userStore.shouldRefreshProfile) {
+			await userStore.fetchProfile();
 		}
 
+		const perfil = userStore.profile;
+
 		if (!perfil) {
-			console.warn("[AdminOnly] ⚠️ Perfil não encontrado");
+			console.warn("[AdminOnly] ⚠️ Perfil não encontrado ou erro ao carregar");
+			// Se falhou ao carregar perfil mesmo com usuário logado
+			if (userStore.profileError) {
+				console.error("[AdminOnly] Erro no perfil:", userStore.profileError);
+			}
 			return navigateTo("/login");
 		}
 
@@ -62,7 +63,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 			// Redirecionar entregador para página específica (futura)
 			if (perfil.cargo === "entregador") {
 				// TODO: Criar página /entregador/entregas
-				return navigateTo("/login");
+				return navigateTo("/login"); // Fallback
 			}
 
 			// Outros cargos não permitidos

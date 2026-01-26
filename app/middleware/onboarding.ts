@@ -4,12 +4,11 @@
  * Garante que usuários com onboarding pendente sejam redirecionados
  * para /admin/onboarding antes de acessar outras páginas do painel.
  *
- * IMPORTANTE:
- * - Executa no servidor E no cliente
- * - Bloqueia acesso a /admin/* (exceto /admin/onboarding) quando onboarding = false
- * - Permite acesso a /admin/onboarding mesmo com onboarding = false
- * - Redireciona para /admin/dashboard quando onboarding = true e está em /admin/onboarding
+ * OTIMIZAÇÃO: Usa Pinia Store (User + Estabelecimento) para cache.
  */
+
+import { useUserStore } from "~/stores/user";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 export default defineNuxtRouteMiddleware(async (to) => {
 	// Só aplicar em rotas /admin/*
@@ -17,33 +16,32 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		return;
 	}
 
-	const user = useSupabaseUser();
-	const userId = user.value?.id ?? (user.value as { sub?: string } | null)?.sub;
-
-	// Se não há usuário, deixar o middleware de auth lidar
-	if (!userId) {
-		return;
-	}
-
-	const supabase = useSupabaseClient();
+	const userStore = useUserStore();
+	const estabelecimentoStore = useEstabelecimentoStore();
 
 	try {
-		// Buscar status do onboarding
-		const { data: perfil } = await supabase
-			.from("perfis")
-			.select(
-				`
-				estabelecimento_id,
-				estabelecimentos:estabelecimento_id (
-					onboarding
-				)
-			`,
-			)
-			.eq("id", userId)
-			.single();
+		// 1. Garantir que o perfil do usuário esteja carregado
+		// (Geralmente carregado pelo admin-only, mas verificamos por segurança)
+		if (userStore.shouldRefreshProfile) {
+			const user = useSupabaseUser();
+			if (user.value) {
+				if (!userStore.authUser || userStore.authUser.id !== user.value.id) {
+					userStore.setAuthUser(user.value);
+				}
+				await userStore.fetchProfile();
+			}
+		}
 
-		// Se não tem estabelecimento, redirecionar para /admin/onboarding
-		if (!perfil?.estabelecimento_id) {
+		// Se não tem perfil carregado (mesmo após tentativa), deixa o admin-only lidar ou redireciona
+		if (!userStore.profile) {
+			// Não faz nada aqui, admin-only vai barrar se não tiver permissão/perfil
+			return;
+		}
+
+		const establishmentId = userStore.profile.estabelecimento_id;
+
+		// 2. Se não tem estabelecimento vinculado
+		if (!establishmentId) {
 			if (to.path !== "/admin/onboarding") {
 				console.warn("[OnboardingMiddleware] ⚠️ Estabelecimento não encontrado");
 				return navigateTo("/admin/onboarding");
@@ -51,17 +49,16 @@ export default defineNuxtRouteMiddleware(async (to) => {
 			return;
 		}
 
-		const estabelecimentos = perfil.estabelecimentos as
-			| { onboarding: boolean }
-			| { onboarding: boolean }[]
-			| null;
+		// 3. Garantir que os dados do estabelecimento estejam carregados
+		// Verifica se precisa carregar (tempo expirado ou ID diferente do atual)
+		if (estabelecimentoStore.shouldRefresh || estabelecimentoStore.id !== establishmentId) {
+			await estabelecimentoStore.fetchEstabelecimento(establishmentId);
+		}
 
-		// Normalizar para objeto único (caso venha como array)
-		const estabelecimento = Array.isArray(estabelecimentos)
-			? estabelecimentos[0]
-			: estabelecimentos;
+		// Verificar status do onboarding no store
+		const onboardingConcluido = estabelecimentoStore.estabelecimento?.onboarding === true;
 
-		const onboardingConcluido = estabelecimento?.onboarding === true;
+		// 4. Lógica de Redirecionamento
 
 		// Se onboarding NÃO foi concluído
 		if (!onboardingConcluido) {
