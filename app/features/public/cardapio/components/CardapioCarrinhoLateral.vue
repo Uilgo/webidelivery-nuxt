@@ -52,7 +52,7 @@ const finalizarPedido = () => {
 <template>
 	<aside class="sticky top-4 h-fit cardapio-theme-bridge">
 		<div
-			class="bg-[var(--cardapio-background)] rounded-2xl shadow-xl overflow-hidden border border-[var(--cardapio-muted)]"
+			class="bg-[var(--cardapio-background)] rounded-2xl shadow-xl overflow-hidden border-[var(--cardapio-muted)]"
 		>
 			<!-- Header Premium com Gradiente -->
 			<div
