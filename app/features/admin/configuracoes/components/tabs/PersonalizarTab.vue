@@ -30,21 +30,38 @@ const onSubmit = handleSubmit(async (formValues) => {
 });
 
 // Cores padrão do sistema
-const CORES_PADRAO = {
-	cor_primaria: "#3b82f6",
-	cor_secundaria: "#10b981",
-	cor_fundo: "#ffffff",
-	cor_texto: "#1f2937",
-	// Status (Novos Defaults)
-	cor_sucesso: "#10b981", // Emerald 500
-	cor_erro: "#ef4444", // Red 500
-	cor_aviso: "#f59e0b", // Amber 500
-	// Gradientes (Novos Defaults)
-	gradiente_promo_inicio: "#f43f5e", // Rose 500
-	gradiente_promo_fim: "#dc2626", // Red 600
-	gradiente_destaque_inicio: "#fbbf24", // Amber 400
-	gradiente_destaque_fim: "#eab308", // Yellow 500
-} as const;
+// Cores padrão do sistema
+// Função para ler variáveis CSS (executada no client)
+const getCssVar = (name: string, fallback: string) => {
+	if (import.meta.server) return fallback;
+	const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+	return value || fallback;
+};
+
+// Cores padrão (Computed para ser reativo/dinâmico se necessário, mas aqui só lemos no mount/uso)
+const getCoresPadrao = () => ({
+	cor_primaria: getCssVar("--default-cardapio-primary", "#fb923c"),
+	cor_secundaria: getCssVar("--default-cardapio-secondary", "#0d9488"),
+	cor_fundo: getCssVar("--default-cardapio-bg", "#020618"), // Slate 950
+	cor_texto: getCssVar("--default-cardapio-text", "#f1f5f9"), // Slate 100
+	// Status
+	cor_sucesso: getCssVar("--default-cardapio-success", "#16a34a"),
+	cor_erro: getCssVar("--default-cardapio-danger", "#dc2626"),
+	cor_aviso: getCssVar("--default-cardapio-warning", "#f59e0b"),
+	// Gradientes
+	gradiente_promo_inicio: getCssVar("--default-cardapio-promo-from", "#dc2626"),
+	gradiente_promo_fim: getCssVar("--default-cardapio-promo-to", "#991b1b"),
+	gradiente_destaque_inicio: getCssVar("--default-cardapio-highlight-from", "#f59e0b"),
+	gradiente_destaque_fim: getCssVar("--default-cardapio-highlight-to", "#d97706"),
+});
+
+// Referência reativa para usar no template/script
+const CORES_PADRAO = ref(getCoresPadrao());
+
+// Atualizar cores ao montar (caso CSS demore a carregar)
+onMounted(() => {
+	CORES_PADRAO.value = getCoresPadrao();
+});
 
 // Watch para carregar dados iniciais
 watch(
@@ -55,16 +72,21 @@ watch(
 				values: {
 					...newTema,
 					// Garante que campos opcionais tenham valor (ou fallback para o padrão se undefined)
-					cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.cor_sucesso,
-					cor_erro: newTema.cor_erro || CORES_PADRAO.cor_erro,
-					cor_aviso: newTema.cor_aviso || CORES_PADRAO.cor_aviso,
+					cor_primaria: newTema.cor_primaria || CORES_PADRAO.value.cor_primaria,
+					cor_secundaria: newTema.cor_secundaria || CORES_PADRAO.value.cor_secundaria,
+					cor_fundo: newTema.cor_fundo || CORES_PADRAO.value.cor_fundo,
+					cor_texto: newTema.cor_texto || CORES_PADRAO.value.cor_texto,
+					cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.value.cor_sucesso,
+					cor_erro: newTema.cor_erro || CORES_PADRAO.value.cor_erro,
+					cor_aviso: newTema.cor_aviso || CORES_PADRAO.value.cor_aviso,
 					gradiente_promo_inicio:
-						newTema.gradiente_promo_inicio || CORES_PADRAO.gradiente_promo_inicio,
-					gradiente_promo_fim: newTema.gradiente_promo_fim || CORES_PADRAO.gradiente_promo_fim,
+						newTema.gradiente_promo_inicio || CORES_PADRAO.value.gradiente_promo_inicio,
+					gradiente_promo_fim:
+						newTema.gradiente_promo_fim || CORES_PADRAO.value.gradiente_promo_fim,
 					gradiente_destaque_inicio:
-						newTema.gradiente_destaque_inicio || CORES_PADRAO.gradiente_destaque_inicio,
+						newTema.gradiente_destaque_inicio || CORES_PADRAO.value.gradiente_destaque_inicio,
 					gradiente_destaque_fim:
-						newTema.gradiente_destaque_fim || CORES_PADRAO.gradiente_destaque_fim,
+						newTema.gradiente_destaque_fim || CORES_PADRAO.value.gradiente_destaque_fim,
 				},
 			});
 			nextTick(() => {
@@ -77,8 +99,8 @@ watch(
 
 // Opções de estilo de botões
 const estilosBotoes = [
-	{ value: "rounded", label: "Arredondado", icon: "lucide:circle" },
-	{ value: "square", label: "Quadrado", icon: "lucide:square" },
+	{ value: "rounded", label: "Arredondado", description: "Bordas circulares e suaves" },
+	{ value: "square", label: "Quadrado", description: "Bordas retas e precisas" },
 ] as const;
 
 // Estado interno
@@ -91,8 +113,8 @@ const secoesAbertas = ref({
 /**
  * Reseta uma cor específica para o padrão
  */
-const resetarCor = (campo: keyof typeof CORES_PADRAO) => {
-	setFieldValue(campo, CORES_PADRAO[campo]);
+const resetarCor = (campo: keyof typeof CORES_PADRAO.value) => {
+	setFieldValue(campo, CORES_PADRAO.value[campo]);
 };
 
 /**
@@ -100,6 +122,38 @@ const resetarCor = (campo: keyof typeof CORES_PADRAO) => {
  */
 const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 	secoesAbertas.value[secao] = !secoesAbertas.value[secao];
+};
+
+/**
+ * Reseta o tema para os padrões do sistema (remove personalização)
+ */
+const resetarTemaCompleto = async () => {
+	if (!confirm("Tem certeza? Isso irá restaurar todas as cores para o padrão original do sistema."))
+		return;
+
+	// Define os valores como undefined/null para o backend limpar ou usar defaults
+	const temaResetado = {
+		cor_primaria: CORES_PADRAO.value.cor_primaria,
+		cor_secundaria: CORES_PADRAO.value.cor_secundaria,
+		cor_fundo: CORES_PADRAO.value.cor_fundo,
+		cor_texto: CORES_PADRAO.value.cor_texto,
+		cor_sucesso: CORES_PADRAO.value.cor_sucesso,
+		cor_erro: CORES_PADRAO.value.cor_erro,
+		cor_aviso: CORES_PADRAO.value.cor_aviso,
+		// Resetar gradientes também
+		gradiente_promo_inicio: CORES_PADRAO.value.gradiente_promo_inicio,
+		gradiente_promo_fim: CORES_PADRAO.value.gradiente_promo_fim,
+		gradiente_destaque_inicio: CORES_PADRAO.value.gradiente_destaque_inicio,
+		gradiente_destaque_fim: CORES_PADRAO.value.gradiente_destaque_fim,
+		estilo_botoes: "rounded" as const,
+		layout_cardapio: "grid" as const,
+	};
+
+	// Atualiza o formulário visualmente
+	resetForm({ values: temaResetado });
+
+	// Salva no banco
+	await onSubmit();
 };
 </script>
 
@@ -423,22 +477,11 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1 transition-all hover:scale-105"
-											:value="values.cor_primaria"
-											@input="
-												(e) => setFieldValue('cor_primaria', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_primaria"
-											placeholder="#3B82F6"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_primaria', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_primaria || ''"
+										placeholder="#3B82F6"
+										@update:model-value="(v) => setFieldValue('cor_primaria', String(v))"
+									/>
 								</div>
 
 								<!-- Cor Secundária -->
@@ -456,22 +499,11 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1 transition-all hover:scale-105"
-											:value="values.cor_secundaria"
-											@input="
-												(e) => setFieldValue('cor_secundaria', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_secundaria"
-											placeholder="#10B981"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_secundaria', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_secundaria || ''"
+										placeholder="#10B981"
+										@update:model-value="(v) => setFieldValue('cor_secundaria', String(v))"
+									/>
 								</div>
 
 								<!-- Cor de Fundo -->
@@ -489,22 +521,11 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1 transition-all hover:scale-105"
-											:value="values.cor_fundo"
-											@input="
-												(e) => setFieldValue('cor_fundo', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_fundo"
-											placeholder="#FFFFFF"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_fundo', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_fundo || ''"
+										placeholder="#FFFFFF"
+										@update:model-value="(v) => setFieldValue('cor_fundo', String(v))"
+									/>
 								</div>
 
 								<!-- Cor de Texto -->
@@ -522,22 +543,11 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1 transition-all hover:scale-105"
-											:value="values.cor_texto"
-											@input="
-												(e) => setFieldValue('cor_texto', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_texto"
-											placeholder="#1F2937"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_texto', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_texto || ''"
+										placeholder="#1F2937"
+										@update:model-value="(v) => setFieldValue('cor_texto', String(v))"
+									/>
 								</div>
 							</div>
 						</section>
@@ -579,21 +589,10 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1"
-											:value="values.cor_sucesso"
-											@input="
-												(e) => setFieldValue('cor_sucesso', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_sucesso"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_sucesso', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_sucesso || ''"
+										@update:model-value="(v) => setFieldValue('cor_sucesso', String(v))"
+									/>
 								</div>
 
 								<!-- Erro -->
@@ -611,21 +610,10 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1"
-											:value="values.cor_erro"
-											@input="
-												(e) => setFieldValue('cor_erro', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_erro"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_erro', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_erro || ''"
+										@update:model-value="(v) => setFieldValue('cor_erro', String(v))"
+									/>
 								</div>
 
 								<!-- Aviso -->
@@ -643,21 +631,10 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 											Resetar
 										</button>
 									</div>
-									<div class="flex gap-2">
-										<input
-											type="color"
-											class="w-12 h-11 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer p-1"
-											:value="values.cor_aviso"
-											@input="
-												(e) => setFieldValue('cor_aviso', (e.target as HTMLInputElement).value)
-											"
-										/>
-										<UiInput
-											:model-value="values.cor_aviso"
-											class="flex-1"
-											@update:model-value="(v) => setFieldValue('cor_aviso', String(v))"
-										/>
-									</div>
+									<UiColorPicker
+										:model-value="values.cor_aviso || ''"
+										@update:model-value="(v) => setFieldValue('cor_aviso', String(v))"
+									/>
 								</div>
 							</div>
 						</section>
@@ -688,8 +665,8 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 								class="grid grid-cols-1 md:grid-cols-2 gap-6 pl-3"
 							>
 								<!-- Promoção -->
-								<div class="col-span-2 grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-xl">
-									<div class="col-span-2 flex justify-between items-center">
+								<div class="col-span-2 grid grid-cols-2 gap-4 p-3 rounded-xl">
+									<div class="col-span-2 flex justify-between items-center mb-2">
 										<label class="text-[10px] font-black text-gray-500 uppercase tracking-widest"
 											>Gradiente de Promoção</label
 										>
@@ -705,56 +682,26 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 									<!-- Inicio -->
 									<div>
 										<label class="text-[9px] text-gray-400 block mb-1">Início</label>
-										<div class="flex gap-2">
-											<input
-												type="color"
-												class="w-8 h-8 rounded border cursor-pointer"
-												:value="values.gradiente_promo_inicio"
-												@input="
-													(e) =>
-														setFieldValue(
-															'gradiente_promo_inicio',
-															(e.target as HTMLInputElement).value,
-														)
-												"
-											/>
-											<UiInput
-												:model-value="values.gradiente_promo_inicio"
-												class="flex-1 h-8 text-xs"
-												@update:model-value="
-													(v) => setFieldValue('gradiente_promo_inicio', String(v))
-												"
-											/>
-										</div>
+										<UiColorPicker
+											:model-value="values.gradiente_promo_inicio || ''"
+											@update:model-value="
+												(v) => setFieldValue('gradiente_promo_inicio', String(v))
+											"
+										/>
 									</div>
 									<!-- Fim -->
 									<div>
 										<label class="text-[9px] text-gray-400 block mb-1">Fim</label>
-										<div class="flex gap-2">
-											<input
-												type="color"
-												class="w-8 h-8 rounded border cursor-pointer"
-												:value="values.gradiente_promo_fim"
-												@input="
-													(e) =>
-														setFieldValue(
-															'gradiente_promo_fim',
-															(e.target as HTMLInputElement).value,
-														)
-												"
-											/>
-											<UiInput
-												:model-value="values.gradiente_promo_fim"
-												class="flex-1 h-8 text-xs"
-												@update:model-value="(v) => setFieldValue('gradiente_promo_fim', String(v))"
-											/>
-										</div>
+										<UiColorPicker
+											:model-value="values.gradiente_promo_fim || ''"
+											@update:model-value="(v) => setFieldValue('gradiente_promo_fim', String(v))"
+										/>
 									</div>
 								</div>
 
 								<!-- Destaque -->
-								<div class="col-span-2 grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-xl">
-									<div class="col-span-2 flex justify-between items-center">
+								<div class="col-span-2 grid grid-cols-2 gap-4 p-3 rounded-xl">
+									<div class="col-span-2 flex justify-between items-center mb-2">
 										<label class="text-[10px] font-black text-gray-500 uppercase tracking-widest"
 											>Gradiente de Destaque</label
 										>
@@ -770,59 +717,29 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 									<!-- Inicio -->
 									<div>
 										<label class="text-[9px] text-gray-400 block mb-1">Início</label>
-										<div class="flex gap-2">
-											<input
-												type="color"
-												class="w-8 h-8 rounded border cursor-pointer"
-												:value="values.gradiente_destaque_inicio"
-												@input="
-													(e) =>
-														setFieldValue(
-															'gradiente_destaque_inicio',
-															(e.target as HTMLInputElement).value,
-														)
-												"
-											/>
-											<UiInput
-												:model-value="values.gradiente_destaque_inicio"
-												class="flex-1 h-8 text-xs"
-												@update:model-value="
-													(v) => setFieldValue('gradiente_destaque_inicio', String(v))
-												"
-											/>
-										</div>
+										<UiColorPicker
+											:model-value="values.gradiente_destaque_inicio || ''"
+											@update:model-value="
+												(v) => setFieldValue('gradiente_destaque_inicio', String(v))
+											"
+										/>
 									</div>
 									<!-- Fim -->
 									<div>
 										<label class="text-[9px] text-gray-400 block mb-1">Fim</label>
-										<div class="flex gap-2">
-											<input
-												type="color"
-												class="w-8 h-8 rounded border cursor-pointer"
-												:value="values.gradiente_destaque_fim"
-												@input="
-													(e) =>
-														setFieldValue(
-															'gradiente_destaque_fim',
-															(e.target as HTMLInputElement).value,
-														)
-												"
-											/>
-											<UiInput
-												:model-value="values.gradiente_destaque_fim"
-												class="flex-1 h-8 text-xs"
-												@update:model-value="
-													(v) => setFieldValue('gradiente_destaque_fim', String(v))
-												"
-											/>
-										</div>
+										<UiColorPicker
+											:model-value="values.gradiente_destaque_fim || ''"
+											@update:model-value="
+												(v) => setFieldValue('gradiente_destaque_fim', String(v))
+											"
+										/>
 									</div>
 								</div>
 							</div>
 						</section>
 
-						<!-- Estilo dos Botões -->
-						<section class="space-y-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+						<!-- Estilo da Interface -->
+						<section class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
 							<div class="flex items-center gap-2 mb-2">
 								<div class="w-1 h-4 bg-primary rounded-full"></div>
 								<h4
@@ -832,27 +749,68 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 								</h4>
 							</div>
 
-							<div class="space-y-3">
-								<label class="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1"
-									>Estilo dos Botões</label
-								>
+							<!-- Estilo dos Botões -->
+							<div class="space-y-2">
+								<div class="flex flex-col gap-0.5 px-1">
+									<label class="text-[10px] font-black text-gray-400 uppercase tracking-widest"
+										>Formato dos Botões</label
+									>
+									<p class="text-[9px] text-gray-500">Arredondamento global da interface</p>
+								</div>
 								<div class="grid grid-cols-2 gap-3">
 									<button
 										v-for="estilo in estilosBotoes"
 										:key="estilo.value"
 										type="button"
-										class="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all"
+										class="group relative flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200"
 										:class="[
 											values.estilo_botoes === estilo.value
-												? 'border-primary bg-primary/5 text-primary'
-												: 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-white dark:bg-gray-800 text-gray-500',
+												? 'bg-gray-200 dark:bg-gray-700 shadow-xl shadow-primary/30 scale-[1.02]'
+												: 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-[1.01]',
 										]"
 										@click="setFieldValue('estilo_botoes', estilo.value)"
 									>
-										<Icon :name="estilo.icon" class="w-5 h-5" />
-										<span class="text-[10px] font-bold uppercase tracking-tight">{{
-											estilo.label
-										}}</span>
+										<!-- Preview Visual do Botão -->
+										<div
+											class="w-16 h-8 transition-all duration-300"
+											:style="{
+												borderRadius: estilo.value === 'rounded' ? '99px' : '6px',
+												backgroundColor:
+													values.estilo_botoes === estilo.value
+														? values.cor_primaria
+														: values.cor_primaria + '40',
+											}"
+										></div>
+
+										<div class="text-center">
+											<span
+												class="block text-[11px] font-bold uppercase tracking-tight transition-colors"
+												:class="
+													values.estilo_botoes === estilo.value
+														? 'text-primary'
+														: 'text-gray-700 dark:text-gray-300'
+												"
+												>{{ estilo.label }}</span
+											>
+											<span class="block text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">
+												{{
+													estilo.value === "rounded"
+														? "Bordas circulares e suaves"
+														: "Bordas retas e precisas"
+												}}
+											</span>
+										</div>
+
+										<!-- Indicator -->
+										<div
+											v-if="values.estilo_botoes === estilo.value"
+											class="absolute top-2 right-2"
+										>
+											<Icon
+												name="lucide:check"
+												class="w-5 h-5 text-primary animate-in zoom-in duration-200"
+											/>
+										</div>
 									</button>
 								</div>
 							</div>
@@ -876,27 +834,41 @@ const toggleSecao = (secao: keyof typeof secoesAbertas.value) => {
 					</div>
 
 					<template #footer>
-						<div class="flex items-center justify-end gap-3 border-gray-100 dark:border-gray-800">
+						<div
+							class="flex items-center justify-between gap-3 border-gray-100 dark:border-gray-800 w-full"
+						>
 							<UiButton
+								type="button"
 								variant="ghost"
 								size="sm"
 								:disabled="saving"
-								@click="() => resetForm({ values: tema! })"
+								@click="resetarTemaCompleto"
 							>
-								Descartar
+								Restaurar Padrões
 							</UiButton>
-							<UiButton
-								variant="solid"
-								color="primary"
-								size="sm"
-								:loading="saving"
-								@click="onSubmit"
-							>
-								<template #iconLeft>
-									<Icon name="lucide:save" class="w-4 h-4" />
-								</template>
-								Salvar Alterações
-							</UiButton>
+
+							<div class="flex items-center gap-2">
+								<UiButton
+									variant="ghost"
+									size="sm"
+									:disabled="saving"
+									@click="() => resetForm({ values: tema! })"
+								>
+									Descartar
+								</UiButton>
+								<UiButton
+									variant="solid"
+									color="primary"
+									size="sm"
+									:loading="saving"
+									@click="onSubmit"
+								>
+									<template #iconLeft>
+										<Icon name="lucide:save" class="w-4 h-4" />
+									</template>
+									Salvar Alterações
+								</UiButton>
+							</div>
 						</div>
 					</template>
 				</UiCard>

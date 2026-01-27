@@ -201,13 +201,19 @@ const adicionarAoCarrinho = (): void => {
 </script>
 
 <template>
-	<UiModal v-model="isOpen" :title="produto?.nome ?? 'Produto'" size="lg" :scrollable="true">
+	<UiModal
+		v-model="isOpen"
+		:title="produto?.nome ?? 'Produto'"
+		size="lg"
+		:scrollable="true"
+		class="cardapio-theme-bridge"
+	>
 		<template v-if="produto">
 			<div class="space-y-6">
 				<!-- Imagem do produto -->
 				<div
 					v-if="produto.imagem_url"
-					class="w-full h-48 rounded-lg overflow-hidden bg-[var(--bg-muted)]"
+					class="w-full h-48 rounded-lg overflow-hidden bg-[var(--cardapio-muted)]"
 				>
 					<img :src="produto.imagem_url" :alt="produto.nome" class="w-full h-full object-cover" />
 				</div>
@@ -228,8 +234,8 @@ const adicionarAoCarrinho = (): void => {
 							class="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors"
 							:class="
 								variacaoSelecionada?.id === variacao.id
-									? 'border-[var(--primary)] bg-[var(--primary-light)]'
-									: 'border-[var(--border-default)] hover:border-[var(--border-hover)]'
+									? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10'
+									: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)]/50'
 							"
 						>
 							<div class="flex items-center gap-3">
@@ -237,7 +243,7 @@ const adicionarAoCarrinho = (): void => {
 									type="radio"
 									:value="variacao"
 									v-model="variacaoSelecionada"
-									class="w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)]"
+									class="w-4 h-4 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)] accent-[var(--cardapio-primary)]"
 								/>
 								<span class="text-[var(--text-primary)]">{{ variacao.nome }}</span>
 							</div>
@@ -288,7 +294,7 @@ const adicionarAoCarrinho = (): void => {
 						<div
 							v-for="adicional in grupo.adicionais"
 							:key="adicional.id"
-							class="flex items-center justify-between p-3 border border-[var(--border-default)] rounded-lg"
+							class="flex items-center justify-between p-3 border border-[var(--cardapio-muted)] rounded-lg"
 						>
 							<div>
 								<span class="text-[var(--text-primary)]">{{ adicional.nome }}</span>
@@ -361,9 +367,8 @@ const adicionarAoCarrinho = (): void => {
 				<!-- Botão adicionar -->
 				<UiButton
 					variant="solid"
-					color="primary"
 					size="lg"
-					class="flex-1"
+					class="flex-1 !bg-[var(--cardapio-primary)] !text-white hover:!bg-[var(--cardapio-primary)]/90"
 					:disabled="!podeAdicionar"
 					@click="adicionarAoCarrinho"
 				>

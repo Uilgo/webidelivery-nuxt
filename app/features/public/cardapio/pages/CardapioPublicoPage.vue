@@ -190,7 +190,7 @@ useSeoMeta({
 </script>
 
 <template>
-	<div class="min-h-screen bg-[var(--bg-page)]">
+	<div class="min-h-screen bg-[var(--cardapio-background)]">
 		<!-- Loading State -->
 		<CardapioSkeleton v-if="loading && !estabelecimento" />
 
@@ -198,8 +198,10 @@ useSeoMeta({
 		<div v-else-if="error" class="flex items-center justify-center min-h-screen p-4">
 			<div class="text-center">
 				<Icon name="lucide:alert-circle" class="w-16 h-16 text-red-500 mx-auto mb-4" />
-				<h2 class="text-xl font-bold text-[var(--text-primary)] mb-2">Erro ao carregar cardápio</h2>
-				<p class="text-[var(--text-muted)]">{{ error }}</p>
+				<h2 class="text-xl font-bold text-[var(--cardapio-text)] mb-2">
+					Erro ao carregar cardápio
+				</h2>
+				<p class="text-[var(--cardapio-text-muted)]">{{ error }}</p>
 			</div>
 		</div>
 
@@ -243,14 +245,14 @@ useSeoMeta({
 									<!-- Só exibe categoria se tiver produtos -->
 									<template v-if="produtosPorCategoria(categoria.id).length > 0">
 										<!-- Título da Categoria -->
-										<h3 class="text-2xl font-bold text-[var(--text-primary)] mb-4">
+										<h3 class="text-2xl font-bold text-[var(--cardapio-text)] mb-4">
 											{{ categoria.nome }}
 										</h3>
 
 										<!-- Descrição da Categoria (se houver) -->
 										<p
 											v-if="categoria.descricao"
-											class="text-sm text-[var(--text-muted)] mb-4 -mt-2"
+											class="text-sm text-[var(--cardapio-text-muted)] mb-4 -mt-2"
 										>
 											{{ categoria.descricao }}
 										</p>
@@ -275,10 +277,12 @@ useSeoMeta({
 										name="lucide:search-x"
 										class="w-16 h-16 text-[var(--text-muted)] mx-auto mb-4"
 									/>
-									<h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">
+									<h3 class="text-lg font-semibold text-[var(--cardapio-text)] mb-2">
 										Nenhum produto encontrado
 									</h3>
-									<p class="text-sm text-[var(--text-muted)]">Tente ajustar sua busca ou filtros</p>
+									<p class="text-sm text-[var(--cardapio-text-muted)]">
+										Tente ajustar sua busca ou filtros
+									</p>
 								</div>
 
 								<!-- Loading -->
@@ -286,14 +290,14 @@ useSeoMeta({
 									<div
 										v-for="i in 3"
 										:key="`skeleton-${i}`"
-										class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden p-4 animate-pulse"
+										class="bg-[var(--cardapio-surface)] rounded-xl shadow-sm overflow-hidden p-4 animate-pulse border border-[var(--cardapio-muted)]"
 									>
 										<div class="flex gap-3">
-											<div class="w-24 h-24 bg-[var(--bg-muted)] rounded-lg"></div>
+											<div class="w-24 h-24 bg-[var(--cardapio-muted)] rounded-lg"></div>
 											<div class="flex-1">
-												<div class="h-4 bg-[var(--bg-muted)] rounded w-3/4 mb-2"></div>
-												<div class="h-3 bg-[var(--bg-muted)] rounded w-full mb-1"></div>
-												<div class="h-3 bg-[var(--bg-muted)] rounded w-2/3"></div>
+												<div class="h-4 bg-[var(--cardapio-muted)] rounded w-3/4 mb-2"></div>
+												<div class="h-3 bg-[var(--cardapio-muted)] rounded w-full mb-1"></div>
+												<div class="h-3 bg-[var(--cardapio-muted)] rounded w-2/3"></div>
 											</div>
 										</div>
 									</div>
@@ -301,7 +305,9 @@ useSeoMeta({
 
 								<!-- Fim da Lista -->
 								<div v-if="!hasMore && produtos.length > 0" class="text-center py-8">
-									<p class="text-[var(--text-muted)] flex items-center justify-center gap-2">
+									<p
+										class="text-[var(--cardapio-text-muted)] flex items-center justify-center gap-2"
+									>
 										<Icon name="lucide:check-circle" class="w-5 h-5 text-green-500" />
 										Você viu todos os produtos!
 									</p>

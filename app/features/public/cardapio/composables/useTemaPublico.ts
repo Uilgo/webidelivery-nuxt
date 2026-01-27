@@ -27,10 +27,10 @@ export const useTemaPublico = (
 		const configTema = estabelecimento.value?.config_tema as ConfigTema | null;
 
 		return {
-			cor_primaria: configTema?.cor_primaria || "#3b82f6",
-			cor_secundaria: configTema?.cor_secundaria || "#10b981",
-			cor_fundo: configTema?.cor_fundo || "#ffffff",
-			cor_texto: configTema?.cor_texto || "#1f2937",
+			cor_primaria: configTema?.cor_primaria,
+			cor_secundaria: configTema?.cor_secundaria,
+			cor_fundo: configTema?.cor_fundo,
+			cor_texto: configTema?.cor_texto,
 			estilo_botoes: configTema?.estilo_botoes || "rounded",
 			layout_cardapio: configTema?.layout_cardapio || "grid",
 			// Novos campos opcionais
@@ -53,11 +53,13 @@ export const useTemaPublico = (
 
 		const root = document.documentElement;
 
-		// Aplica cores personalizadas base
-		root.style.setProperty("--cardapio-cor-primaria", tema.value.cor_primaria);
-		root.style.setProperty("--cardapio-cor-secundaria", tema.value.cor_secundaria);
-		root.style.setProperty("--cardapio-cor-fundo", tema.value.cor_fundo);
-		root.style.setProperty("--cardapio-cor-texto", tema.value.cor_texto);
+		// Aplica cores personalizadas base (apenas se existir valor configurado)
+		if (tema.value.cor_primaria)
+			root.style.setProperty("--cardapio-cor-primaria", tema.value.cor_primaria);
+		if (tema.value.cor_secundaria)
+			root.style.setProperty("--cardapio-cor-secundaria", tema.value.cor_secundaria);
+		if (tema.value.cor_fundo) root.style.setProperty("--cardapio-cor-fundo", tema.value.cor_fundo);
+		if (tema.value.cor_texto) root.style.setProperty("--cardapio-cor-texto", tema.value.cor_texto);
 
 		// Aplica cores semânticas (se definidas)
 		if (tema.value.cor_sucesso)

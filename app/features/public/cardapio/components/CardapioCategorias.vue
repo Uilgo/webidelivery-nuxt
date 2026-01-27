@@ -92,12 +92,12 @@ watch(
 	<nav class="sticky top-0 z-30 py-3 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4">
 		<!-- Container com Glassmorphism -->
 		<div
-			class="relative bg-[var(--bg-surface)]/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg border border-white/10 dark:border-white/5 p-2"
+			class="relative bg-[var(--cardapio-surface)]/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg border border-white/10 dark:border-white/5 p-2"
 		>
 			<!-- Fade gradient esquerda -->
 			<div
 				v-if="mostrarBotaoEsquerda"
-				class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[var(--bg-surface)] to-transparent z-10 pointer-events-none rounded-l-xl sm:rounded-l-2xl"
+				class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[var(--cardapio-surface)] to-transparent z-10 pointer-events-none rounded-l-xl sm:rounded-l-2xl"
 			/>
 
 			<!-- Botão Esquerda (Desktop) -->
@@ -112,10 +112,10 @@ watch(
 				<button
 					v-if="mostrarBotaoEsquerda"
 					type="button"
-					class="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 size-8 items-center justify-center rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] shadow-lg border border-[var(--border-default)] transition-all hover:scale-110"
+					class="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 size-8 items-center justify-center rounded-full bg-[var(--cardapio-surface)] hover:bg-[var(--cardapio-hover)] shadow-lg border border-[var(--cardapio-muted)] transition-all hover:scale-110"
 					@click="rolarEsquerda"
 				>
-					<Icon name="lucide:chevron-left" class="w-5 h-5 text-[var(--text-primary)]" />
+					<Icon name="lucide:chevron-left" class="w-5 h-5 text-[var(--cardapio-text)]" />
 				</button>
 			</Transition>
 
@@ -131,8 +131,8 @@ watch(
 					class="flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-all duration-300 rounded-lg sm:rounded-xl relative overflow-hidden group"
 					:class="[
 						categoriaSelecionada === null
-							? 'bg-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/25'
-							: 'bg-[var(--bg-muted)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
+							? 'bg-[var(--cardapio-primary)] text-white shadow-lg shadow-[var(--cardapio-primary)]/25'
+							: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)]',
 					]"
 					@click="selecionarCategoria(null)"
 				>
@@ -155,8 +155,8 @@ watch(
 					class="flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-all duration-300 rounded-lg sm:rounded-xl relative overflow-hidden group"
 					:class="[
 						categoriaSelecionada === categoria.id
-							? 'bg-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/25'
-							: 'bg-[var(--bg-muted)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
+							? 'bg-[var(--cardapio-primary)] text-white shadow-lg shadow-[var(--cardapio-primary)]/25'
+							: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)]',
 					]"
 					@click="selecionarCategoria(categoria.id)"
 				>
@@ -172,7 +172,7 @@ watch(
 			<!-- Fade gradient direita -->
 			<div
 				v-if="mostrarBotaoDireita"
-				class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[var(--bg-surface)] to-transparent z-10 pointer-events-none rounded-r-xl sm:rounded-r-2xl"
+				class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[var(--cardapio-surface)] to-transparent z-10 pointer-events-none rounded-r-xl sm:rounded-r-2xl"
 			/>
 
 			<!-- Botão Direita (Desktop) -->
@@ -187,10 +187,10 @@ watch(
 				<button
 					v-if="mostrarBotaoDireita"
 					type="button"
-					class="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 size-8 items-center justify-center rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] shadow-lg border border-[var(--border-default)] transition-all hover:scale-110"
+					class="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 size-8 items-center justify-center rounded-full bg-[var(--cardapio-surface)] hover:bg-[var(--cardapio-hover)] shadow-lg border border-[var(--cardapio-muted)] transition-all hover:scale-110"
 					@click="rolarDireita"
 				>
-					<Icon name="lucide:chevron-right" class="w-5 h-5 text-[var(--text-primary)]" />
+					<Icon name="lucide:chevron-right" class="w-5 h-5 text-[var(--cardapio-text)]" />
 				</button>
 			</Transition>
 		</div>

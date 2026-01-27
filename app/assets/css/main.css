@@ -139,7 +139,7 @@ VARIÁVEIS SEMÂNTICAS (Light/Dark Mode)
 ========================================= */
 :root {
 	/* Cores Primárias */
-	--primary: var(--color-brand-600);
+	--primary: var(--color-brand-400);
 	--primary-hover: var(--color-brand-700);
 	--primary-light: var(--color-brand-100);
 	--primary-foreground: var(--color-neutral-50);
@@ -278,33 +278,63 @@ TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
 	 * Cores Base (Herdam do global mas permitem override)
 	 * Padrão: Cores do sistema atual
 	 */
-	--cardapio-primary: var(--cardapio-cor-primaria, var(--primary));
-	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--accent));
-	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-surface));
+	/* ============= DEFAULTS DO CARDÁPIO (HEX para Leitura via JS) ============= */
+	/* Fonte da verdade para o Painel Admin e Fallbacks */
+	--default-cardapio-primary: #fb923c; /* Orange 400 */
+	--default-cardapio-secondary: #0d9488; /* Teal 600 */
+	--default-cardapio-bg: #020618; /* Slate 950 (Dark Default) */
+	--default-cardapio-text: #f1f5f9; /* Slate 100 (Light Text) */
+	--default-cardapio-success: #16a34a; /* Green 600 */
+	--default-cardapio-danger: #dc2626; /* Red 600 */
+	--default-cardapio-warning: #f59e0b; /* Amber 500 */
+
+	/* Gradientes Default */
+	--default-cardapio-promo-from: #dc2626; /* Red 600 */
+	--default-cardapio-promo-to: #991b1b; /* Red 800 */
+	--default-cardapio-highlight-from: #f59e0b; /* Amber 500 */
+	--default-cardapio-highlight-to: #d97706; /* Amber 600 */
+
+	/* Mapeamento para Variáveis de Uso (com suporte a override via style inline) */
+	--cardapio-primary: var(--cardapio-cor-primaria, var(--default-cardapio-primary));
+	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--default-cardapio-secondary));
+	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-page));
 	--cardapio-text: var(--cardapio-cor-texto, var(--text-primary));
 	--cardapio-radius: var(--cardapio-border-radius, 8px);
+
+	/* Tokens Derivados (Auto-adaptáveis) */
+	--cardapio-surface: var(
+		--cardapio-cor-surface,
+		var(
+			--cardapio-cor-secundaria,
+			color-mix(in srgb, var(--cardapio-background), var(--cardapio-text) 5%)
+		)
+	);
+	--cardapio-muted: color-mix(in srgb, var(--cardapio-surface), var(--cardapio-text) 10%);
+	--cardapio-hover: color-mix(in srgb, var(--cardapio-surface), var(--cardapio-text) 15%);
+	--cardapio-text-muted: color-mix(in srgb, var(--cardapio-text), transparent 40%);
+	--cardapio-primary-light: color-mix(in srgb, var(--cardapio-primary), transparent 85%);
 
 	/* 
 	 * Cores Semânticas do Cardápio (Tokens Específicos)
 	 * Mapeiam para as cores que definimos no redesign
 	 */
 
-	/* Status Sucesso (Aberto, Preço Promo) - Padrão: Emerald do Tailwind */
-	--cardapio-success: var(--cardapio-cor-success, #10b981); /* emerald-500 */
-	--cardapio-success-light: #ecfdf5; /* emerald-50 */
-	--cardapio-success-dark: #047857; /* emerald-700 */
+	/* Status Sucesso (Aberto, Preço Promo) */
+	--cardapio-success: var(--cardapio-cor-success, var(--default-cardapio-success));
+	--cardapio-success-light: var(--success-light);
+	--cardapio-success-dark: var(--success-hover);
 
-	/* Status Erro/Promoção (Fechado, Badge Promo) - Padrão: Red/Rose do Tailwind */
-	--cardapio-danger: var(--cardapio-cor-danger, #ef4444); /* red-500 */
-	--cardapio-danger-light: #fef2f2; /* red-50 */
+	/* Status Erro/Promoção (Fechado, Badge Promo) */
+	--cardapio-danger: var(--cardapio-cor-danger, var(--default-cardapio-danger));
+	--cardapio-danger-light: var(--error-light);
 
 	/* Gradiente de Promoção (Rose -> Red) */
-	--cardapio-promo-from: #f43f5e; /* rose-500 */
-	--cardapio-promo-to: #dc2626; /* red-600 */
+	--cardapio-promo-from: var(--cardapio-promo-from, var(--default-cardapio-promo-from));
+	--cardapio-promo-to: var(--cardapio-promo-to, var(--default-cardapio-promo-to));
 
-	/* Status Aviso/Destaque (Estrelas, Badge Destaque) - Padrão: Amber do Tailwind */
-	--cardapio-warning: var(--cardapio-cor-warning, #f59e0b); /* amber-500 */
-	--cardapio-warning-light: #fffbeb; /* amber-50 */
+	/* Status Aviso/Destaque (Estrelas, Badge Destaque) */
+	--cardapio-warning: var(--cardapio-cor-warning, var(--default-cardapio-warning));
+	--cardapio-warning-light: var(--warning-light);
 
 	/* Gradiente de Destaque (Amber -> Yellow) */
 	--cardapio-highlight-from: #fbbf24; /* amber-400 */
@@ -416,4 +446,49 @@ SCROLLBAR PERSONALIZADO
 * {
 	scrollbar-width: thin;
 	scrollbar-color: var(--border-strong) transparent;
+}
+
+/* =========================================
+   PONTE DE TEMA (BRIDGE) PARA O CARDÁPIO
+   ========================================= 
+   Utilizada para mapear variáveis globais de UI 
+   para os tokens isolados do cardápio público.
+*/
+.cardapio-theme-bridge {
+	/* Superfícies e Fundos */
+	--bg-surface: var(--cardapio-surface);
+	--bg-page: var(--cardapio-background);
+	--bg-muted: var(--cardapio-muted);
+	--bg-hover: var(--cardapio-hover);
+
+	/* Textos */
+	--text-primary: var(--cardapio-text);
+	--text-secondary: var(--cardapio-text-muted);
+	--text-muted: var(--cardapio-text-muted);
+
+	/* Bordas */
+	--border-default: var(--cardapio-muted);
+	--border-muted: var(--cardapio-muted);
+	--border-hover: var(--cardapio-hover);
+	--border-strong: color-mix(in srgb, var(--cardapio-muted), var(--cardapio-text) 10%);
+
+	/* Cores de Ação */
+	--primary: var(--cardapio-primary);
+	--primary-light: var(--cardapio-primary-light);
+	--primary-hover: color-mix(in srgb, var(--cardapio-primary), black 10%);
+
+	/* Mapeamento de Inputs */
+	--input-bg: var(--cardapio-surface);
+	--input-border: var(--cardapio-muted);
+	--input-text: var(--cardapio-text);
+	--input-placeholder: var(--cardapio-text-muted);
+	--input-border-focus: var(--cardapio-primary);
+
+	/* Cards e Outros */
+	--card-bg: var(--cardapio-surface);
+	--bg-active: var(--cardapio-hover);
+
+	/* Cores Semânticas */
+	--success: var(--cardapio-success);
+	--error: var(--cardapio-danger);
 }

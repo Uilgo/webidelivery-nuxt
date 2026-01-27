@@ -59,13 +59,20 @@ const irParaCheckout = async (): Promise<void> => {
 </script>
 
 <template>
-	<UiDrawer v-model="isOpen" title="Seu pedido" position="right" size="md">
+	<UiDrawer
+		v-model="isOpen"
+		title="Seu pedido"
+		position="right"
+		size="md"
+		class="cardapio-theme-bridge"
+	>
 		<!-- Estado vazio -->
 		<UiEmptyState
 			v-if="carrinhoStore.estaVazio"
 			icon="lucide:shopping-bag"
 			title="Carrinho vazio"
 			description="Adicione produtos ao seu carrinho"
+			class="cardapio-theme-bridge"
 		>
 			<template #actions>
 				<UiButton variant="outline" color="primary" @click="fechar"> Continuar comprando </UiButton>
@@ -73,12 +80,12 @@ const irParaCheckout = async (): Promise<void> => {
 		</UiEmptyState>
 
 		<!-- Lista de itens -->
-		<div v-else class="divide-y divide-[var(--border-muted)]">
+		<div v-else class="divide-y divide-[var(--cardapio-muted)]">
 			<div v-for="item in carrinhoStore.itens" :key="item.id" class="py-4">
 				<div class="flex gap-3">
 					<!-- Imagem -->
 					<div
-						class="w-16 h-16 rounded-lg bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
+						class="w-16 h-16 rounded-lg bg-[var(--cardapio-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
 					>
 						<img
 							v-if="item.imagem_url"
@@ -86,31 +93,31 @@ const irParaCheckout = async (): Promise<void> => {
 							:alt="item.nome"
 							class="w-full h-full object-cover"
 						/>
-						<Icon v-else name="lucide:image" class="w-6 h-6 text-[var(--text-muted)]" />
+						<Icon v-else name="lucide:image" class="w-6 h-6 text-[var(--cardapio-text-muted)]" />
 					</div>
 
 					<!-- Info -->
 					<div class="flex-1 min-w-0">
-						<h3 class="font-medium text-[var(--text-primary)] truncate">{{ item.nome }}</h3>
+						<h3 class="font-medium text-[var(--cardapio-text)] truncate">{{ item.nome }}</h3>
 
 						<!-- Variação -->
-						<p v-if="item.variacao" class="text-sm text-[var(--text-muted)]">
+						<p v-if="item.variacao" class="text-sm text-[var(--cardapio-text-muted)]">
 							{{ item.variacao.nome }}
 						</p>
 
 						<!-- Adicionais -->
-						<p v-if="item.adicionais.length > 0" class="text-xs text-[var(--text-muted)]">
+						<p v-if="item.adicionais.length > 0" class="text-xs text-[var(--cardapio-text-muted)]">
 							+ {{ item.adicionais.map((a) => `${a.quantidade}x ${a.nome}`).join(", ") }}
 						</p>
 
 						<!-- Observação -->
-						<p v-if="item.observacao" class="text-xs text-[var(--text-muted)] italic mt-1">
+						<p v-if="item.observacao" class="text-xs text-[var(--cardapio-text-muted)] italic mt-1">
 							"{{ item.observacao }}"
 						</p>
 
 						<!-- Preço e controles -->
 						<div class="flex items-center justify-between mt-2">
-							<span class="font-medium text-[var(--text-primary)]">
+							<span class="font-medium text-[var(--cardapio-text)]">
 								{{ formatCurrency(item.preco_total) }}
 							</span>
 
@@ -125,7 +132,7 @@ const irParaCheckout = async (): Promise<void> => {
 									<Icon name="lucide:minus" class="w-3 h-3" />
 								</UiButton>
 
-								<span class="w-5 text-center text-sm font-medium text-[var(--text-primary)]">
+								<span class="w-5 text-center text-sm font-medium text-[var(--cardapio-text)]">
 									{{ item.quantidade }}
 								</span>
 
@@ -160,14 +167,14 @@ const irParaCheckout = async (): Promise<void> => {
 			<div class="space-y-4">
 				<!-- Resumo -->
 				<div class="space-y-2 text-sm">
-					<div class="flex justify-between text-[var(--text-secondary)]">
+					<div class="flex justify-between text-[var(--cardapio-text-muted)]">
 						<span>Subtotal</span>
 						<span>{{ formatCurrency(carrinhoStore.subtotal) }}</span>
 					</div>
 
 					<div
 						v-if="carrinhoStore.taxa_entrega > 0"
-						class="flex justify-between text-[var(--text-secondary)]"
+						class="flex justify-between text-[var(--cardapio-text-muted)]"
 					>
 						<span>Taxa de entrega</span>
 						<span>{{ formatCurrency(carrinhoStore.taxa_entrega) }}</span>
@@ -179,7 +186,7 @@ const irParaCheckout = async (): Promise<void> => {
 					</div>
 
 					<div
-						class="flex justify-between font-semibold text-[var(--text-primary)] text-base pt-2 border-t border-[var(--border-muted)]"
+						class="flex justify-between font-semibold text-[var(--cardapio-text)] text-base pt-2 border-t border-[var(--cardapio-muted)]"
 					>
 						<span>Total</span>
 						<span>{{ formatCurrency(carrinhoStore.total) }}</span>

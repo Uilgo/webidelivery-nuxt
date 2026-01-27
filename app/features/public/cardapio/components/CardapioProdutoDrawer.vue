@@ -441,13 +441,17 @@ const adicionarAoCarrinho = (): void => {
 </script>
 
 <template>
-	<UiDrawer v-model="isOpen" :title="produto?.nome ?? 'Produto'" size="xl">
+	<UiDrawer
+		v-model="isOpen"
+		:title="produto?.nome ?? 'Produto'"
+		size="xl"
+		class="cardapio-theme-bridge"
+	>
 		<template v-if="produto">
 			<div class="space-y-6 pb-24">
-				<!-- Imagem do produto -->
 				<div
 					v-if="produto.imagem_url"
-					class="w-full h-48 sm:h-64 rounded-lg overflow-hidden bg-[var(--bg-muted)]"
+					class="w-full h-48 sm:h-64 rounded-lg overflow-hidden bg-[var(--cardapio-muted)]"
 				>
 					<img :src="produto.imagem_url" :alt="produto.nome" class="w-full h-full object-cover" />
 				</div>
@@ -472,17 +476,17 @@ const adicionarAoCarrinho = (): void => {
 				<div class="space-y-3">
 					<!-- Checkbox para ativar múltiplos sabores -->
 					<label
-						class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors bg-[var(--bg-muted)]"
+						class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors bg-[var(--cardapio-muted)]"
 						:class="
 							multiplosSabores
-								? 'border-[var(--primary)] bg-[var(--primary-light)]'
-								: 'border-[var(--border-default)] hover:border-[var(--border-hover)]'
+								? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5'
+								: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-hover)]'
 						"
 					>
 						<input
 							type="checkbox"
 							v-model="multiplosSabores"
-							class="w-5 h-5 mt-0.5 text-[var(--primary)] rounded focus:ring-[var(--primary)]"
+							class="w-5 h-5 mt-0.5 text-[var(--cardapio-primary)] rounded focus:ring-[var(--cardapio-primary)] accent-[var(--cardapio-primary)]"
 						/>
 						<div class="flex-1">
 							<h3 class="font-semibold text-[var(--text-primary)]">Adicionar mais sabores?</h3>
@@ -506,8 +510,8 @@ const adicionarAoCarrinho = (): void => {
 									class="relative flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 group"
 									:class="
 										quantidadeSabores === opcao.value
-											? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary-light)] to-transparent shadow-lg scale-105'
-											: 'border-[var(--border-default)] hover:border-[var(--primary)] hover:shadow-md hover:scale-102 bg-[var(--bg-surface)]'
+											? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-lg scale-105'
+											: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)] hover:shadow-md hover:scale-102 bg-[var(--cardapio-surface)]'
 									"
 								>
 									<input
@@ -525,8 +529,8 @@ const adicionarAoCarrinho = (): void => {
 										class="w-5 h-5 transition-all duration-200"
 										:class="
 											quantidadeSabores === opcao.value
-												? 'text-[var(--primary)] scale-110'
-												: 'text-[var(--text-muted)] group-hover:text-[var(--primary)] group-hover:scale-105'
+												? 'text-[var(--cardapio-primary)] scale-110'
+												: 'text-[var(--text-muted)] group-hover:text-[var(--cardapio-primary)] group-hover:scale-105'
 										"
 									/>
 
@@ -535,8 +539,8 @@ const adicionarAoCarrinho = (): void => {
 										class="font-semibold text-sm transition-colors duration-200"
 										:class="
 											quantidadeSabores === opcao.value
-												? 'text-[var(--primary)]'
-												: 'text-[var(--text-primary)] group-hover:text-[var(--primary)]'
+												? 'text-[var(--cardapio-primary)]'
+												: 'text-[var(--text-primary)] group-hover:text-[var(--cardapio-primary)]'
 										"
 									>
 										{{ opcao.label }}
@@ -545,7 +549,7 @@ const adicionarAoCarrinho = (): void => {
 									<!-- Badge de selecionado -->
 									<div
 										v-if="quantidadeSabores === opcao.value"
-										class="absolute -top-2 -right-2 w-6 h-6 bg-[var(--primary)] rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200"
+										class="absolute -top-2 -right-2 w-6 h-6 bg-[var(--cardapio-primary)] rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200"
 									>
 										<Icon name="lucide:check" class="w-4 h-4 text-white" />
 									</div>
@@ -563,7 +567,7 @@ const adicionarAoCarrinho = (): void => {
 							<div v-if="carregandoProdutos" class="text-center py-4">
 								<Icon
 									name="lucide:loader-2"
-									class="w-6 h-6 animate-spin text-[var(--primary)] mx-auto"
+									class="w-6 h-6 animate-spin text-[var(--cardapio-primary)] mx-auto"
 								/>
 								<p class="text-sm text-[var(--text-muted)] mt-2">Carregando sabores...</p>
 							</div>
@@ -572,10 +576,10 @@ const adicionarAoCarrinho = (): void => {
 							<div v-else class="space-y-2">
 								<!-- Slot 1: Produto atual (fixo) -->
 								<div
-									class="flex items-center gap-3 p-4 border-2 rounded-xl bg-gradient-to-br from-[var(--primary-light)] to-transparent border-[var(--primary)]"
+									class="flex items-center gap-3 p-4 border-2 rounded-xl bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent border-[var(--cardapio-primary)]"
 								>
 									<div
-										class="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+										class="w-8 h-8 rounded-full bg-[var(--cardapio-primary)] flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
 									>
 										1
 									</div>
@@ -585,7 +589,7 @@ const adicionarAoCarrinho = (): void => {
 										</p>
 										<p class="text-xs text-[var(--text-muted)]">Sabor principal</p>
 									</div>
-									<Icon name="lucide:lock" class="w-5 h-5 text-[var(--primary)]" />
+									<Icon name="lucide:lock" class="w-5 h-5 text-[var(--cardapio-primary)]" />
 								</div>
 
 								<!-- Slots 2, 3, 4: Sabores adicionais (selects customizados) -->
@@ -595,16 +599,16 @@ const adicionarAoCarrinho = (): void => {
 									class="flex items-center gap-3 p-4 border-2 rounded-xl transition-all duration-200"
 									:class="
 										saboresSelecionados[index - 1]
-											? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary-light)] to-transparent shadow-md'
-											: 'border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--border-hover)] hover:shadow-sm'
+											? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-md'
+											: 'border-[var(--cardapio-muted)] bg-[var(--cardapio-surface)] hover:border-[var(--cardapio-hover)] hover:shadow-sm'
 									"
 								>
 									<div
 										class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 transition-all duration-200"
 										:class="
 											saboresSelecionados[index - 1]
-												? 'bg-[var(--primary)] text-white shadow-lg scale-110'
-												: 'bg-[var(--bg-muted)] text-[var(--text-muted)]'
+												? 'bg-[var(--cardapio-primary)] text-white shadow-lg scale-110'
+												: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)]'
 										"
 									>
 										{{ index + 1 }}
@@ -628,7 +632,7 @@ const adicionarAoCarrinho = (): void => {
 
 										<button
 											type="button"
-											class="ml-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white border border-[var(--primary)] rounded-lg transition-all duration-200"
+											class="ml-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white border border-[var(--cardapio-primary)] rounded-lg transition-all duration-200"
 											@click="
 												() => {
 													const newSabores = [...saboresSelecionados];
@@ -664,7 +668,7 @@ const adicionarAoCarrinho = (): void => {
 									<Icon
 										v-if="saboresSelecionados[index - 1]"
 										name="lucide:check-circle-2"
-										class="w-5 h-5 text-[var(--primary)] flex-shrink-0 animate-in zoom-in duration-200"
+										class="w-5 h-5 text-[var(--cardapio-primary)] flex-shrink-0 animate-in zoom-in duration-200"
 									/>
 									<Icon
 										v-else
@@ -693,8 +697,8 @@ const adicionarAoCarrinho = (): void => {
 							class="relative flex items-center justify-between gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 group"
 							:class="
 								grupoSelecionado === grupo.id
-									? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary-light)] to-transparent shadow-lg'
-									: 'border-[var(--border-default)] hover:border-[var(--primary)] hover:shadow-md bg-[var(--bg-surface)]'
+									? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-lg'
+									: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)] hover:shadow-md bg-[var(--cardapio-surface)]'
 							"
 							@click="grupoSelecionado = grupoSelecionado === grupo.id ? null : grupo.id"
 						>
@@ -704,8 +708,8 @@ const adicionarAoCarrinho = (): void => {
 								class="w-5 h-5 transition-all duration-200 flex-shrink-0"
 								:class="
 									grupoSelecionado === grupo.id
-										? 'text-[var(--primary)] scale-110'
-										: 'text-[var(--text-muted)] group-hover:text-[var(--primary)] group-hover:scale-105'
+										? 'text-[var(--cardapio-primary)] scale-110'
+										: 'text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)] group-hover:scale-105'
 								"
 							/>
 
@@ -715,8 +719,8 @@ const adicionarAoCarrinho = (): void => {
 									class="font-semibold text-sm transition-colors duration-200"
 									:class="
 										grupoSelecionado === grupo.id
-											? 'text-[var(--primary)]'
-											: 'text-[var(--text-primary)] group-hover:text-[var(--primary)]'
+											? 'text-[var(--cardapio-primary)]'
+											: 'text-[var(--text-primary)] group-hover:text-[var(--cardapio-primary)]'
 									"
 								>
 									{{ grupo.nome }}
@@ -765,7 +769,7 @@ const adicionarAoCarrinho = (): void => {
 											0,
 										);
 										return totalSelecionado > 0
-											? 'text-[var(--primary)]'
+											? 'text-[var(--cardapio-primary)]'
 											: 'text-[var(--text-muted)]';
 									})()
 								"
@@ -817,7 +821,7 @@ const adicionarAoCarrinho = (): void => {
 							<!-- Badge de selecionado -->
 							<div
 								v-if="grupoSelecionado === grupo.id"
-								class="absolute -top-2 -right-2 w-6 h-6 bg-[var(--primary)] rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200"
+								class="absolute -top-2 -right-2 w-6 h-6 bg-[var(--cardapio-primary)] rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200"
 							>
 								<Icon name="lucide:check" class="w-4 h-4 text-white" />
 							</div>
@@ -839,7 +843,7 @@ const adicionarAoCarrinho = (): void => {
 										return totalSelecionado < grupo.max_selecao;
 									})()
 								"
-								class="p-3 border-2 border-dashed border-[var(--border-default)] rounded-xl bg-[var(--bg-surface)]"
+								class="p-3 border-2 border-dashed border-[var(--cardapio-muted)] rounded-xl bg-[var(--cardapio-surface)]"
 							>
 								<UiSelectMenu
 									:model-value="null"
@@ -881,13 +885,13 @@ const adicionarAoCarrinho = (): void => {
 									(a) => getQuantidadeAdicional(a.id) > 0,
 								)"
 								:key="adicional.id"
-								class="flex items-center justify-between p-4 border-2 border-[var(--primary)] rounded-xl bg-gradient-to-br from-[var(--primary-light)] to-transparent"
+								class="flex items-center justify-between p-4 border-2 border-[var(--cardapio-primary)] rounded-xl bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent"
 							>
 								<!-- Nome e quantidade -->
 								<div class="flex-1 min-w-0">
-									<p class="text-sm font-semibold text-[var(--primary)]">
+									<p class="text-sm font-semibold text-[var(--cardapio-text)]">
 										{{ adicional.nome }}
-										<span class="text-[var(--primary)]">
+										<span class="text-[var(--cardapio-text-muted)]">
 											({{ getQuantidadeAdicional(adicional.id) }}x)
 										</span>
 									</p>
@@ -897,7 +901,7 @@ const adicionarAoCarrinho = (): void => {
 								<div class="flex items-center gap-3">
 									<span
 										v-if="adicional.preco > 0"
-										class="text-sm font-semibold text-[var(--primary)] whitespace-nowrap"
+										class="text-sm font-semibold text-[var(--cardapio-primary)] whitespace-nowrap"
 									>
 										+ {{ formatCurrency(adicional.preco * getQuantidadeAdicional(adicional.id)) }}
 									</span>
@@ -908,7 +912,7 @@ const adicionarAoCarrinho = (): void => {
 										<button
 											v-if="adicional.permite_multiplas_unidades"
 											type="button"
-											class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors duration-200"
+											class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors duration-200"
 											@click="
 												() => {
 													const qtdAtual = getQuantidadeAdicional(adicional.id);
@@ -928,7 +932,7 @@ const adicionarAoCarrinho = (): void => {
 										<button
 											v-if="adicional.permite_multiplas_unidades"
 											type="button"
-											class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors duration-200"
+											class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors duration-200"
 											@click="
 												() => {
 													const qtdAtual = getQuantidadeAdicional(adicional.id);
@@ -978,10 +982,9 @@ const adicionarAoCarrinho = (): void => {
 			</div>
 		</template>
 
-		<!-- Footer fixo com quantidade e botão adicionar -->
 		<template #footer>
 			<div
-				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--border-default)] bg-[var(--bg-surface)]"
+				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--cardapio-muted)] bg-[var(--cardapio-background)]"
 			>
 				<!-- Controle de quantidade -->
 				<div class="flex items-center gap-3">
@@ -1013,7 +1016,7 @@ const adicionarAoCarrinho = (): void => {
 				<UiButton
 					variant="solid"
 					size="lg"
-					class="flex-1"
+					class="flex-1 !bg-[var(--cardapio-primary)] !text-white hover:!bg-[var(--cardapio-primary)]/90"
 					:disabled="!podeAdicionar"
 					@click="adicionarAoCarrinho"
 				>

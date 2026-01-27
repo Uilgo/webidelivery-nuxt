@@ -89,12 +89,12 @@ export interface ConfigPagamento {
 }
 
 export interface ConfigTema {
-	readonly cor_primaria: string;
-	readonly cor_secundaria: string;
-	readonly cor_fundo: string;
-	readonly cor_texto: string;
-	readonly estilo_botoes: "rounded" | "square";
-	readonly layout_cardapio: "grid" | "list";
+	readonly cor_primaria?: string;
+	readonly cor_secundaria?: string;
+	readonly cor_fundo?: string;
+	readonly cor_texto?: string;
+	readonly estilo_botoes?: "rounded" | "square";
+	readonly layout_cardapio?: "grid" | "list";
 
 	// Cores Semânticas (Opcionais - Default no Frontend)
 	readonly cor_sucesso?: string; // Status Aberto, Preços

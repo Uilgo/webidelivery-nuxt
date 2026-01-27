@@ -101,7 +101,7 @@ const abrirWhatsApp = (): void => {
 				<!-- Fallback: gradiente baseado na cor primária -->
 				<div
 					v-else
-					class="w-full h-full bg-gradient-to-br from-[var(--primary)] via-[var(--primary-dark,var(--primary))] to-[var(--primary)]"
+					class="w-full h-full bg-gradient-to-br from-[var(--cardapio-primary)] via-[var(--cardapio-primary)] to-[var(--cardapio-primary)]"
 				/>
 				<!-- Overlay gradiente escuro para legibilidade -->
 				<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
@@ -114,11 +114,11 @@ const abrirWhatsApp = (): void => {
 					<div class="relative shrink-0 group">
 						<!-- Glow ring -->
 						<div
-							class="absolute -inset-1 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--secondary,var(--primary))] opacity-75 blur-sm group-hover:opacity-100 transition-opacity duration-300"
+							class="absolute -inset-1 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[var(--cardapio-primary)] to-[var(--cardapio-secondary,var(--cardapio-primary))] opacity-75 blur-sm group-hover:opacity-100 transition-opacity duration-300"
 						/>
 						<!-- Logo Container -->
 						<div
-							class="relative size-20 sm:size-24 md:size-28 lg:size-32 rounded-xl sm:rounded-2xl overflow-hidden bg-white shadow-2xl ring-2 ring-white/50"
+							class="relative size-20 sm:size-24 md:size-28 lg:size-32 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-surface)] shadow-2xl ring-2 ring-white/50"
 						>
 							<img
 								v-if="estabelecimento.logo"
@@ -213,8 +213,8 @@ const abrirWhatsApp = (): void => {
 	<UiModal v-model="modalInfoAberto" title="Informações" size="md">
 		<div class="space-y-5">
 			<!-- Header do Modal com Logo -->
-			<div class="flex items-center gap-4 pb-4 border-b border-[var(--border-default)]">
-				<div class="size-16 rounded-xl overflow-hidden bg-[var(--bg-muted)] shadow-md">
+			<div class="flex items-center gap-4 pb-4 border-b border-[var(--cardapio-muted)]">
+				<div class="size-16 rounded-xl overflow-hidden bg-[var(--cardapio-muted)] shadow-md">
 					<img
 						v-if="estabelecimento.logo"
 						:src="estabelecimento.logo"
@@ -222,11 +222,11 @@ const abrirWhatsApp = (): void => {
 						class="w-full h-full object-cover"
 					/>
 					<div v-else class="w-full h-full flex items-center justify-center">
-						<Icon name="lucide:store" class="w-8 h-8 text-[var(--text-muted)]" />
+						<Icon name="lucide:store" class="w-8 h-8 text-[var(--cardapio-text-muted)]" />
 					</div>
 				</div>
 				<div>
-					<h3 class="text-lg font-bold text-[var(--text-primary)]">
+					<h3 class="text-lg font-bold text-[var(--cardapio-text)]">
 						{{ estabelecimento.nome }}
 					</h3>
 					<UiBadge :variant="estaAberto ? 'success' : 'error'" size="sm" class="mt-1">
@@ -237,11 +237,11 @@ const abrirWhatsApp = (): void => {
 
 			<!-- Descrição -->
 			<div v-if="estabelecimento.descricao">
-				<h4 class="text-sm font-semibold text-[var(--text-primary)] mb-2 flex items-center gap-2">
-					<Icon name="lucide:file-text" class="w-4 h-4 text-[var(--primary)]" />
+				<h4 class="text-sm font-semibold text-[var(--cardapio-text)] mb-2 flex items-center gap-2">
+					<Icon name="lucide:file-text" class="w-4 h-4 text-[var(--cardapio-primary)]" />
 					Sobre
 				</h4>
-				<p class="text-sm text-[var(--text-muted)] leading-relaxed">
+				<p class="text-sm text-[var(--cardapio-text-muted)] leading-relaxed">
 					{{ estabelecimento.descricao }}
 				</p>
 			</div>
@@ -249,12 +249,14 @@ const abrirWhatsApp = (): void => {
 			<!-- Grid de Informações -->
 			<div class="grid grid-cols-2 gap-3">
 				<!-- Tempo de Entrega -->
-				<div class="p-3 rounded-xl bg-[var(--bg-muted)]">
-					<div class="flex items-center gap-2 text-[var(--primary)] mb-1">
+				<div
+					class="p-3 rounded-xl bg-[var(--cardapio-surface)] border border-[var(--cardapio-muted)]"
+				>
+					<div class="flex items-center gap-2 text-[var(--cardapio-primary)] mb-1">
 						<Icon name="lucide:clock" class="w-4 h-4" />
 						<span class="text-xs font-medium">Tempo de Entrega</span>
 					</div>
-					<p class="text-lg font-bold text-[var(--text-primary)]">{{ tempoEntrega }}</p>
+					<p class="text-lg font-bold text-[var(--cardapio-text)]">{{ tempoEntrega }}</p>
 				</div>
 
 				<!-- Frete Grátis -->
@@ -276,17 +278,17 @@ const abrirWhatsApp = (): void => {
 
 			<!-- Endereço -->
 			<div v-if="enderecoCompleto">
-				<h4 class="text-sm font-semibold text-[var(--text-primary)] mb-2 flex items-center gap-2">
-					<Icon name="lucide:map-pin" class="w-4 h-4 text-[var(--primary)]" />
+				<h4 class="text-sm font-semibold text-[var(--cardapio-text)] mb-2 flex items-center gap-2">
+					<Icon name="lucide:map-pin" class="w-4 h-4 text-[var(--cardapio-primary)]" />
 					Endereço
 				</h4>
-				<p class="text-sm text-[var(--text-muted)]">{{ enderecoCompleto }}</p>
+				<p class="text-sm text-[var(--cardapio-text-muted)]">{{ enderecoCompleto }}</p>
 			</div>
 
 			<!-- Ações (WhatsApp + Compartilhar) -->
 			<div>
-				<h4 class="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-					<Icon name="lucide:share-2" class="w-4 h-4 text-[var(--primary)]" />
+				<h4 class="text-sm font-semibold text-[var(--cardapio-text)] mb-3 flex items-center gap-2">
+					<Icon name="lucide:share-2" class="w-4 h-4 text-[var(--cardapio-primary)]" />
 					Ações
 				</h4>
 				<div class="grid grid-cols-2 gap-2">
@@ -308,7 +310,7 @@ const abrirWhatsApp = (): void => {
 					<UiButton
 						variant="outline"
 						size="md"
-						class="!border-[var(--primary)] !text-[var(--primary)] hover:!bg-[var(--primary-light)]"
+						class="!border-[var(--cardapio-primary)] !text-[var(--cardapio-primary)] hover:!bg-[var(--cardapio-primary)] hover:!bg-opacity-10"
 						@click="compartilhar"
 					>
 						<template #iconLeft>

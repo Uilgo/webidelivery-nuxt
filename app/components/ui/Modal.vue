@@ -216,7 +216,7 @@ onMounted(() => {
 		>
 			<div
 				v-if="modelValue"
-				:class="modalClasses"
+				:class="[modalClasses, $attrs.class]"
 				role="dialog"
 				:aria-labelledby="titleId"
 				:aria-describedby="descriptionId"

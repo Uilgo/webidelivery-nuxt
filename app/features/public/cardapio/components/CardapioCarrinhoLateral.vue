@@ -50,13 +50,13 @@ const finalizarPedido = () => {
 </script>
 
 <template>
-	<aside class="sticky top-4 h-fit">
+	<aside class="sticky top-4 h-fit cardapio-theme-bridge">
 		<div
-			class="bg-[var(--bg-surface)] rounded-2xl shadow-xl overflow-hidden border border-[var(--border-default)]"
+			class="bg-[var(--cardapio-background)] rounded-2xl shadow-xl overflow-hidden border border-[var(--cardapio-muted)]"
 		>
 			<!-- Header Premium com Gradiente -->
 			<div
-				class="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark,var(--primary))] p-4 sm:p-5"
+				class="bg-gradient-to-r from-[var(--cardapio-primary)] to-[var(--cardapio-primary)] p-4 sm:p-5"
 			>
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
@@ -76,7 +76,7 @@ const finalizarPedido = () => {
 					<!-- Badge de quantidade -->
 					<div
 						v-if="montado && carrinhoStore.quantidadeTotal > 0"
-						class="size-8 rounded-full bg-white text-[var(--primary)] font-bold flex items-center justify-center shadow-lg"
+						class="size-8 rounded-full bg-white text-[var(--cardapio-primary)] font-bold flex items-center justify-center shadow-lg"
 					>
 						{{ carrinhoStore.quantidadeTotal }}
 					</div>
@@ -89,12 +89,14 @@ const finalizarPedido = () => {
 				class="flex flex-col items-center justify-center py-12 px-4 text-center"
 			>
 				<div
-					class="size-20 rounded-full bg-[var(--bg-muted)] flex items-center justify-center mb-4"
+					class="size-20 rounded-full bg-[var(--cardapio-muted)] flex items-center justify-center mb-4"
 				>
-					<Icon name="lucide:shopping-bag" class="w-10 h-10 text-[var(--text-muted)]" />
+					<Icon name="lucide:shopping-bag" class="w-10 h-10 text-[var(--cardapio-text-muted)]" />
 				</div>
-				<p class="text-sm font-medium text-[var(--text-primary)] mb-1">Seu carrinho está vazio</p>
-				<p class="text-xs text-[var(--text-muted)]">Adicione itens do cardápio para começar</p>
+				<p class="text-sm font-medium text-[var(--cardapio-text)] mb-1">Seu carrinho está vazio</p>
+				<p class="text-xs text-[var(--cardapio-text-muted)]">
+					Adicione itens do cardápio para começar
+				</p>
 			</div>
 
 			<!-- Itens do Carrinho -->
@@ -106,11 +108,11 @@ const finalizarPedido = () => {
 					<div
 						v-for="item in carrinhoStore.itens"
 						:key="item.id"
-						class="group flex gap-3 p-3 bg-[var(--bg-muted)] rounded-xl hover:bg-[var(--bg-hover)] transition-colors"
+						class="group flex gap-3 p-3 bg-[var(--cardapio-surface)] border border-[var(--cardapio-muted)] rounded-xl hover:bg-[var(--cardapio-hover)] transition-colors"
 					>
 						<!-- Imagem -->
 						<div
-							class="size-14 rounded-lg bg-[var(--bg-surface)] overflow-hidden shrink-0 shadow-sm"
+							class="size-14 rounded-lg bg-[var(--cardapio-background)] overflow-hidden shrink-0 shadow-sm"
 						>
 							<img
 								v-if="item.imagem_url"
@@ -119,24 +121,24 @@ const finalizarPedido = () => {
 								class="w-full h-full object-cover"
 							/>
 							<div v-else class="w-full h-full flex items-center justify-center">
-								<Icon name="lucide:image" class="w-5 h-5 text-[var(--text-muted)]" />
+								<Icon name="lucide:image" class="w-5 h-5 text-[var(--cardapio-text-muted)]" />
 							</div>
 						</div>
 
 						<!-- Info -->
 						<div class="flex-1 min-w-0">
-							<h4 class="text-sm font-semibold text-[var(--text-primary)] truncate">
+							<h4 class="text-sm font-semibold text-[var(--cardapio-text)] truncate">
 								{{ item.nome }}
 							</h4>
-							<p v-if="item.variacao" class="text-xs text-[var(--text-muted)] truncate">
+							<p v-if="item.variacao" class="text-xs text-[var(--cardapio-text-muted)] truncate">
 								{{ item.variacao.nome }}
 							</p>
 							<div class="flex items-center justify-between mt-1.5">
-								<span class="text-sm font-bold text-[var(--primary)]">
+								<span class="text-sm font-bold text-[var(--cardapio-primary)]">
 									{{ formatCurrency(item.preco_total) }}
 								</span>
 								<span
-									class="text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded-full"
+									class="text-xs text-[var(--cardapio-text-muted)] bg-[var(--cardapio-background)] px-2 py-0.5 rounded-full"
 								>
 									{{ item.quantidade }}x
 								</span>
@@ -146,7 +148,7 @@ const finalizarPedido = () => {
 						<!-- Botão Remover -->
 						<button
 							type="button"
-							class="self-start opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+							class="self-start opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
 							title="Remover item"
 							@click="removerItem(item.id)"
 						>
@@ -159,29 +161,29 @@ const finalizarPedido = () => {
 			<!-- Resumo e Ações -->
 			<div
 				v-if="montado && carrinhoStore.itens.length > 0"
-				class="p-4 border-t border-[var(--border-default)] space-y-4"
+				class="p-4 border-t border-[var(--cardapio-muted)] space-y-4"
 			>
 				<!-- Resumo de Valores -->
 				<div class="space-y-2">
 					<div class="flex items-center justify-between text-sm">
-						<span class="text-[var(--text-muted)]">Subtotal</span>
-						<span class="font-medium text-[var(--text-primary)]">
+						<span class="text-[var(--cardapio-text-muted)]">Subtotal</span>
+						<span class="font-medium text-[var(--cardapio-text)]">
 							{{ formatCurrency(carrinhoStore.subtotal) }}
 						</span>
 					</div>
 
 					<div class="flex items-center justify-between text-sm">
-						<span class="text-[var(--text-muted)]">Taxa de entrega</span>
-						<span class="font-medium text-[var(--text-primary)]">
+						<span class="text-[var(--cardapio-text-muted)]">Taxa de entrega</span>
+						<span class="font-medium text-[var(--cardapio-text)]">
 							{{ formatCurrency(carrinhoStore.taxa_entrega) }}
 						</span>
 					</div>
 
-					<div class="h-px bg-[var(--border-default)] my-2" />
+					<div class="h-px bg-[var(--cardapio-muted)] my-2" />
 
 					<div class="flex items-center justify-between">
-						<span class="text-base font-bold text-[var(--text-primary)]">Total</span>
-						<span class="text-xl font-bold text-[var(--primary)]">
+						<span class="text-base font-bold text-[var(--cardapio-text)]">Total</span>
+						<span class="text-xl font-bold text-[var(--cardapio-primary)]">
 							{{ formatCurrency(carrinhoStore.total) }}
 						</span>
 					</div>
@@ -192,7 +194,7 @@ const finalizarPedido = () => {
 					<!-- Botão Finalizar com gradiente -->
 					<button
 						type="button"
-						class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark,var(--primary))] text-white font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
+						class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[var(--cardapio-primary)] to-[var(--cardapio-primary)] text-white font-semibold shadow-lg shadow-[var(--cardapio-primary)]/25 hover:shadow-xl hover:shadow-[var(--cardapio-primary)]/30 transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
 						@click="finalizarPedido"
 					>
 						<Icon name="lucide:check" class="w-5 h-5" />
@@ -202,7 +204,7 @@ const finalizarPedido = () => {
 					<!-- Botão Limpar -->
 					<button
 						type="button"
-						class="w-full py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center justify-center gap-2"
+						class="w-full py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-white transition-colors flex items-center justify-center gap-2"
 						@click="limparCarrinho"
 					>
 						<Icon name="lucide:trash-2" class="w-4 h-4" />

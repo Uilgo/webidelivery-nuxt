@@ -188,7 +188,7 @@ onUnmounted(() => {
 		>
 			<div
 				v-if="modelValue"
-				:class="drawerClasses"
+				:class="[drawerClasses, $attrs.class]"
 				role="dialog"
 				:aria-labelledby="titleId"
 				:aria-describedby="descriptionId"

@@ -28,15 +28,17 @@ const props = defineProps<Props>();
 					<Icon name="lucide:flame" class="w-4 h-4 sm:w-5 sm:h-5 text-white" />
 				</div>
 				<div>
-					<h3 class="text-lg sm:text-xl font-bold text-[var(--text-primary)]">
+					<h3 class="text-lg sm:text-xl font-bold text-[var(--cardapio-text)]">
 						Ofertas Imperdíveis
 					</h3>
-					<p class="text-xs sm:text-sm text-[var(--text-muted)]">Promoções por tempo limitado</p>
+					<p class="text-xs sm:text-sm text-[var(--cardapio-text-muted)]">
+						Promoções por tempo limitado
+					</p>
 				</div>
 			</div>
 			<NuxtLink
 				to="#"
-				class="text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary-dark,var(--primary))] transition-colors flex items-center gap-1"
+				class="text-sm font-semibold text-[var(--cardapio-primary)] hover:text-[var(--cardapio-primary)] hover:opacity-80 transition-colors flex items-center gap-1"
 			>
 				Ver tudo
 				<Icon name="lucide:chevron-right" class="w-4 h-4" />

@@ -32,8 +32,10 @@ const props = defineProps<Props>();
 				/>
 			</div>
 			<div>
-				<h3 class="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Mais Vendidos</h3>
-				<p class="text-xs sm:text-sm text-[var(--text-muted)]">Os favoritos dos clientes</p>
+				<h3 class="text-xl sm:text-2xl font-bold text-[var(--cardapio-text)]">Mais Vendidos</h3>
+				<p class="text-xs sm:text-sm text-[var(--cardapio-text-muted)]">
+					Os favoritos dos clientes
+				</p>
 			</div>
 		</div>
 

@@ -83,7 +83,9 @@ const temFiltrosAtivos = computed(() => {
 </script>
 
 <template>
-	<div class="py-3 pb-8 bg-[var(--bg-page)] -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4">
+	<div
+		class="py-3 pb-8 bg-[var(--cardapio-background)] -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 cardapio-theme-bridge"
+	>
 		<div class="w-full flex gap-2">
 			<!-- Campo de busca -->
 			<div class="flex-1">
@@ -96,10 +98,10 @@ const temFiltrosAtivos = computed(() => {
 					<template v-if="termoBusca" #trailing>
 						<button
 							type="button"
-							class="p-1 rounded-full hover:bg-[var(--bg-hover)] transition-colors"
+							class="p-1 rounded-full hover:bg-[var(--cardapio-hover)] transition-colors"
 							@click="limparBusca"
 						>
-							<Icon name="lucide:x" class="w-4 h-4 text-[var(--text-muted)]" />
+							<Icon name="lucide:x" class="w-4 h-4 text-[var(--cardapio-text-muted)]" />
 						</button>
 					</template>
 				</UiInput>
@@ -133,14 +135,15 @@ const temFiltrosAtivos = computed(() => {
 				</template>
 
 				<template #default="{ close }">
-					<div class="py-1 w-max min-w-[140px]">
+					<div class="py-1 w-max min-w-[140px] cardapio-theme-bridge">
 						<button
 							v-for="opcao in opcoesOrdenacao"
 							:key="opcao.value"
 							type="button"
-							class="w-full flex items-center px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap rounded-lg"
+							class="w-full flex items-center px-3 py-2 text-sm text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] transition-colors whitespace-nowrap rounded-lg"
 							:class="{
-								'bg-[var(--primary-light)] text-[var(--primary)]': ordenacaoAtual === opcao.value,
+								'bg-[var(--cardapio-primary-light)] text-[var(--cardapio-primary)]':
+									ordenacaoAtual === opcao.value,
 							}"
 							@click="
 								selecionarOrdenacao(opcao.value);
@@ -151,16 +154,16 @@ const temFiltrosAtivos = computed(() => {
 							<Icon
 								v-if="ordenacaoAtual === opcao.value"
 								name="lucide:check"
-								class="w-4 h-4 ml-auto text-[var(--primary)]"
+								class="w-4 h-4 ml-auto text-[var(--cardapio-primary)]"
 							/>
 						</button>
 
 						<!-- Botão Limpar -->
 						<template v-if="ordenacaoAtual !== 'padrao'">
-							<div class="h-px bg-[var(--border-default)] my-1"></div>
+							<div class="h-px bg-[var(--cardapio-muted)] my-1"></div>
 							<button
 								type="button"
-								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors rounded-lg"
+								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--cardapio-text-muted)] hover:bg-[var(--cardapio-hover)] hover:text-[var(--cardapio-text)] transition-colors rounded-lg"
 								@click="
 									selecionarOrdenacao('padrao');
 									close();
@@ -202,37 +205,55 @@ const temFiltrosAtivos = computed(() => {
 				</template>
 
 				<template #default="{ close }">
-					<div class="py-1 w-max min-w-[180px]">
-						<div class="px-3 py-2 space-y-3">
+					<div class="py-1 w-max min-w-[180px] cardapio-theme-bridge">
+						<div class="px-1 py-1 space-y-1">
 							<!-- Filtro: Destaques -->
-							<div class="flex items-center gap-2">
-								<Icon name="lucide:star" class="w-4 h-4 text-[var(--text-muted)]" />
+							<div
+								class="flex items-center gap-2 px-2 py-2 hover:bg-[var(--cardapio-hover)] rounded-lg transition-colors cursor-pointer group"
+								@click="
+									filtroDestaque = !filtroDestaque;
+									aplicarFiltros();
+								"
+							>
+								<Icon
+									name="lucide:star"
+									class="w-4 h-4 text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)] transition-colors"
+								/>
 								<UiCheckbox
 									v-model="filtroDestaque"
 									label="Destaques"
 									size="sm"
-									@change="aplicarFiltros"
+									class="pointer-events-none"
 								/>
 							</div>
 
 							<!-- Filtro: Promoções -->
-							<div class="flex items-center gap-2">
-								<Icon name="lucide:tag" class="w-4 h-4 text-[var(--text-muted)]" />
+							<div
+								class="flex items-center gap-2 px-2 py-2 hover:bg-[var(--cardapio-hover)] rounded-lg transition-colors cursor-pointer group"
+								@click="
+									filtroPromocao = !filtroPromocao;
+									aplicarFiltros();
+								"
+							>
+								<Icon
+									name="lucide:tag"
+									class="w-4 h-4 text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)] transition-colors"
+								/>
 								<UiCheckbox
 									v-model="filtroPromocao"
 									label="Em promoção"
 									size="sm"
-									@change="aplicarFiltros"
+									class="pointer-events-none"
 								/>
 							</div>
 						</div>
 
 						<!-- Botão Limpar Filtros -->
 						<template v-if="temFiltrosAtivos">
-							<div class="h-px bg-[var(--border-default)] my-1"></div>
+							<div class="h-px bg-[var(--cardapio-muted)] my-1"></div>
 							<button
 								type="button"
-								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors rounded-lg"
+								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--cardapio-text-muted)] hover:bg-[var(--cardapio-hover)] hover:text-[var(--cardapio-text)] transition-colors rounded-lg"
 								@click="
 									limparFiltros();
 									close();
@@ -248,3 +269,5 @@ const temFiltrosAtivos = computed(() => {
 		</div>
 	</div>
 </template>
+
+<style scoped></style>

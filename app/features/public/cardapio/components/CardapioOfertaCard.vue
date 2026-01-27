@@ -67,11 +67,11 @@ const abrirProduto = () => {
 
 <template>
 	<div
-		class="group shrink-0 w-[160px] sm:w-[180px] bg-[var(--bg-surface)] rounded-xl sm:rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-[var(--primary)]/10 transition-all duration-300 cursor-pointer border border-transparent hover:border-[var(--primary)]/20"
+		class="group shrink-0 w-[160px] sm:w-[180px] bg-[var(--cardapio-surface)] rounded-xl sm:rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-[var(--cardapio-primary)]/15 transition-all duration-300 cursor-pointer border border-transparent hover:border-[var(--cardapio-primary)]/20"
 		@click="abrirProduto"
 	>
 		<!-- Imagem -->
-		<div class="relative aspect-square bg-[var(--bg-muted)] overflow-hidden">
+		<div class="relative aspect-square bg-[var(--cardapio-muted)] overflow-hidden">
 			<!-- Badge de Desconto (animado) -->
 			<div
 				v-if="descontoPercentual"
@@ -107,7 +107,7 @@ const abrirProduto = () => {
 		<!-- Informações -->
 		<div class="p-3">
 			<h4
-				class="font-semibold text-sm text-[var(--text-primary)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
+				class="font-semibold text-sm text-[var(--cardapio-text)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
 			>
 				{{ produto.nome }}
 			</h4>
@@ -115,7 +115,10 @@ const abrirProduto = () => {
 			<div class="mt-2 flex items-center justify-between">
 				<div class="flex flex-col">
 					<!-- Preço Original Riscado -->
-					<span v-if="precoOriginal" class="text-[10px] text-[var(--text-muted)] line-through">
+					<span
+						v-if="precoOriginal"
+						class="text-[10px] text-[var(--cardapio-text-muted)] line-through"
+					>
 						{{ formatCurrency(precoOriginal) }}
 					</span>
 					<!-- Preço Atual -->

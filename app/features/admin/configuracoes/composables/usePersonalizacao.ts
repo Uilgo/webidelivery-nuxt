@@ -52,14 +52,9 @@ export const usePersonalizacao = (): UsePersonalizacaoReturn => {
 			// Extrair config_tema
 			const configTema = estabelecimento.config_tema as ConfiguracoesTema | null;
 
-			tema.value = configTema || {
-				cor_primaria: "#3b82f6",
-				cor_secundaria: "#10b981",
-				cor_fundo: "#ffffff",
-				cor_texto: "#1f2937",
-				estilo_botoes: "rounded",
-				layout_cardapio: "grid",
-			};
+			// Retorna o que vier do banco ou objeto vazio.
+			// Defaults visuais são gerenciados pelo frontend (PersonalizarTab) lendo do CSS.
+			tema.value = configTema || {};
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao buscar tema";
 			error.value = message;

@@ -127,7 +127,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="bg-[var(--bg-page)]">
+	<div class="bg-[var(--cardapio-background)]">
 		<div class="w-full">
 			<!-- Carrossel -->
 			<div class="relative rounded-xl overflow-hidden shadow-md">

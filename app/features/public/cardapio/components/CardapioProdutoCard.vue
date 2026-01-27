@@ -74,14 +74,14 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--bg-surface)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--primary)]/5 transition-all duration-300 text-left border border-transparent hover:border-[var(--primary)]/20"
+		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--cardapio-surface)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--cardapio-primary)]/10 transition-all duration-300 text-left border border-transparent hover:border-[var(--cardapio-primary)]/20"
 		@click="abrirDrawer(produto)"
 	>
 		<!-- Imagem com Zoom Effect -->
 		<div class="relative shrink-0 overflow-hidden rounded-lg sm:rounded-xl">
 			<!-- Container da imagem -->
 			<div
-				class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-[var(--bg-muted)] overflow-hidden rounded-lg sm:rounded-xl"
+				class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-[var(--cardapio-muted)] overflow-hidden rounded-lg sm:rounded-xl"
 			>
 				<img
 					v-if="produto.imagem_url"
@@ -115,14 +115,14 @@ const temMultiplasVariacoes = computed(() => {
 			<!-- Nome + Descrição -->
 			<div>
 				<h3
-					class="text-sm sm:text-base font-semibold text-[var(--text-primary)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
+					class="text-sm sm:text-base font-semibold text-[var(--cardapio-text)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
 				>
 					{{ produto.nome }}
 				</h3>
 
 				<p
 					v-if="produto.descricao"
-					class="mt-1 text-xs sm:text-sm text-[var(--text-muted)] line-clamp-2 leading-relaxed"
+					class="mt-1 text-xs sm:text-sm text-[var(--cardapio-text-muted)] line-clamp-2 leading-relaxed"
 				>
 					{{ produto.descricao }}
 				</p>
@@ -134,7 +134,7 @@ const temMultiplasVariacoes = computed(() => {
 					<!-- Preço Original Riscado -->
 					<span
 						v-if="precoOriginal"
-						class="text-[11px] sm:text-xs text-[var(--text-muted)] line-through"
+						class="text-[11px] sm:text-xs text-[var(--cardapio-text-muted)] line-through"
 					>
 						{{ formatCurrency(precoOriginal) }}
 					</span>
@@ -143,7 +143,7 @@ const temMultiplasVariacoes = computed(() => {
 					<div class="flex items-baseline gap-1.5">
 						<span
 							v-if="temMultiplasVariacoes"
-							class="text-[10px] sm:text-xs text-[var(--text-muted)]"
+							class="text-[10px] sm:text-xs text-[var(--cardapio-text-muted)]"
 						>
 							A partir de
 						</span>
@@ -182,7 +182,7 @@ const temMultiplasVariacoes = computed(() => {
 
 					<!-- Botão Adicionar -->
 					<div
-						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-lg shadow-[var(--cardapio-primary)]/25 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-[var(--cardapio-primary)]/30 transition-all duration-300"
+						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-lg shadow-[var(--cardapio-primary)]/20 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-[var(--cardapio-primary)]/30 transition-all duration-300"
 					>
 						<Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5" />
 					</div>
