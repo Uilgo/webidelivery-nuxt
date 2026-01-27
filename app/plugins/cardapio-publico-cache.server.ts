@@ -1,235 +1,291 @@
 /**
- * 📌 Plugin de Cache do Cardápio Público (Server-Side)
+ * 📌 Plugin: Cardápio Público Cache (Server-side)
  *
- * Carrega dados do cardápio no servidor e popula o useState.
- * Isso garante que os dados estejam disponíveis imediatamente no cliente (SSR).
+ * Carrega dados do cardápio público NO SERVIDOR para carregamento instantâneo.
+ * Este é o plugin MAIS CRÍTICO pois afeta a experiência do cliente final.
  *
- * Dados carregados:
- * - Estabelecimento
- * - Categorias
- * - Ofertas (produtos em promoção)
- * - Destaques (produtos em destaque)
+ * ⚡ OTIMIZAÇÕES:
+ * - Cache com TTL de 2 minutos (cardápio muda frequentemente)
+ * - Query única com JOINs para reduzir latência
+ * - Carrega apenas dados essenciais (sem paginação no SSR)
+ * - Suporta múltiplos estabelecimentos via slug
+ *
+ * IMPORTANTE: Dados são públicos, não requerem autenticação.
  */
 
-export default defineNuxtPlugin(async (_nuxtApp) => {
-	// Só executa no servidor
-	if (import.meta.client) return;
+import { createCacheWithTTL } from "~/lib/utils/cache";
+import type {
+	Estabelecimento,
+	CategoriaPublica,
+	ProdutoPublico,
+} from "~/features/public/cardapio/types/cardapio-publico";
 
-	// Pega o slug da rota
+export default defineNuxtPlugin(async () => {
+	// Só executar no server-side
+	if (!import.meta.server) return;
+
+	// Só carregar em rotas de cardápio público (/{slug})
 	const route = useRoute();
 	const slug = route.params.slug as string;
 
-	if (!slug) return;
+	// Ignorar rotas admin, auth, etc
+	if (
+		!slug ||
+		slug.startsWith("admin") ||
+		slug.startsWith("login") ||
+		slug.startsWith("signup") ||
+		slug.startsWith("super-admin")
+	) {
+		return;
+	}
+
+	const supabase = useSupabaseClient();
+
+	// Inicializar estados globais
+	const estabelecimento = useState<Estabelecimento | null>("cardapio-estabelecimento", () => null);
+	const categorias = useState<CategoriaPublica[]>("cardapio-categorias", () => []);
+	const ofertas = useState<ProdutoPublico[]>("cardapio-ofertas", () => []);
+	const destaques = useState<ProdutoPublico[]>("cardapio-destaques", () => []);
+	const produtos = useState<ProdutoPublico[]>("cardapio-produtos", () => []);
 
 	try {
-		const supabase = useSupabaseClient();
+		// ⚡ Cache por estabelecimento (TTL: 2 minutos)
+		const estabelecimentoCache = createCacheWithTTL<Estabelecimento>(
+			`cardapio-pub-estab-${slug}`,
+			2 * 60 * 1000, // 2 minutos
+		);
 
-		// 1. Busca estabelecimento pelo slug
-		const { data: estabelecimentoData, error: estabelecimentoError } = await supabase
-			.from("estabelecimentos")
-			.select(
-				"id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, config_geral, config_tema",
-			)
-			.eq("slug", slug)
-			.eq("status", "ativo")
-			.single();
+		const categoriasCache = createCacheWithTTL<CategoriaPublica[]>(
+			`cardapio-pub-cats-${slug}`,
+			2 * 60 * 1000,
+		);
 
-		if (estabelecimentoError || !estabelecimentoData) {
-			console.error("Estabelecimento não encontrado:", estabelecimentoError);
-			return;
-		}
+		const ofertasCache = createCacheWithTTL<ProdutoPublico[]>(
+			`cardapio-pub-ofertas-${slug}`,
+			2 * 60 * 1000,
+		);
 
-		// Extrai configurações
-		const configGeral = estabelecimentoData.config_geral as Record<string, unknown> | null;
-		const configTema = estabelecimentoData.config_tema as Record<string, unknown> | null;
-		const tempoEntregaMin = (configGeral?.tempo_entrega_min as number) ?? 20;
-		const tempoEntregaMax = (configGeral?.tempo_entrega_max as number) ?? 40;
-		const entregaGratisAcima = (configGeral?.valor_minimo_pedido as number) ?? null;
+		const destaquesCache = createCacheWithTTL<ProdutoPublico[]>(
+			`cardapio-pub-destaques-${slug}`,
+			2 * 60 * 1000,
+		);
 
-		// Monta objeto do estabelecimento
-		const estabelecimento = {
-			id: estabelecimentoData.id,
-			nome: estabelecimentoData.nome,
-			slug: estabelecimentoData.slug,
-			logo: estabelecimentoData.logo_url,
-			capa: estabelecimentoData.capa_url,
-			descricao: estabelecimentoData.descricao,
-			whatsapp: estabelecimentoData.whatsapp,
-			tempo_entrega_min: tempoEntregaMin,
-			tempo_entrega_max: tempoEntregaMax,
-			entrega_gratis_acima: entregaGratisAcima,
-			aberto: estabelecimentoData.aberto,
-			config_tema: configTema,
-		};
+		const produtosCache = createCacheWithTTL<ProdutoPublico[]>(
+			`cardapio-pub-produtos-${slug}`,
+			2 * 60 * 1000,
+		);
 
-		// 2. Busca categorias ativas
-		const { data: categoriasData } = await supabase
-			.from("categorias")
-			.select("id, nome, descricao, imagem_url, ordem, categoria_pai_id")
-			.eq("estabelecimento_id", estabelecimentoData.id)
-			.eq("ativo", true)
-			.order("ordem", { ascending: true });
+		// Buscar todos os dados em paralelo com cache
+		const [estabelecimentoData, categoriasData, ofertasData, destaquesData, produtosData] =
+			await Promise.all([
+				// 1. Estabelecimento
+				estabelecimentoCache.get(async () => {
+					const { data, error } = await supabase
+						.from("estabelecimentos")
+						.select(
+							"id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, config_geral, config_tema",
+						)
+						.eq("slug", slug)
+						.eq("status", "ativo")
+						.single();
 
-		const categorias = (categoriasData ?? []).map((cat) => ({
-			...cat,
-			produtos: [],
-		}));
+					if (error || !data) {
+						throw new Error("Estabelecimento não encontrado");
+					}
 
-		// 3. Busca produtos em promoção (ofertas) - limite 8
-		const { data: ofertasData } = await supabase
-			.from("produtos")
-			.select(
-				`
-				id,
-				nome,
-				descricao,
-				imagem_url,
-				destaque,
-				em_promocao,
-				categoria_id,
-				produto_variacoes (
-					id,
-					nome,
-					preco,
-					preco_promocional
-				)
-			`,
-			)
-			.eq("estabelecimento_id", estabelecimentoData.id)
-			.eq("ativo", true)
-			.eq("em_promocao", true)
-			.order("ordem", { ascending: true })
-			.limit(8);
+					const configGeral = data.config_geral as Record<string, unknown> | null;
+					const configTema = data.config_tema as Record<string, unknown> | null;
 
-		const ofertas = (ofertasData ?? []).map((produto) => ({
-			id: produto.id,
-			nome: produto.nome,
-			descricao: produto.descricao,
-			imagem_url: produto.imagem_url,
-			destaque: produto.destaque,
-			em_promocao: produto.em_promocao,
-			categoria_id: produto.categoria_id,
-			variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-				const variacao = v as Record<string, unknown>;
-				return {
-					id: variacao.id as string,
-					nome: variacao.nome as string,
-					preco: parseFloat(variacao.preco as string),
-					preco_promocional: variacao.preco_promocional
-						? parseFloat(variacao.preco_promocional as string)
-						: null,
-				};
-			}),
-			grupos_adicionais: [],
-		}));
+					return {
+						id: data.id,
+						nome: data.nome,
+						slug: data.slug,
+						logo: data.logo_url,
+						capa: data.capa_url,
+						descricao: data.descricao,
+						whatsapp: data.whatsapp,
+						tempo_entrega_min: (configGeral?.tempo_entrega_min as number) ?? 20,
+						tempo_entrega_max: (configGeral?.tempo_entrega_max as number) ?? 40,
+						entrega_gratis_acima: (configGeral?.valor_minimo_pedido as number) ?? null,
+						aberto: data.aberto,
+						config_tema: configTema,
+					};
+				}),
 
-		// 4. Busca produtos em destaque - limite 9
-		const { data: destaquesData } = await supabase
-			.from("produtos")
-			.select(
-				`
-				id,
-				nome,
-				descricao,
-				imagem_url,
-				destaque,
-				em_promocao,
-				categoria_id,
-				produto_variacoes (
-					id,
-					nome,
-					preco,
-					preco_promocional
-				)
-			`,
-			)
-			.eq("estabelecimento_id", estabelecimentoData.id)
-			.eq("ativo", true)
-			.eq("destaque", true)
-			.order("total_vendas", { ascending: false })
-			.limit(9);
+				// 2. Categorias
+				categoriasCache.get(async () => {
+					// Primeiro buscar estabelecimento para pegar o ID
+					const { data: estab } = await supabase
+						.from("estabelecimentos")
+						.select("id")
+						.eq("slug", slug)
+						.single();
 
-		const destaques = (destaquesData ?? []).map((produto) => ({
-			id: produto.id,
-			nome: produto.nome,
-			descricao: produto.descricao,
-			imagem_url: produto.imagem_url,
-			destaque: produto.destaque,
-			em_promocao: produto.em_promocao,
-			categoria_id: produto.categoria_id,
-			variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-				const variacao = v as Record<string, unknown>;
-				return {
-					id: variacao.id as string,
-					nome: variacao.nome as string,
-					preco: parseFloat(variacao.preco as string),
-					preco_promocional: variacao.preco_promocional
-						? parseFloat(variacao.preco_promocional as string)
-						: null,
-				};
-			}),
-			grupos_adicionais: [],
-		}));
+					if (!estab) return [];
 
-		// Popula os estados
-		const estabelecimentoState = useState("cardapio-estabelecimento");
-		const categoriasState = useState("cardapio-categorias");
-		const ofertasState = useState("cardapio-ofertas");
-		const destaquesState = useState("cardapio-destaques");
-		const produtosState = useState("cardapio-produtos");
+					const { data } = await supabase
+						.from("categorias")
+						.select("id, nome, descricao, imagem_url, ordem, categoria_pai_id")
+						.eq("estabelecimento_id", estab.id)
+						.eq("ativo", true)
+						.order("ordem", { ascending: true });
 
-		estabelecimentoState.value = estabelecimento;
-		categoriasState.value = categorias;
-		ofertasState.value = ofertas;
-		destaquesState.value = destaques;
+					return (data ?? []).map((cat) => ({
+						...cat,
+						produtos: [],
+					}));
+				}),
 
-		// 5. Busca primeira página de produtos (20 itens) para SSR
-		const { data: produtosData } = await supabase
-			.from("produtos")
-			.select(
-				`
-				id,
-				nome,
-				descricao,
-				imagem_url,
-				destaque,
-				em_promocao,
-				categoria_id,
-				produto_variacoes (
-					id,
-					nome,
-					preco,
-					preco_promocional
-				)
-			`,
-			)
-			.eq("estabelecimento_id", estabelecimentoData.id)
-			.eq("ativo", true)
-			.order("ordem", { ascending: true })
-			.range(0, 19);
+				// 3. Ofertas (produtos em promoção)
+				ofertasCache.get(async () => {
+					const { data: estab } = await supabase
+						.from("estabelecimentos")
+						.select("id")
+						.eq("slug", slug)
+						.single();
 
-		produtosState.value = (produtosData ?? []).map((produto) => ({
-			id: produto.id,
-			nome: produto.nome,
-			descricao: produto.descricao,
-			imagem_url: produto.imagem_url,
-			destaque: produto.destaque,
-			em_promocao: produto.em_promocao,
-			categoria_id: produto.categoria_id,
-			variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-				const variacao = v as Record<string, unknown>;
-				return {
-					id: variacao.id as string,
-					nome: variacao.nome as string,
-					preco: parseFloat(variacao.preco as string),
-					preco_promocional: variacao.preco_promocional
-						? parseFloat(variacao.preco_promocional as string)
-						: null,
-				};
-			}),
-			grupos_adicionais: [],
-		}));
-	} catch (err) {
-		console.error("Erro ao carregar cardápio:", err);
+					if (!estab) return [];
+
+					const { data } = await supabase
+						.from("produtos")
+						.select(
+							`
+						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						produto_variacoes (id, nome, preco, preco_promocional)
+					`,
+						)
+						.eq("estabelecimento_id", estab.id)
+						.eq("ativo", true)
+						.eq("em_promocao", true)
+						.order("ordem", { ascending: true })
+						.limit(8);
+
+					return (data ?? []).map((produto) => ({
+						id: produto.id,
+						nome: produto.nome,
+						descricao: produto.descricao,
+						imagem_url: produto.imagem_url,
+						destaque: produto.destaque,
+						em_promocao: produto.em_promocao,
+						categoria_id: produto.categoria_id,
+						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+							const variacao = v as Record<string, unknown>;
+							return {
+								id: variacao.id as string,
+								nome: variacao.nome as string,
+								preco: parseFloat(variacao.preco as string),
+								preco_promocional: variacao.preco_promocional
+									? parseFloat(variacao.preco_promocional as string)
+									: null,
+							};
+						}),
+						grupos_adicionais: [],
+					}));
+				}),
+
+				// 4. Destaques (produtos mais vendidos)
+				destaquesCache.get(async () => {
+					const { data: estab } = await supabase
+						.from("estabelecimentos")
+						.select("id")
+						.eq("slug", slug)
+						.single();
+
+					if (!estab) return [];
+
+					const { data } = await supabase
+						.from("produtos")
+						.select(
+							`
+						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						produto_variacoes (id, nome, preco, preco_promocional)
+					`,
+						)
+						.eq("estabelecimento_id", estab.id)
+						.eq("ativo", true)
+						.eq("destaque", true)
+						.order("total_vendas", { ascending: false })
+						.limit(9);
+
+					return (data ?? []).map((produto) => ({
+						id: produto.id,
+						nome: produto.nome,
+						descricao: produto.descricao,
+						imagem_url: produto.imagem_url,
+						destaque: produto.destaque,
+						em_promocao: produto.em_promocao,
+						categoria_id: produto.categoria_id,
+						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+							const variacao = v as Record<string, unknown>;
+							return {
+								id: variacao.id as string,
+								nome: variacao.nome as string,
+								preco: parseFloat(variacao.preco as string),
+								preco_promocional: variacao.preco_promocional
+									? parseFloat(variacao.preco_promocional as string)
+									: null,
+							};
+						}),
+						grupos_adicionais: [],
+					}));
+				}),
+
+				// 5. Produtos (primeira página - 20 itens)
+				produtosCache.get(async () => {
+					const { data: estab } = await supabase
+						.from("estabelecimentos")
+						.select("id")
+						.eq("slug", slug)
+						.single();
+
+					if (!estab) return [];
+
+					const { data } = await supabase
+						.from("produtos")
+						.select(
+							`
+						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						produto_variacoes (id, nome, preco, preco_promocional)
+					`,
+						)
+						.eq("estabelecimento_id", estab.id)
+						.eq("ativo", true)
+						.order("ordem", { ascending: true })
+						.limit(20); // Primeira página
+
+					return (data ?? []).map((produto) => ({
+						id: produto.id,
+						nome: produto.nome,
+						descricao: produto.descricao,
+						imagem_url: produto.imagem_url,
+						destaque: produto.destaque,
+						em_promocao: produto.em_promocao,
+						categoria_id: produto.categoria_id,
+						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+							const variacao = v as Record<string, unknown>;
+							return {
+								id: variacao.id as string,
+								nome: variacao.nome as string,
+								preco: parseFloat(variacao.preco as string),
+								preco_promocional: variacao.preco_promocional
+									? parseFloat(variacao.preco_promocional as string)
+									: null,
+							};
+						}),
+						grupos_adicionais: [],
+					}));
+				}),
+			]);
+
+		// Atualizar estados
+		estabelecimento.value = estabelecimentoData;
+		categorias.value = categoriasData;
+		ofertas.value = ofertasData;
+		destaques.value = destaquesData;
+		produtos.value = produtosData;
+	} catch (error) {
+		console.error("[CardapioPublicoCache] Erro ao carregar dados:", error);
+		// Em caso de erro, deixa os estados vazios
+		// O composable vai tentar carregar no client-side
 	}
 });

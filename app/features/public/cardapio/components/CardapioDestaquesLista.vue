@@ -2,7 +2,8 @@
 /**
  * 📌 CardapioDestaquesLista
  *
- * Lista vertical de produtos em destaque (mais vendidos).
+ * Seção premium de produtos mais vendidos/destaque.
+ * Visual diferenciado com ícone animado.
  */
 
 import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
@@ -16,22 +17,29 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-	<section v-if="destaques.length" class="mb-4">
-		<!-- Header -->
-		<h3 class="text-2xl font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-			<Icon name="lucide:star" class="w-6 h-6 text-primary fill-current" />
-			Mais Vendidos
-		</h3>
-
-		<!-- Lista vertical (cards separados) -->
-		<div class="space-y-3">
+	<section v-if="destaques.length" class="mb-6 sm:mb-8">
+		<!-- Header Premium -->
+		<div class="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+			<!-- Ícone com animação de brilho -->
 			<div
-				v-for="produto in destaques"
-				:key="produto.id"
-				class="bg-[var(--bg-surface)] rounded-xl shadow-sm overflow-hidden"
+				class="relative size-8 sm:size-10 rounded-xl bg-gradient-to-br from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] flex items-center justify-center shadow-lg shadow-[var(--cardapio-warning)]/25"
 			>
-				<CardapioProdutoCard :produto="produto" />
+				<Icon name="lucide:star" class="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
+				<!-- Brilho animado -->
+				<div
+					class="absolute inset-0 rounded-xl bg-white/30 animate-ping opacity-0"
+					style="animation-duration: 2s"
+				/>
 			</div>
+			<div>
+				<h3 class="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Mais Vendidos</h3>
+				<p class="text-xs sm:text-sm text-[var(--text-muted)]">Os favoritos dos clientes</p>
+			</div>
+		</div>
+
+		<!-- Lista de produtos -->
+		<div class="space-y-3">
+			<CardapioProdutoCard v-for="produto in destaques" :key="produto.id" :produto="produto" />
 		</div>
 	</section>
 </template>

@@ -109,6 +109,29 @@ DESIGN TOKENS - TAILWIND V4 @theme
 	--color-neutral-800: oklch(0.279 0.041 260.031);
 	--color-neutral-900: oklch(0.208 0.042 265.755);
 	--color-neutral-950: oklch(0.129 0.042 264.695);
+
+	/* ============= CARDÁPIO PÚBLICO (Alias Semânticos) ============= */
+	/* Permite usar: bg-cardapio-primary, text-cardapio-success, etc. */
+	--color-cardapio-primary: var(--cardapio-primary);
+	--color-cardapio-secondary: var(--cardapio-secondary);
+
+	/* Semântica Específica */
+	--color-cardapio-success: var(--cardapio-success);
+	--color-cardapio-success-light: var(--cardapio-success-light);
+	--color-cardapio-success-dark: var(--cardapio-success-dark);
+
+	--color-cardapio-danger: var(--cardapio-danger);
+	--color-cardapio-danger-light: var(--cardapio-danger-light);
+
+	--color-cardapio-warning: var(--cardapio-warning);
+	--color-cardapio-warning-light: var(--cardapio-warning-light);
+
+	/* Gradientes (definidos como cores para uso em from/to) */
+	--color-cardapio-promo-from: var(--cardapio-promo-from);
+	--color-cardapio-promo-to: var(--cardapio-promo-to);
+
+	--color-cardapio-highlight-from: var(--cardapio-highlight-from);
+	--color-cardapio-highlight-to: var(--cardapio-highlight-to);
 }
 
 /* =========================================
@@ -247,13 +270,45 @@ body {
 /* =========================================
 TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
 ========================================= */
+/* =========================================
+   TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
+   ========================================= */
 .cardapio-tema-personalizado {
-	/* Cores personalizadas do estabelecimento */
+	/* 
+	 * Cores Base (Herdam do global mas permitem override)
+	 * Padrão: Cores do sistema atual
+	 */
 	--cardapio-primary: var(--cardapio-cor-primaria, var(--primary));
 	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--accent));
 	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-surface));
 	--cardapio-text: var(--cardapio-cor-texto, var(--text-primary));
 	--cardapio-radius: var(--cardapio-border-radius, 8px);
+
+	/* 
+	 * Cores Semânticas do Cardápio (Tokens Específicos)
+	 * Mapeiam para as cores que definimos no redesign
+	 */
+
+	/* Status Sucesso (Aberto, Preço Promo) - Padrão: Emerald do Tailwind */
+	--cardapio-success: var(--cardapio-cor-success, #10b981); /* emerald-500 */
+	--cardapio-success-light: #ecfdf5; /* emerald-50 */
+	--cardapio-success-dark: #047857; /* emerald-700 */
+
+	/* Status Erro/Promoção (Fechado, Badge Promo) - Padrão: Red/Rose do Tailwind */
+	--cardapio-danger: var(--cardapio-cor-danger, #ef4444); /* red-500 */
+	--cardapio-danger-light: #fef2f2; /* red-50 */
+
+	/* Gradiente de Promoção (Rose -> Red) */
+	--cardapio-promo-from: #f43f5e; /* rose-500 */
+	--cardapio-promo-to: #dc2626; /* red-600 */
+
+	/* Status Aviso/Destaque (Estrelas, Badge Destaque) - Padrão: Amber do Tailwind */
+	--cardapio-warning: var(--cardapio-cor-warning, #f59e0b); /* amber-500 */
+	--cardapio-warning-light: #fffbeb; /* amber-50 */
+
+	/* Gradiente de Destaque (Amber -> Yellow) */
+	--cardapio-highlight-from: #fbbf24; /* amber-400 */
+	--cardapio-highlight-to: #eab308; /* yellow-500 */
 }
 
 /* Classes utilitárias para o cardápio público */

@@ -163,4 +163,40 @@ export const personalizacaoSchema = z.object({
 	cor_texto: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor de texto inválida"),
 	estilo_botoes: z.enum(["rounded", "square"]),
 	layout_cardapio: z.enum(["grid", "list"]).optional(),
+
+	// Cores Semânticas
+	cor_sucesso: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	cor_erro: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	cor_aviso: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	cor_info: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+
+	// Gradientes
+	gradiente_promo_inicio: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	gradiente_promo_fim: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	gradiente_destaque_inicio: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
+	gradiente_destaque_fim: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida")
+		.optional(),
 });

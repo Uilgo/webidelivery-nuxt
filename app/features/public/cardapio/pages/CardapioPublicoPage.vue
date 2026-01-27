@@ -261,7 +261,6 @@ useSeoMeta({
 												v-for="produto in produtosPorCategoria(categoria.id)"
 												:key="produto.id"
 												:produto="produto"
-												class="cardapio-bg-surface cardapio-rounded shadow-sm overflow-hidden"
 											/>
 										</div>
 									</template>

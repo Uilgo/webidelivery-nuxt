@@ -95,6 +95,18 @@ export interface ConfigTema {
 	readonly cor_texto: string;
 	readonly estilo_botoes: "rounded" | "square";
 	readonly layout_cardapio: "grid" | "list";
+
+	// Cores Semânticas (Opcionais - Default no Frontend)
+	readonly cor_sucesso?: string; // Status Aberto, Preços
+	readonly cor_erro?: string; // Status Fechado
+	readonly cor_aviso?: string; // Alertas, Frete Grátis
+	readonly cor_info?: string; // Informações
+
+	// Gradientes e Identidade (Opcionais)
+	readonly gradiente_promo_inicio?: string;
+	readonly gradiente_promo_fim?: string;
+	readonly gradiente_destaque_inicio?: string;
+	readonly gradiente_destaque_fim?: string;
 }
 
 export interface HorarioFuncionamento {

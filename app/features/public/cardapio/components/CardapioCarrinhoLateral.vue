@@ -2,11 +2,12 @@
 /**
  * 📌 CardapioCarrinhoLateral
  *
- * Carrinho de compras lateral fixo (desktop only).
- * Exibe itens do carrinho, subtotal e botão de finalizar pedido.
+ * Carrinho de compras premium (desktop only).
+ * Visual moderno com micro-animações e hierarquia visual.
  */
 
 import { useCarrinhoStore } from "~/stores/carrinho";
+import { formatCurrency } from "~/lib/formatters/currency";
 
 const carrinhoStore = useCarrinhoStore();
 
@@ -18,13 +19,6 @@ const montado = ref(false);
 onMounted(() => {
 	montado.value = true;
 });
-
-/**
- * Formata valor em reais
- */
-const formatarPreco = (valor: number): string => {
-	return valor.toFixed(2).replace(".", ",");
-};
 
 /**
  * Remove item do carrinho
@@ -57,136 +51,181 @@ const finalizarPedido = () => {
 
 <template>
 	<aside class="sticky top-4 h-fit">
-		<div class="bg-[var(--bg-surface)] rounded-xl shadow-lg p-4">
-			<!-- Header -->
+		<div
+			class="bg-[var(--bg-surface)] rounded-2xl shadow-xl overflow-hidden border border-[var(--border-default)]"
+		>
+			<!-- Header Premium com Gradiente -->
 			<div
-				class="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-color)]"
+				class="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark,var(--primary))] p-4 sm:p-5"
 			>
-				<h3 class="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
-					<Icon name="lucide:shopping-cart" class="w-5 h-5" />
-					Seu Pedido
-				</h3>
-				<UiBadge v-if="montado && carrinhoStore.quantidadeTotal > 0" variant="primary" size="sm">
-					{{ carrinhoStore.quantidadeTotal }}
-				</UiBadge>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-3">
+						<div
+							class="size-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center"
+						>
+							<Icon name="lucide:shopping-cart" class="w-5 h-5 text-white" />
+						</div>
+						<div>
+							<h3 class="text-lg font-bold text-white">Seu Pedido</h3>
+							<p v-if="montado && carrinhoStore.quantidadeTotal > 0" class="text-sm text-white/80">
+								{{ carrinhoStore.quantidadeTotal }}
+								{{ carrinhoStore.quantidadeTotal === 1 ? "item" : "itens" }}
+							</p>
+						</div>
+					</div>
+					<!-- Badge de quantidade -->
+					<div
+						v-if="montado && carrinhoStore.quantidadeTotal > 0"
+						class="size-8 rounded-full bg-white text-[var(--primary)] font-bold flex items-center justify-center shadow-lg"
+					>
+						{{ carrinhoStore.quantidadeTotal }}
+					</div>
+				</div>
 			</div>
 
 			<!-- Carrinho Vazio -->
 			<div
 				v-if="!montado || carrinhoStore.itens.length === 0"
-				class="flex flex-col items-center justify-center py-8 text-center"
+				class="flex flex-col items-center justify-center py-12 px-4 text-center"
 			>
-				<Icon name="lucide:shopping-bag" class="w-16 h-16 text-[var(--text-muted)] mb-3" />
-				<p class="text-sm text-[var(--text-muted)]">Seu carrinho está vazio</p>
-				<p class="text-xs text-[var(--text-muted)] mt-1">Adicione itens do cardápio para começar</p>
+				<div
+					class="size-20 rounded-full bg-[var(--bg-muted)] flex items-center justify-center mb-4"
+				>
+					<Icon name="lucide:shopping-bag" class="w-10 h-10 text-[var(--text-muted)]" />
+				</div>
+				<p class="text-sm font-medium text-[var(--text-primary)] mb-1">Seu carrinho está vazio</p>
+				<p class="text-xs text-[var(--text-muted)]">Adicione itens do cardápio para começar</p>
 			</div>
 
 			<!-- Itens do Carrinho -->
 			<div
 				v-if="montado && carrinhoStore.itens.length > 0"
-				class="space-y-3 mb-4 max-h-[400px] overflow-y-auto"
+				class="p-4 space-y-3 max-h-[350px] overflow-y-auto"
 			>
-				<div
-					v-for="item in carrinhoStore.itens"
-					:key="item.id"
-					class="flex gap-3 p-3 bg-[var(--bg-muted)] rounded-lg"
-				>
-					<!-- Imagem -->
-					<div class="size-16 rounded-lg bg-[var(--bg-surface)] overflow-hidden shrink-0">
-						<img
-							v-if="item.imagem_url"
-							:src="item.imagem_url"
-							:alt="item.nome"
-							class="w-full h-full object-cover"
-						/>
+				<TransitionGroup name="list">
+					<div
+						v-for="item in carrinhoStore.itens"
+						:key="item.id"
+						class="group flex gap-3 p-3 bg-[var(--bg-muted)] rounded-xl hover:bg-[var(--bg-hover)] transition-colors"
+					>
+						<!-- Imagem -->
 						<div
-							v-else
-							class="w-full h-full flex items-center justify-center text-[var(--text-muted)]"
+							class="size-14 rounded-lg bg-[var(--bg-surface)] overflow-hidden shrink-0 shadow-sm"
 						>
-							<Icon name="lucide:image" class="w-6 h-6" />
+							<img
+								v-if="item.imagem_url"
+								:src="item.imagem_url"
+								:alt="item.nome"
+								class="w-full h-full object-cover"
+							/>
+							<div v-else class="w-full h-full flex items-center justify-center">
+								<Icon name="lucide:image" class="w-5 h-5 text-[var(--text-muted)]" />
+							</div>
 						</div>
-					</div>
 
-					<!-- Info -->
-					<div class="flex-1 min-w-0">
-						<h4 class="text-sm font-semibold text-[var(--text-primary)] truncate">
-							{{ item.nome }}
-						</h4>
-						<p v-if="item.variacao" class="text-xs text-[var(--text-muted)]">
-							{{ item.variacao.nome }}
-						</p>
-						<p class="text-xs font-medium text-primary mt-1">
-							R$ {{ formatarPreco(item.preco_total) }}
-						</p>
-					</div>
+						<!-- Info -->
+						<div class="flex-1 min-w-0">
+							<h4 class="text-sm font-semibold text-[var(--text-primary)] truncate">
+								{{ item.nome }}
+							</h4>
+							<p v-if="item.variacao" class="text-xs text-[var(--text-muted)] truncate">
+								{{ item.variacao.nome }}
+							</p>
+							<div class="flex items-center justify-between mt-1.5">
+								<span class="text-sm font-bold text-[var(--primary)]">
+									{{ formatCurrency(item.preco_total) }}
+								</span>
+								<span
+									class="text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded-full"
+								>
+									{{ item.quantidade }}x
+								</span>
+							</div>
+						</div>
 
-					<!-- Quantidade + Remover -->
-					<div class="flex flex-col items-end justify-between">
+						<!-- Botão Remover -->
 						<button
 							type="button"
-							class="text-[var(--text-muted)] hover:text-red-500 transition-colors"
+							class="self-start opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+							title="Remover item"
 							@click="removerItem(item.id)"
 						>
-							<Icon name="lucide:x" class="w-4 h-4" />
+							<Icon name="lucide:trash-2" class="w-4 h-4" />
 						</button>
-						<span class="text-xs text-[var(--text-muted)]">{{ item.quantidade }}x</span>
 					</div>
-				</div>
+				</TransitionGroup>
 			</div>
 
-			<!-- Resumo -->
-			<div v-if="montado && carrinhoStore.itens.length > 0" class="space-y-3">
-				<!-- Subtotal -->
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-[var(--text-muted)]">Subtotal</span>
-					<span class="font-semibold text-[var(--text-primary)]">
-						R$ {{ formatarPreco(carrinhoStore.subtotal) }}
-					</span>
+			<!-- Resumo e Ações -->
+			<div
+				v-if="montado && carrinhoStore.itens.length > 0"
+				class="p-4 border-t border-[var(--border-default)] space-y-4"
+			>
+				<!-- Resumo de Valores -->
+				<div class="space-y-2">
+					<div class="flex items-center justify-between text-sm">
+						<span class="text-[var(--text-muted)]">Subtotal</span>
+						<span class="font-medium text-[var(--text-primary)]">
+							{{ formatCurrency(carrinhoStore.subtotal) }}
+						</span>
+					</div>
+
+					<div class="flex items-center justify-between text-sm">
+						<span class="text-[var(--text-muted)]">Taxa de entrega</span>
+						<span class="font-medium text-[var(--text-primary)]">
+							{{ formatCurrency(carrinhoStore.taxa_entrega) }}
+						</span>
+					</div>
+
+					<div class="h-px bg-[var(--border-default)] my-2" />
+
+					<div class="flex items-center justify-between">
+						<span class="text-base font-bold text-[var(--text-primary)]">Total</span>
+						<span class="text-xl font-bold text-[var(--primary)]">
+							{{ formatCurrency(carrinhoStore.total) }}
+						</span>
+					</div>
 				</div>
 
-				<!-- Taxa de Entrega -->
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-[var(--text-muted)]">Taxa de entrega</span>
-					<span class="font-semibold text-[var(--text-primary)]">
-						R$ {{ formatarPreco(carrinhoStore.taxa_entrega) }}
-					</span>
-				</div>
-
-				<!-- Total -->
-				<div
-					class="flex items-center justify-between text-base pt-3 border-t border-[var(--border-color)]"
-				>
-					<span class="font-bold text-[var(--text-primary)]">Total</span>
-					<span class="font-bold text-primary text-lg">
-						R$ {{ formatarPreco(carrinhoStore.total) }}
-					</span>
-				</div>
-
-				<!-- Botões -->
-				<div class="space-y-2 pt-2">
-					<UiButton
-						variant="solid"
-						color="primary"
-						size="md"
-						class="w-full"
-						@click="
-							() => {
-								console.log('Botão clicado!', slug);
-								finalizarPedido();
-							}
-						"
+				<!-- Botões de Ação -->
+				<div class="space-y-2">
+					<!-- Botão Finalizar com gradiente -->
+					<button
+						type="button"
+						class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark,var(--primary))] text-white font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
+						@click="finalizarPedido"
 					>
-						<template #iconLeft>
-							<Icon name="lucide:check" class="w-4 h-4" />
-						</template>
+						<Icon name="lucide:check" class="w-5 h-5" />
 						Finalizar Pedido
-					</UiButton>
+					</button>
 
-					<UiButton variant="ghost" size="sm" class="w-full" @click="limparCarrinho">
+					<!-- Botão Limpar -->
+					<button
+						type="button"
+						class="w-full py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center justify-center gap-2"
+						@click="limparCarrinho"
+					>
+						<Icon name="lucide:trash-2" class="w-4 h-4" />
 						Limpar Carrinho
-					</UiButton>
+					</button>
 				</div>
 			</div>
 		</div>
 	</aside>
 </template>
+
+<style scoped>
+/* Animações de lista */
+.list-enter-active,
+.list-leave-active {
+	transition: all 0.3s ease;
+}
+.list-enter-from {
+	opacity: 0;
+	transform: translateX(-20px);
+}
+.list-leave-to {
+	opacity: 0;
+	transform: translateX(20px);
+}
+</style>

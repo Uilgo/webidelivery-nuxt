@@ -33,6 +33,15 @@ export const useTemaPublico = (
 			cor_texto: configTema?.cor_texto || "#1f2937",
 			estilo_botoes: configTema?.estilo_botoes || "rounded",
 			layout_cardapio: configTema?.layout_cardapio || "grid",
+			// Novos campos opcionais
+			cor_sucesso: configTema?.cor_sucesso,
+			cor_erro: configTema?.cor_erro,
+			cor_aviso: configTema?.cor_aviso,
+			cor_info: configTema?.cor_info,
+			gradiente_promo_inicio: configTema?.gradiente_promo_inicio,
+			gradiente_promo_fim: configTema?.gradiente_promo_fim,
+			gradiente_destaque_inicio: configTema?.gradiente_destaque_inicio,
+			gradiente_destaque_fim: configTema?.gradiente_destaque_fim,
 		};
 	});
 
@@ -44,16 +53,44 @@ export const useTemaPublico = (
 
 		const root = document.documentElement;
 
-		// Aplica cores personalizadas
+		// Aplica cores personalizadas base
 		root.style.setProperty("--cardapio-cor-primaria", tema.value.cor_primaria);
 		root.style.setProperty("--cardapio-cor-secundaria", tema.value.cor_secundaria);
 		root.style.setProperty("--cardapio-cor-fundo", tema.value.cor_fundo);
 		root.style.setProperty("--cardapio-cor-texto", tema.value.cor_texto);
 
+		// Aplica cores semânticas (se definidas)
+		if (tema.value.cor_sucesso)
+			root.style.setProperty("--cardapio-cor-success", tema.value.cor_sucesso);
+		if (tema.value.cor_erro) root.style.setProperty("--cardapio-cor-danger", tema.value.cor_erro);
+		if (tema.value.cor_aviso)
+			root.style.setProperty("--cardapio-cor-warning", tema.value.cor_aviso);
+		// if (tema.value.cor_info) root.style.setProperty("--cardapio-cor-info", tema.value.cor_info);
+
+		// Aplica gradientes (se definidos)
+		if (tema.value.gradiente_promo_inicio)
+			root.style.setProperty("--cardapio-promo-from", tema.value.gradiente_promo_inicio);
+		if (tema.value.gradiente_promo_fim)
+			root.style.setProperty("--cardapio-promo-to", tema.value.gradiente_promo_fim);
+
+		if (tema.value.gradiente_destaque_inicio)
+			root.style.setProperty("--cardapio-highlight-from", tema.value.gradiente_destaque_inicio);
+		if (tema.value.gradiente_destaque_fim)
+			root.style.setProperty("--cardapio-highlight-to", tema.value.gradiente_destaque_fim);
+
+		// Opcional: Se o backend enviar cores semânticas personalizadas no futuro,
+		// podemos aplicá-las aqui. Por enquanto, usamos os defaults do CSS (Emerald/Red/Amber)
+		// mas deixamos a estrutura pronta se quiser sobrescrever.
+		/*
+		if (tema.value.cor_success) root.style.setProperty("--cardapio-cor-success", tema.value.cor_success);
+		if (tema.value.cor_danger) root.style.setProperty("--cardapio-cor-danger", tema.value.cor_danger);
+		if (tema.value.cor_warning) root.style.setProperty("--cardapio-cor-warning", tema.value.cor_warning);
+		*/
+
 		// Aplica estilo de botões
 		root.style.setProperty(
 			"--cardapio-border-radius",
-			tema.value.estilo_botoes === "rounded" ? "9999px" : "8px",
+			tema.value.estilo_botoes === "rounded" ? "9999px" : "4px",
 		);
 
 		// Adiciona classe para identificar tema personalizado
@@ -70,12 +107,21 @@ export const useTemaPublico = (
 
 		const root = document.documentElement;
 
-		// Remove propriedades personalizadas
+		// Remove propriedades personalizadas base
 		root.style.removeProperty("--cardapio-cor-primaria");
 		root.style.removeProperty("--cardapio-cor-secundaria");
 		root.style.removeProperty("--cardapio-cor-fundo");
 		root.style.removeProperty("--cardapio-cor-texto");
 		root.style.removeProperty("--cardapio-border-radius");
+
+		// Remove propriedades opcionais
+		root.style.removeProperty("--cardapio-cor-success");
+		root.style.removeProperty("--cardapio-cor-danger");
+		root.style.removeProperty("--cardapio-cor-warning");
+		root.style.removeProperty("--cardapio-promo-from");
+		root.style.removeProperty("--cardapio-promo-to");
+		root.style.removeProperty("--cardapio-highlight-from");
+		root.style.removeProperty("--cardapio-highlight-to");
 
 		// Remove classe
 		root.classList.remove("cardapio-tema-personalizado");

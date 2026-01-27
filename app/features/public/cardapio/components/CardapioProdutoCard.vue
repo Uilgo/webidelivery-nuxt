@@ -2,8 +2,9 @@
 /**
  * 📌 CardapioProdutoCard
  *
- * Card horizontal de produto (estilo iFood/Rappi).
- * Imagem à esquerda, informações à direita.
+ * Card de produto premium com visual moderno.
+ * Inclui: hover effects, zoom na imagem, shadow elevation,
+ * badges estilizados e micro-animações.
  */
 
 import { useProdutoDrawer } from "../composables/useProdutoDrawer";
@@ -54,6 +55,15 @@ const precoOriginal = computed(() => {
 });
 
 /**
+ * Calcula percentual de desconto
+ */
+const percentualDesconto = computed(() => {
+	if (!precoOriginal.value || menorPreco.value >= precoOriginal.value) return null;
+	const desconto = ((precoOriginal.value - menorPreco.value) / precoOriginal.value) * 100;
+	return Math.round(desconto);
+});
+
+/**
  * Verifica se tem múltiplas variações
  */
 const temMultiplasVariacoes = computed(() => {
@@ -64,82 +74,119 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="w-full flex gap-2 sm:gap-2.5 md:gap-3 p-2 sm:p-2.5 md:p-3 lg:p-4 cardapio-bg-surface hover:bg-[var(--bg-hover)] transition-colors text-left cardapio-rounded"
+		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--bg-surface)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--primary)]/5 transition-all duration-300 text-left border border-transparent hover:border-[var(--primary)]/20"
 		@click="abrirDrawer(produto)"
 	>
-		<!-- Imagem (esquerda - muito menor no mobile) -->
-		<div
-			class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 cardapio-rounded bg-[var(--bg-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
-		>
-			<img
-				v-if="produto.imagem_url"
-				:src="produto.imagem_url"
-				:alt="produto.nome"
-				class="w-full h-full object-cover"
-			/>
-			<Icon
-				v-else
-				name="lucide:image"
-				class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[var(--text-muted)]"
-			/>
+		<!-- Imagem com Zoom Effect -->
+		<div class="relative shrink-0 overflow-hidden rounded-lg sm:rounded-xl">
+			<!-- Container da imagem -->
+			<div
+				class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-[var(--bg-muted)] overflow-hidden rounded-lg sm:rounded-xl"
+			>
+				<img
+					v-if="produto.imagem_url"
+					:src="produto.imagem_url"
+					:alt="produto.nome"
+					class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+					loading="lazy"
+				/>
+				<div
+					v-else
+					class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+				>
+					<Icon
+						name="lucide:image"
+						class="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 dark:text-gray-500"
+					/>
+				</div>
+			</div>
+
+			<!-- Badge de Desconto (se houver) -->
+			<div
+				v-if="percentualDesconto"
+				class="absolute top-1.5 left-1.5 px-1.5 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-white text-[10px] sm:text-xs font-bold shadow-lg"
+			>
+				-{{ percentualDesconto }}%
+			</div>
 		</div>
 
-		<!-- Conteúdo (direita) -->
-		<div class="flex-1 min-w-0">
-			<!-- Nome -->
-			<h3
-				class="text-xs sm:text-sm md:text-base font-medium cardapio-text-content line-clamp-2 leading-tight"
-			>
-				{{ produto.nome }}
-			</h3>
+		<!-- Conteúdo -->
+		<div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+			<!-- Nome + Descrição -->
+			<div>
+				<h3
+					class="text-sm sm:text-base font-semibold text-[var(--text-primary)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
+				>
+					{{ produto.nome }}
+				</h3>
 
-			<!-- Descrição -->
-			<p
-				v-if="produto.descricao"
-				class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--text-muted)] line-clamp-2"
-			>
-				{{ produto.descricao }}
-			</p>
+				<p
+					v-if="produto.descricao"
+					class="mt-1 text-xs sm:text-sm text-[var(--text-muted)] line-clamp-2 leading-relaxed"
+				>
+					{{ produto.descricao }}
+				</p>
+			</div>
 
-			<!-- Preço -->
-			<div class="mt-1 sm:mt-1.5 md:mt-2 flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
-				<!-- Preço promocional ou normal -->
-				<span class="text-xs sm:text-sm md:text-base font-semibold cardapio-text-primary">
+			<!-- Preço + Badges -->
+			<div class="mt-2 sm:mt-3 flex items-end justify-between gap-2">
+				<div class="flex flex-col gap-1">
+					<!-- Preço Original Riscado -->
 					<span
-						v-if="temMultiplasVariacoes"
-						class="text-[var(--text-muted)] font-normal text-[10px] sm:text-xs md:text-sm"
-						>A partir de
+						v-if="precoOriginal"
+						class="text-[11px] sm:text-xs text-[var(--text-muted)] line-through"
+					>
+						{{ formatCurrency(precoOriginal) }}
 					</span>
-					{{ formatCurrency(menorPreco) }}
-				</span>
 
-				<!-- Preço original riscado (se em promoção) -->
-				<span
-					v-if="precoOriginal"
-					class="text-[10px] sm:text-xs text-[var(--text-muted)] line-through"
-				>
-					{{ formatCurrency(precoOriginal) }}
-				</span>
+					<!-- Preço Atual -->
+					<div class="flex items-baseline gap-1.5">
+						<span
+							v-if="temMultiplasVariacoes"
+							class="text-[10px] sm:text-xs text-[var(--text-muted)]"
+						>
+							A partir de
+						</span>
+						<span
+							class="text-base sm:text-lg font-bold"
+							:class="
+								temPromocao
+									? 'text-[var(--cardapio-success)] dark:text-[var(--cardapio-success)]'
+									: 'text-[var(--cardapio-primary)]'
+							"
+						>
+							{{ formatCurrency(menorPreco) }}
+						</span>
+					</div>
+				</div>
 
-				<!-- Badge de promoção -->
-				<UiBadge
-					v-if="produto.em_promocao"
-					variant="error"
-					size="sm"
-					class="text-[9px] sm:text-[10px] md:text-xs scale-90 sm:scale-100"
-				>
-					Promoção
-				</UiBadge>
+				<!-- Badges + Botão Add -->
+				<div class="flex items-center gap-2">
+					<!-- Badge de Destaque -->
+					<span
+						v-if="produto.destaque && !produto.em_promocao"
+						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-[var(--cardapio-warning-light)] dark:bg-amber-900/30 text-[var(--cardapio-warning)] dark:text-[var(--cardapio-warning)] text-[10px] sm:text-xs font-medium border border-[var(--cardapio-warning)]/20"
+					>
+						<Icon name="lucide:star" class="w-3 h-3 fill-current" />
+						Destaque
+					</span>
 
-				<!-- Badge de destaque -->
-				<UiBadge
-					v-if="produto.destaque"
-					variant="warning"
-					size="sm"
-					class="text-[9px] sm:text-[10px] md:text-xs scale-90 sm:scale-100"
-				>
-					Destaque
-				</UiBadge>
+					<!-- Badge de Promoção -->
+					<span
+						v-if="produto.em_promocao"
+						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-white text-[10px] sm:text-xs font-medium shadow-sm"
+					>
+						<Icon name="lucide:flame" class="w-3 h-3" />
+						Promoção
+					</span>
+
+					<!-- Botão Adicionar -->
+					<div
+						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-lg shadow-[var(--cardapio-primary)]/25 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-[var(--cardapio-primary)]/30 transition-all duration-300"
+					>
+						<Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5" />
+					</div>
+				</div>
 			</div>
 		</div>
 	</button>
