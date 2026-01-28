@@ -22,8 +22,11 @@ const emit = defineEmits<Emits>();
 
 // Ref do container de scroll
 const scrollContainer = ref<HTMLElement | null>(null);
+// Inicia botão esquerda como false (nunca há scroll no início)
 const mostrarBotaoEsquerda = ref(false);
-const mostrarBotaoDireita = ref(false);
+// Inicia botão direita como true para evitar flash durante hidratação SSR
+// O onMounted irá corrigir se não houver scroll suficiente
+const mostrarBotaoDireita = ref(true);
 
 /**
  * Seleciona uma categoria

@@ -17,15 +17,6 @@ const emit = defineEmits<Emits>();
 
 // Store do carrinho
 const carrinhoStore = useCarrinhoStore();
-
-/**
- * Estado de hidratação - evita mismatch SSR
- */
-const montado = ref(false);
-
-onMounted(() => {
-	montado.value = true;
-});
 </script>
 
 <template>
@@ -38,7 +29,7 @@ onMounted(() => {
 		leave-to-class="translate-y-full opacity-0"
 	>
 		<div
-			v-if="montado && !carrinhoStore.estaVazio"
+			v-if="!carrinhoStore.estaVazio"
 			class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[var(--cardapio-background)] border-t border-[var(--cardapio-border)] shadow-lg cardapio-theme-bridge"
 		>
 			<div class="max-w-3xl mx-auto">

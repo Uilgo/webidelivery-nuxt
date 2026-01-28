@@ -12,15 +12,6 @@ import { formatCurrency } from "~/lib/formatters/currency";
 const carrinhoStore = useCarrinhoStore();
 
 /**
- * Estado de hidratação - evita mismatch SSR
- */
-const montado = ref(false);
-
-onMounted(() => {
-	montado.value = true;
-});
-
-/**
  * Remove item do carrinho
  */
 const removerItem = (itemId: string) => {
@@ -67,7 +58,7 @@ const finalizarPedido = () => {
 						</div>
 						<div>
 							<h3 class="text-lg font-bold text-white">Seu Pedido</h3>
-							<p v-if="montado && carrinhoStore.quantidadeTotal > 0" class="text-sm text-white/80">
+							<p v-if="carrinhoStore.quantidadeTotal > 0" class="text-sm text-white/80">
 								{{ carrinhoStore.quantidadeTotal }}
 								{{ carrinhoStore.quantidadeTotal === 1 ? "item" : "itens" }}
 							</p>
@@ -75,7 +66,7 @@ const finalizarPedido = () => {
 					</div>
 					<!-- Badge de quantidade -->
 					<div
-						v-if="montado && carrinhoStore.quantidadeTotal > 0"
+						v-if="carrinhoStore.quantidadeTotal > 0"
 						class="size-8 rounded-full bg-white text-[var(--cardapio-primary)] font-bold flex items-center justify-center shadow-lg"
 					>
 						{{ carrinhoStore.quantidadeTotal }}
@@ -85,7 +76,7 @@ const finalizarPedido = () => {
 
 			<!-- Carrinho Vazio -->
 			<div
-				v-if="!montado || carrinhoStore.itens.length === 0"
+				v-if="carrinhoStore.itens.length === 0"
 				class="flex flex-col items-center justify-center py-12 px-4 text-center"
 			>
 				<div
@@ -101,7 +92,7 @@ const finalizarPedido = () => {
 
 			<!-- Itens do Carrinho -->
 			<div
-				v-if="montado && carrinhoStore.itens.length > 0"
+				v-if="carrinhoStore.itens.length > 0"
 				class="p-4 space-y-3 max-h-[350px] overflow-y-auto"
 			>
 				<TransitionGroup name="list">
@@ -160,7 +151,7 @@ const finalizarPedido = () => {
 
 			<!-- Resumo e Ações -->
 			<div
-				v-if="montado && carrinhoStore.itens.length > 0"
+				v-if="carrinhoStore.itens.length > 0"
 				class="p-4 border-t border-[var(--cardapio-border)] space-y-4"
 			>
 				<!-- Resumo de Valores -->

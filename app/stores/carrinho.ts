@@ -1,8 +1,12 @@
 /**
- * 📌 Store do Carrinho (Pinia)
+ * 📌 Store do Carrinho (Pinia + Cookie)
  *
  * Gerencia o estado do carrinho de compras do cliente.
- * Persiste no localStorage para manter entre sessões.
+ * Persiste em cookie para SSR compatível (sem flash de hidratação).
+ *
+ * @description
+ * O carrinho é salvo em cookie para que o servidor possa ler os dados
+ * e renderizar o HTML já com os itens do carrinho preenchidos.
  */
 
 import { defineStore } from "pinia";
@@ -12,12 +16,38 @@ import type { ItemCarrinho, Carrinho } from "~/features/public/cardapio/types/ca
 // TIPOS DO STORE
 // ========================================
 
-interface CarrinhoState {
+/**
+ * Dados persistidos no cookie (estrutura reduzida)
+ */
+interface CarrinhoCookieData {
 	estabelecimento_id: string | null;
 	estabelecimento_slug: string | null;
 	itens: ItemCarrinho[];
 	taxa_entrega: number;
 	desconto: number;
+}
+
+// ========================================
+// COMPOSABLE DO COOKIE
+// ========================================
+
+/**
+ * Composable para acessar o cookie do carrinho.
+ * Pode ser usado no servidor e no cliente.
+ */
+export function useCarrinhoCookie() {
+	return useCookie<CarrinhoCookieData | null>("webidelivery_carrinho", {
+		// Cookie dura 7 dias
+		maxAge: 60 * 60 * 24 * 7,
+		// Protege contra CSRF em navegação cross-site
+		sameSite: "lax",
+		// Cookie acessível em todo o site
+		path: "/",
+		// Valor padrão quando não existe
+		default: () => null,
+		// Permite serialização de objetos complexos
+		watch: true,
+	});
 }
 
 // ========================================
@@ -28,13 +58,30 @@ export const useCarrinhoStore = defineStore("carrinho", {
 	// ========================================
 	// ESTADO
 	// ========================================
-	state: (): CarrinhoState => ({
-		estabelecimento_id: null,
-		estabelecimento_slug: null,
-		itens: [],
-		taxa_entrega: 0,
-		desconto: 0,
-	}),
+	state: (): CarrinhoCookieData => {
+		// Tenta ler do cookie no momento da criação do estado
+		const cookie = useCarrinhoCookie();
+		const dadosCookie = cookie.value;
+
+		if (dadosCookie) {
+			return {
+				estabelecimento_id: dadosCookie.estabelecimento_id,
+				estabelecimento_slug: dadosCookie.estabelecimento_slug,
+				itens: dadosCookie.itens || [],
+				taxa_entrega: dadosCookie.taxa_entrega || 0,
+				desconto: dadosCookie.desconto || 0,
+			};
+		}
+
+		// Estado inicial vazio
+		return {
+			estabelecimento_id: null,
+			estabelecimento_slug: null,
+			itens: [],
+			taxa_entrega: 0,
+			desconto: 0,
+		};
+	},
 
 	// ========================================
 	// GETTERS
@@ -91,6 +138,21 @@ export const useCarrinhoStore = defineStore("carrinho", {
 	// ========================================
 	actions: {
 		/**
+		 * Sincroniza o estado do store com o cookie.
+		 * Deve ser chamado após qualquer alteração no estado.
+		 */
+		_sincronizarCookie(): void {
+			const cookie = useCarrinhoCookie();
+			cookie.value = {
+				estabelecimento_id: this.estabelecimento_id,
+				estabelecimento_slug: this.estabelecimento_slug,
+				itens: this.itens,
+				taxa_entrega: this.taxa_entrega,
+				desconto: this.desconto,
+			};
+		},
+
+		/**
 		 * Define o estabelecimento do carrinho
 		 * Se mudar de estabelecimento, limpa o carrinho
 		 */
@@ -102,7 +164,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 
 			this.estabelecimento_id = id;
 			this.estabelecimento_slug = slug;
-			this.salvarNoStorage();
+			this._sincronizarCookie();
 		},
 
 		/**
@@ -115,7 +177,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 			};
 
 			this.itens.push(novoItem);
-			this.salvarNoStorage();
+			this._sincronizarCookie();
 		},
 
 		/**
@@ -125,7 +187,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 			const index = this.itens.findIndex((item) => item.id === itemId);
 			if (index !== -1) {
 				this.itens.splice(index, 1);
-				this.salvarNoStorage();
+				this._sincronizarCookie();
 			}
 		},
 
@@ -140,7 +202,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 				} else {
 					item.quantidade = quantidade;
 					item.preco_total = item.preco_unitario * quantidade;
-					this.salvarNoStorage();
+					this._sincronizarCookie();
 				}
 			}
 		},
@@ -170,7 +232,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 		 */
 		setTaxaEntrega(taxa: number): void {
 			this.taxa_entrega = taxa;
-			this.salvarNoStorage();
+			this._sincronizarCookie();
 		},
 
 		/**
@@ -178,7 +240,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 		 */
 		aplicarDesconto(valor: number): void {
 			this.desconto = valor;
-			this.salvarNoStorage();
+			this._sincronizarCookie();
 		},
 
 		/**
@@ -188,44 +250,7 @@ export const useCarrinhoStore = defineStore("carrinho", {
 			this.itens = [];
 			this.taxa_entrega = 0;
 			this.desconto = 0;
-			this.salvarNoStorage();
-		},
-
-		/**
-		 * Salva o estado no localStorage
-		 */
-		salvarNoStorage(): void {
-			if (import.meta.client) {
-				const dados = {
-					estabelecimento_id: this.estabelecimento_id,
-					estabelecimento_slug: this.estabelecimento_slug,
-					itens: this.itens,
-					taxa_entrega: this.taxa_entrega,
-					desconto: this.desconto,
-				};
-				localStorage.setItem("webidelivery_carrinho", JSON.stringify(dados));
-			}
-		},
-
-		/**
-		 * Carrega o estado do localStorage
-		 */
-		carregarDoStorage(): void {
-			if (import.meta.client) {
-				const dados = localStorage.getItem("webidelivery_carrinho");
-				if (dados) {
-					try {
-						const parsed = JSON.parse(dados) as CarrinhoState;
-						this.estabelecimento_id = parsed.estabelecimento_id;
-						this.estabelecimento_slug = parsed.estabelecimento_slug;
-						this.itens = parsed.itens || [];
-						this.taxa_entrega = parsed.taxa_entrega || 0;
-						this.desconto = parsed.desconto || 0;
-					} catch {
-						// Se der erro no parse, ignora
-					}
-				}
-			}
+			this._sincronizarCookie();
 		},
 	},
 });
