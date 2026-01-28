@@ -141,18 +141,34 @@ watch(
 					:class="[
 						categoriaSelecionada === null
 							? 'bg-[var(--cardapio-primary)] text-white shadow-lg shadow-[var(--cardapio-primary)]/25'
-							: 'bg-[var(--cardapio-secondary)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] border border-[var(--cardapio-border)]',
+							: 'text-[var(--cardapio-text)]',
 					]"
+					:style="
+						categoriaSelecionada !== null
+							? {
+									backgroundColor:
+										'color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 6%)',
+								}
+							: {}
+					"
 					@click="selecionarCategoria(null)"
 				>
 					<span class="relative z-10 flex items-center gap-2">
 						<Icon name="lucide:grid-2x2" class="w-4 h-4" />
 						Todos
 					</span>
+					<!-- Overlay de hover -->
+					<span
+						v-if="categoriaSelecionada !== null"
+						class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity z-0"
+						:style="{
+							backgroundColor: 'var(--cardapio-hover)',
+						}"
+					/>
 					<!-- Brilho no hover (quando não selecionado) -->
 					<span
 						v-if="categoriaSelecionada !== null"
-						class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+						class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 z-10"
 					/>
 				</button>
 
@@ -165,15 +181,31 @@ watch(
 					:class="[
 						categoriaSelecionada === categoria.id
 							? 'bg-[var(--cardapio-primary)] text-white shadow-lg shadow-[var(--cardapio-primary)]/25'
-							: 'bg-[var(--cardapio-secondary)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] border border-[var(--cardapio-border)]',
+							: 'text-[var(--cardapio-text)]',
 					]"
+					:style="
+						categoriaSelecionada !== categoria.id
+							? {
+									backgroundColor:
+										'color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 6%)',
+								}
+							: {}
+					"
 					@click="selecionarCategoria(categoria.id)"
 				>
 					<span class="relative z-10">{{ categoria.nome }}</span>
+					<!-- Overlay de hover -->
+					<span
+						v-if="categoriaSelecionada !== categoria.id"
+						class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity z-0"
+						:style="{
+							backgroundColor: 'var(--cardapio-hover)',
+						}"
+					/>
 					<!-- Brilho no hover (quando não selecionado) -->
 					<span
 						v-if="categoriaSelecionada !== categoria.id"
-						class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+						class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 z-10"
 					/>
 				</button>
 			</div>

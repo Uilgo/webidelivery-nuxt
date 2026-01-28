@@ -239,7 +239,12 @@ export const useTemaPublico = (
 		// Aplica estilo de botões
 		root.style.setProperty(
 			"--cardapio-border-radius",
-			tema.value.estilo_botoes === "rounded" ? "9999px" : "4px",
+			tema.value.estilo_botoes === "rounded" ? "9999px" : "8px",
+		);
+		// 🔥 CRÍTICO: Aplicar também --cardapio-radius diretamente
+		root.style.setProperty(
+			"--cardapio-radius",
+			tema.value.estilo_botoes === "rounded" ? "9999px" : "8px",
 		);
 
 		// Adiciona classe para identificar tema personalizado

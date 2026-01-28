@@ -26,7 +26,16 @@ const { handleSubmit, values, setFieldValue, resetForm } = useForm({
 
 // Submeter formulário manual
 const onSubmit = handleSubmit(async (formValues) => {
-	await salvarTema(formValues);
+	// 🔥 CRÍTICO: Remover campos undefined para não sobrescrever valores no banco
+	// Quando em modo simples, cor_secundaria deve ser omitida (não enviada como undefined)
+	const dadosLimpos = Object.fromEntries(
+		Object.entries(formValues).filter(([_, value]) => value !== undefined && value !== ""),
+	);
+
+	console.log("🔍 Dados do formulário (antes de limpar):", formValues);
+	console.log("✅ Dados limpos (enviando):", dadosLimpos);
+
+	await salvarTema(dadosLimpos);
 });
 
 // Cores padrão do sistema
@@ -68,25 +77,40 @@ watch(
 	tema,
 	(newTema) => {
 		if (newTema) {
+			// 🔥 CRÍTICO: Detectar modo baseado na presença de cor_secundaria
+			const temCorSecundariaCustomizada = !!(
+				newTema.cor_secundaria && newTema.cor_secundaria !== CORES_PADRAO.value.cor_secundaria
+			);
+
 			resetForm({
 				values: {
-					...newTema,
-					// Garante que campos opcionais tenham valor (ou fallback para o padrão se undefined)
+					// Campos obrigatórios sempre têm valor
 					cor_primaria: newTema.cor_primaria || CORES_PADRAO.value.cor_primaria,
-					cor_secundaria: newTema.cor_secundaria || CORES_PADRAO.value.cor_secundaria,
 					cor_fundo: newTema.cor_fundo || CORES_PADRAO.value.cor_fundo,
 					cor_texto: newTema.cor_texto || CORES_PADRAO.value.cor_texto,
-					cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.value.cor_sucesso,
-					cor_erro: newTema.cor_erro || CORES_PADRAO.value.cor_erro,
-					cor_aviso: newTema.cor_aviso || CORES_PADRAO.value.cor_aviso,
-					gradiente_promo_inicio:
-						newTema.gradiente_promo_inicio || CORES_PADRAO.value.gradiente_promo_inicio,
-					gradiente_promo_fim:
-						newTema.gradiente_promo_fim || CORES_PADRAO.value.gradiente_promo_fim,
-					gradiente_destaque_inicio:
-						newTema.gradiente_destaque_inicio || CORES_PADRAO.value.gradiente_destaque_inicio,
-					gradiente_destaque_fim:
-						newTema.gradiente_destaque_fim || CORES_PADRAO.value.gradiente_destaque_fim,
+					estilo_botoes: newTema.estilo_botoes || "rounded",
+					layout_cardapio: newTema.layout_cardapio,
+
+					// 🔥 Cor secundária: só incluir se for customizada (modo avançado)
+					...(temCorSecundariaCustomizada ? { cor_secundaria: newTema.cor_secundaria } : {}),
+
+					// Campos opcionais: só incluir se existirem
+					...(newTema.cor_sucesso ? { cor_sucesso: newTema.cor_sucesso } : {}),
+					...(newTema.cor_erro ? { cor_erro: newTema.cor_erro } : {}),
+					...(newTema.cor_aviso ? { cor_aviso: newTema.cor_aviso } : {}),
+					...(newTema.cor_info ? { cor_info: newTema.cor_info } : {}),
+					...(newTema.gradiente_promo_inicio
+						? { gradiente_promo_inicio: newTema.gradiente_promo_inicio }
+						: {}),
+					...(newTema.gradiente_promo_fim
+						? { gradiente_promo_fim: newTema.gradiente_promo_fim }
+						: {}),
+					...(newTema.gradiente_destaque_inicio
+						? { gradiente_destaque_inicio: newTema.gradiente_destaque_inicio }
+						: {}),
+					...(newTema.gradiente_destaque_fim
+						? { gradiente_destaque_fim: newTema.gradiente_destaque_fim }
+						: {}),
 				},
 			});
 			nextTick(() => {
@@ -139,7 +163,8 @@ const toggleModo = () => {
 
 	// Se alternar para modo simples, limpar cor secundária (será gerada automaticamente)
 	if (!modoAvancado.value) {
-		setFieldValue("cor_secundaria", undefined);
+		// 🔥 CRÍTICO: Usar null ao invés de undefined para forçar remoção do campo
+		setFieldValue("cor_secundaria", null);
 	} else {
 		// Se alternar para modo avançado, definir cor padrão
 		setFieldValue("cor_secundaria", CORES_PADRAO.value.cor_secundaria);
@@ -436,7 +461,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 													class="px-2 py-0.5 rounded-full text-[8px] font-bold text-white shadow-sm flex items-center gap-1"
 													:style="{
 														backgroundColor: values.cor_sucesso,
-														borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '4px',
+														borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '8px',
 													}"
 												>
 													<div class="w-1 h-1 rounded-full bg-white animate-pulse"></div>
@@ -447,7 +472,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 													class="px-2 py-0.5 rounded-full text-[8px] font-medium bg-gray-100/50 backdrop-blur-sm flex items-center gap-1"
 													:style="{
 														color: values.cor_texto,
-														borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '4px',
+														borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '8px',
 													}"
 												>
 													<Icon name="lucide:clock" class="w-2 h-2" />
@@ -472,7 +497,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 														? '#f3f4f6'
 														: `${values.cor_texto}15`,
 											color: i === 0 ? '#ffffff' : values.cor_texto,
-											borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '4px',
+											borderRadius: values.estilo_botoes === 'rounded' ? '99px' : '8px',
 											opacity: i === 0 ? 1 : 0.6,
 										}"
 									>
@@ -513,7 +538,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 													class="w-5 h-5 flex items-center justify-center text-white shadow-sm transition-all"
 													:style="{
 														backgroundColor: values.cor_primaria,
-														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '4px',
+														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '8px',
 													}"
 												>
 													<Icon name="lucide:plus" class="w-3 h-3" />
@@ -562,7 +587,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 													class="w-5 h-5 flex items-center justify-center text-white shadow-sm transition-all"
 													:style="{
 														backgroundColor: values.cor_primaria,
-														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '4px',
+														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '8px',
 													}"
 												>
 													<Icon name="lucide:plus" class="w-3 h-3" />
@@ -616,7 +641,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 													class="w-5 h-5 flex items-center justify-center text-white shadow-sm transition-all"
 													:style="{
 														backgroundColor: values.cor_primaria,
-														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '4px',
+														borderRadius: values.estilo_botoes === 'rounded' ? '50%' : '8px',
 													}"
 												>
 													<Icon name="lucide:plus" class="w-3 h-3" />
@@ -1116,7 +1141,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 										<div
 											class="w-16 h-8 transition-all duration-300"
 											:style="{
-												borderRadius: estilo.value === 'rounded' ? '99px' : '6px',
+												borderRadius: estilo.value === 'rounded' ? '99px' : '8px',
 												backgroundColor:
 													values.estilo_botoes === estilo.value
 														? values.cor_primaria

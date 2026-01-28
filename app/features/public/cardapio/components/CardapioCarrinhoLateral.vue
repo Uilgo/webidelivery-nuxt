@@ -134,7 +134,7 @@ const finalizarPedido = () => {
 								<!-- Botão Remover -->
 								<button
 									type="button"
-									class="shrink-0 p-1 rounded-md text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+									class="shrink-0 p-1.5 rounded-md text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all flex items-center justify-center"
 									title="Remover item"
 									@click="removerItem(item.id)"
 								>

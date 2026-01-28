@@ -170,7 +170,7 @@ const temMultiplasVariacoes = computed(() => {
 				<div class="flex items-center gap-2">
 					<!-- Badge de Destaque -->
 					<span
-						v-if="produto.destaque && !produto.em_promocao"
+						v-if="produto.destaque"
 						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] text-[var(--cardapio-highlight-text)] text-[10px] sm:text-xs font-medium shadow-sm"
 					>
 						<Icon name="lucide:star" class="w-3 h-3 fill-current" />
@@ -179,7 +179,7 @@ const temMultiplasVariacoes = computed(() => {
 
 					<!-- Badge de Promoção -->
 					<span
-						v-if="produto.em_promocao"
+						v-if="temPromocao"
 						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-[10px] sm:text-xs font-medium shadow-sm"
 					>
 						<Icon name="lucide:flame" class="w-3 h-3" />

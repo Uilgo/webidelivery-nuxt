@@ -47,6 +47,18 @@ const {
 // Aplica tema personalizado do estabelecimento
 useTemaPublico(estabelecimento);
 
+// 🔍 DEBUG: Verificar valores CSS aplicados
+onMounted(() => {
+	const root = document.documentElement;
+	const borderRadius = getComputedStyle(root).getPropertyValue("--cardapio-border-radius").trim();
+	const radius = getComputedStyle(root).getPropertyValue("--cardapio-radius").trim();
+	console.log("🔍 DEBUG Border Radius:", {
+		"--cardapio-border-radius": borderRadius,
+		"--cardapio-radius": radius,
+		"estilo_botoes no banco": estabelecimento.value?.config_tema?.estilo_botoes,
+	});
+});
+
 // Estado da busca
 const termoBusca = ref("");
 const filtrosAtivos = ref({ destaque: false, promocao: false });

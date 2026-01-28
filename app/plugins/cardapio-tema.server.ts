@@ -193,7 +193,9 @@ function gerarCSSVariaveis(tema: ConfigTema): string {
 		vars.push(`--cardapio-highlight-to: ${tema.gradiente_destaque_fim};`);
 
 	// 🎨 Estilo de botões
-	vars.push(`--cardapio-border-radius: ${tema.estilo_botoes === "rounded" ? "9999px" : "4px"};`);
+	const borderRadius = tema.estilo_botoes === "rounded" ? "9999px" : "8px";
+	vars.push(`--cardapio-border-radius: ${borderRadius};`);
+	vars.push(`--cardapio-radius: ${borderRadius};`);
 
 	// Retorna CSS completo
 	return `:root { ${vars.join(" ")} }`;
