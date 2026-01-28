@@ -115,7 +115,7 @@ const temFiltrosAtivos = computed(() => {
 						variant="ghost"
 						size="md"
 						icon="lucide:arrow-up-down"
-						class="!min-h-[40px] !w-[40px] flex-shrink-0"
+						class="!min-h-[40px] !w-[40px] flex-shrink-0 hover:!bg-[var(--cardapio-hover)]"
 						aria-label="Ordenar produtos"
 						@click="toggle"
 					/>
@@ -123,7 +123,7 @@ const temFiltrosAtivos = computed(() => {
 						v-else
 						variant="ghost"
 						size="md"
-						class="!min-h-[40px] !px-3 flex-shrink-0"
+						class="!min-h-[40px] !px-3 flex-shrink-0 hover:!bg-[var(--cardapio-hover)]"
 						aria-label="Ordenar produtos"
 						@click="toggle"
 					>
@@ -185,7 +185,7 @@ const temFiltrosAtivos = computed(() => {
 						variant="ghost"
 						size="md"
 						icon="lucide:filter"
-						class="!min-h-[40px] !w-[40px] flex-shrink-0"
+						class="!min-h-[40px] !w-[40px] flex-shrink-0 hover:!bg-[var(--cardapio-hover)]"
 						aria-label="Filtrar produtos"
 						@click="toggle"
 					/>
@@ -193,7 +193,7 @@ const temFiltrosAtivos = computed(() => {
 						v-else
 						variant="ghost"
 						size="md"
-						class="!min-h-[40px] !px-3 flex-shrink-0"
+						class="!min-h-[40px] !px-3 flex-shrink-0 hover:!bg-[var(--cardapio-hover)]"
 						aria-label="Filtrar produtos"
 						@click="toggle"
 					>

@@ -93,58 +93,116 @@ const finalizarPedido = () => {
 			<!-- Itens do Carrinho -->
 			<div
 				v-if="carrinhoStore.itens.length > 0"
-				class="p-4 space-y-3 max-h-[350px] overflow-y-auto"
+				class="p-4 space-y-3 max-h-[400px] overflow-y-auto"
 			>
 				<TransitionGroup name="list">
 					<div
 						v-for="item in carrinhoStore.itens"
 						:key="item.id"
-						class="group flex gap-3 p-3 bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)] rounded-xl hover:bg-[var(--cardapio-hover)] transition-colors"
+						class="group bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)] rounded-xl overflow-hidden hover:border-[var(--cardapio-primary)]/30 transition-all duration-200"
 					>
-						<!-- Imagem -->
-						<div
-							class="size-14 rounded-lg bg-[var(--cardapio-background)] overflow-hidden shrink-0 shadow-sm"
-						>
-							<img
-								v-if="item.imagem_url"
-								:src="item.imagem_url"
-								:alt="item.nome"
-								class="w-full h-full object-cover"
-							/>
-							<div v-else class="w-full h-full flex items-center justify-center">
-								<Icon name="lucide:image" class="w-5 h-5 text-[var(--cardapio-text-muted)]" />
+						<!-- Conteúdo Principal: Imagem + Info -->
+						<div class="flex gap-3 p-3 pb-0">
+							<!-- Imagem -->
+							<div
+								class="size-16 rounded-lg bg-[var(--cardapio-background)] overflow-hidden shrink-0 shadow-sm ring-1 ring-[var(--cardapio-border)]"
+							>
+								<img
+									v-if="item.imagem_url"
+									:src="item.imagem_url"
+									:alt="item.nome"
+									class="w-full h-full object-cover"
+								/>
+								<div v-else class="w-full h-full flex items-center justify-center">
+									<Icon name="lucide:image" class="w-6 h-6 text-[var(--cardapio-text-muted)]" />
+								</div>
 							</div>
-						</div>
 
-						<!-- Info -->
-						<div class="flex-1 min-w-0">
-							<h4 class="text-sm font-semibold text-[var(--cardapio-text)] truncate">
-								{{ item.nome }}
-							</h4>
-							<p v-if="item.variacao" class="text-xs text-[var(--cardapio-text-muted)] truncate">
-								{{ item.variacao.nome }}
-							</p>
-							<div class="flex items-center justify-between mt-1.5">
-								<span class="text-sm font-bold text-[var(--cardapio-primary)]">
-									{{ formatCurrency(item.preco_total) }}
-								</span>
-								<span
-									class="text-xs text-[var(--cardapio-text-muted)] bg-[var(--cardapio-background)] px-2 py-0.5 rounded-full"
+							<!-- Info e Botão Remover -->
+							<div class="flex-1 min-w-0 flex items-start justify-between gap-2">
+								<div class="flex-1 min-w-0">
+									<h4 class="text-sm font-semibold text-[var(--cardapio-text)] leading-tight">
+										{{ item.nome }}
+									</h4>
+									<p v-if="item.variacao" class="text-xs text-[var(--cardapio-text-muted)] mt-0.5">
+										{{ item.variacao.nome }}
+									</p>
+									<p class="text-xs text-[var(--cardapio-text-muted)] mt-0.5">
+										{{ formatCurrency(item.preco_unitario) }} cada
+									</p>
+								</div>
+								<!-- Botão Remover -->
+								<button
+									type="button"
+									class="shrink-0 p-1 rounded-md text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+									title="Remover item"
+									@click="removerItem(item.id)"
 								>
-									{{ item.quantidade }}x
+									<Icon name="lucide:trash-2" class="w-4 h-4" />
+								</button>
+							</div>
+						</div>
+
+						<!-- Linha de Controles: Seletor + Preço Total (largura total) -->
+						<div class="flex items-center justify-between px-3 pb-3 pt-3">
+							<!-- Controles +/- -->
+							<div
+								class="flex items-center gap-1.5 bg-[var(--cardapio-background)] rounded-lg p-1 ring-1 ring-[var(--cardapio-border)]"
+							>
+								<button
+									type="button"
+									class="size-7 flex items-center justify-center rounded-md text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+									:disabled="item.quantidade <= 1"
+									@click="carrinhoStore.decrementar(item.id)"
+								>
+									<Icon name="lucide:minus" class="w-4 h-4" />
+								</button>
+								<span
+									class="min-w-[1.75rem] text-center text-sm font-semibold text-[var(--cardapio-text)]"
+								>
+									{{ item.quantidade }}
+								</span>
+								<button
+									type="button"
+									class="size-7 flex items-center justify-center rounded-md text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] active:scale-95 transition-all"
+									@click="carrinhoStore.incrementar(item.id)"
+								>
+									<Icon name="lucide:plus" class="w-4 h-4" />
+								</button>
+							</div>
+
+							<!-- Preço Total -->
+							<span class="text-base font-bold text-[var(--cardapio-primary)]">
+								{{ formatCurrency(item.preco_total) }}
+							</span>
+						</div>
+
+						<!-- Adicionais (se houver) -->
+						<div
+							v-if="item.adicionais && item.adicionais.length > 0"
+							class="px-3 pb-3 pt-0 border-t border-[var(--cardapio-border)]/50"
+						>
+							<div class="flex flex-wrap gap-1 mt-2">
+								<span
+									v-for="adicional in item.adicionais"
+									:key="adicional.id"
+									class="text-xs px-2 py-0.5 rounded-full bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)] border border-[var(--cardapio-border)]"
+								>
+									+ {{ adicional.nome }}
 								</span>
 							</div>
 						</div>
 
-						<!-- Botão Remover -->
-						<button
-							type="button"
-							class="self-start opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
-							title="Remover item"
-							@click="removerItem(item.id)"
+						<!-- Observações (se houver) -->
+						<div
+							v-if="item.observacao"
+							class="px-3 pb-3 pt-0 border-t border-[var(--cardapio-border)]/50"
 						>
-							<Icon name="lucide:trash-2" class="w-4 h-4" />
-						</button>
+							<p class="text-xs text-[var(--cardapio-text-muted)] italic mt-2">
+								<Icon name="lucide:message-square" class="w-3 h-3 inline mr-1" />
+								{{ item.observacao }}
+							</p>
+						</div>
 					</div>
 				</TransitionGroup>
 			</div>
@@ -195,7 +253,7 @@ const finalizarPedido = () => {
 					<!-- Botão Limpar -->
 					<button
 						type="button"
-						class="w-full py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-white transition-colors flex items-center justify-center gap-2"
+						class="w-full py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--cardapio-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center justify-center gap-2"
 						@click="limparCarrinho"
 					>
 						<Icon name="lucide:trash-2" class="w-4 h-4" />
