@@ -8,27 +8,14 @@
  * - Design premium com headers de seção e estrutura otimizada
  */
 
-import { watch } from "vue";
-import type { FiltrosPeriodo } from "../../types/relatorios";
 import ProdutosKpis from "./ProdutosKpis.vue";
 import ProdutosRanking from "./ProdutosRanking.vue";
 import ProdutosGraficos from "./ProdutosGraficos.vue";
 import ProdutosTabela from "./ProdutosTabela.vue";
 import { useRelatoriosProdutos } from "../../composables/useRelatoriosProdutos";
-import { useRelatoriosFiltros } from "../../composables/useRelatoriosFiltros";
 
+// Watch já está dentro do composable
 const { dados, loading, error } = useRelatoriosProdutos();
-const { periodo } = useRelatoriosFiltros();
-
-// Buscar dados quando o período mudar
-watch(
-	periodo,
-	async (novoPeriodo: FiltrosPeriodo) => {
-		const { fetchDados } = useRelatoriosProdutos();
-		await fetchDados(novoPeriodo);
-	},
-	{ immediate: true },
-);
 </script>
 
 <template>

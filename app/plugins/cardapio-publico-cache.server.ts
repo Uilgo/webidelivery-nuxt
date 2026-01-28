@@ -26,16 +26,26 @@ export default defineNuxtPlugin(async () => {
 
 	// Só carregar em rotas de cardápio público (/{slug})
 	const route = useRoute();
+	const path = route.path;
+
+	// Ignorar rotas que não são de cardápio público
+	if (
+		path === "/" ||
+		path.startsWith("/admin") ||
+		path.startsWith("/super-admin") ||
+		path.startsWith("/login") ||
+		path.startsWith("/signup") ||
+		path.startsWith("/forgot-password") ||
+		path.startsWith("/confirm")
+	) {
+		return;
+	}
+
+	// Extrair slug da URL (/{slug} ou /{slug}/checkout)
 	const slug = route.params.slug as string;
 
-	// Ignorar rotas admin, auth, etc
-	if (
-		!slug ||
-		slug.startsWith("admin") ||
-		slug.startsWith("login") ||
-		slug.startsWith("signup") ||
-		slug.startsWith("super-admin")
-	) {
+	// Se não tem slug, não é rota de cardápio
+	if (!slug || typeof slug !== "string" || slug.length === 0) {
 		return;
 	}
 

@@ -80,12 +80,12 @@ const irParaCheckout = async (): Promise<void> => {
 		</UiEmptyState>
 
 		<!-- Lista de itens -->
-		<div v-else class="divide-y divide-[var(--cardapio-muted)]">
+		<div v-else class="divide-y divide-[var(--cardapio-border)]">
 			<div v-for="item in carrinhoStore.itens" :key="item.id" class="py-4">
 				<div class="flex gap-3">
 					<!-- Imagem -->
 					<div
-						class="w-16 h-16 rounded-lg bg-[var(--cardapio-muted)] flex-shrink-0 overflow-hidden flex items-center justify-center"
+						class="w-16 h-16 rounded-lg bg-[var(--cardapio-secondary)] flex-shrink-0 overflow-hidden flex items-center justify-center"
 					>
 						<img
 							v-if="item.imagem_url"
@@ -186,7 +186,7 @@ const irParaCheckout = async (): Promise<void> => {
 					</div>
 
 					<div
-						class="flex justify-between font-semibold text-[var(--cardapio-text)] text-base pt-2 border-t border-[var(--cardapio-muted)]"
+						class="flex justify-between font-semibold text-[var(--cardapio-text)] text-base pt-2 border-t border-[var(--cardapio-border)]"
 					>
 						<span>Total</span>
 						<span>{{ formatCurrency(carrinhoStore.total) }}</span>

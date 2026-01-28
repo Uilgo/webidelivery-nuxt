@@ -158,7 +158,10 @@ export const freteEntregaSchema = z.object({
  */
 export const personalizacaoSchema = z.object({
 	cor_primaria: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor primária inválida"),
-	cor_secundaria: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor secundária inválida"),
+	cor_secundaria: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Cor secundária inválida")
+		.optional(), // ✅ Opcional para suportar Modo Simples (geração automática)
 	cor_fundo: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor de fundo inválida"),
 	cor_texto: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor de texto inválida"),
 	estilo_botoes: z.enum(["rounded", "square"]),

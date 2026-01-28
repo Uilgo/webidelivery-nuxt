@@ -4,12 +4,12 @@
  * Busca os dados de relatórios NO SERVIDOR e popula o useState.
  * Quando o cliente hidrata, os dados já estão disponíveis = carregamento instantâneo.
  *
- * INTELIGENTE: Carrega apenas os dados da aba ativa (detectada via URL query ou cookie)
+ * ⚡ OTIMIZAÇÃO: Carrega dados de TODAS as abas no servidor para evitar skeletons
  *
  * IMPORTANTE: Os dados são protegidos por RLS, então só carrega se o usuário estiver autenticado.
  */
 
-import type { AbaRelatorio, FiltrosPeriodo } from "~/features/admin/relatorios/types/relatorios";
+import type { FiltrosPeriodo } from "~/features/admin/relatorios/types/relatorios";
 
 export default defineNuxtPlugin(async () => {
 	// Só executar no server-side
@@ -26,12 +26,7 @@ export default defineNuxtPlugin(async () => {
 	if (!userId) return;
 
 	const supabase = useSupabaseClient();
-
-	// Inicializar os estados globais
-	const abaAtiva = useState<AbaRelatorio>("relatorios.abaAtiva", () => "pedidos");
-
-	// Estado global de cache
-	const relatoriosCacheLoaded = useState<boolean>("relatorios-cache-loaded", () => false);
+	const estabelecimentoStore = useEstabelecimentoStore();
 
 	try {
 		// Buscar estabelecimento_id e onboarding do usuário
@@ -50,8 +45,7 @@ export default defineNuxtPlugin(async () => {
 			.single();
 
 		if (!perfil?.estabelecimento_id) {
-			console.warn("[RelatoriosCache] ⚠️ Estabelecimento não encontrado");
-			relatoriosCacheLoaded.value = true;
+			console.warn("[relatorios-cache] Estabelecimento não encontrado");
 			return;
 		}
 
@@ -63,127 +57,69 @@ export default defineNuxtPlugin(async () => {
 		} | null;
 
 		if (!estabelecimentos || estabelecimentos.onboarding === false) {
-			console.warn("[RelatoriosCache] ⚠️ Onboarding não concluído");
-			relatoriosCacheLoaded.value = true;
+			console.warn("[relatorios-cache] Onboarding não concluído");
 			return;
 		}
 
-		// ========================================
-		// DETECTAR ABA ATIVA
-		// ========================================
-
-		// 1. Tentar pegar da URL query
-		let abaParaCarregar: AbaRelatorio = "pedidos";
-
-		if (route.query.tab && typeof route.query.tab === "string") {
-			const tabFromUrl = route.query.tab as AbaRelatorio;
-			const abasValidas: AbaRelatorio[] = [
-				"pedidos",
-				"vendas",
-				"produtos",
-				"marketing",
-				"financeiro",
-			];
-
-			if (abasValidas.includes(tabFromUrl)) {
-				abaParaCarregar = tabFromUrl;
-			}
-		} else {
-			// 2. Se não tem na URL, tentar pegar do cookie
-			const cookies = useRequestHeaders(["cookie"]);
-			const cookieHeader = cookies.cookie || "";
-
-			// Parse manual do cookie (simples)
-			const match = cookieHeader.match(/relatorios-last-tab=([^;]+)/);
-			if (match && match[1]) {
-				const tabFromCookie = decodeURIComponent(match[1]) as AbaRelatorio;
-				const abasValidas: AbaRelatorio[] = [
-					"pedidos",
-					"vendas",
-					"produtos",
-					"marketing",
-					"financeiro",
-				];
-
-				if (abasValidas.includes(tabFromCookie)) {
-					abaParaCarregar = tabFromCookie;
-				}
-			}
+		// Garantir que o estabelecimento está na store
+		if (!estabelecimentoStore.estabelecimento) {
+			estabelecimentoStore.$patch({
+				estabelecimento: {
+					id: estabelecimentos.id,
+					onboarding: estabelecimentos.onboarding,
+				} as unknown as typeof estabelecimentoStore.estabelecimento,
+			});
 		}
 
-		// Atualizar estado da aba ativa
-		abaAtiva.value = abaParaCarregar;
-
 		// ========================================
-		// DEFINIR PERÍODO PADRÃO (ÚLTIMOS 7 DIAS)
+		// DEFINIR PERÍODO PADRÃO (ESTE MÊS)
 		// ========================================
 
 		const hoje = new Date();
-		const seteDiasAtras = new Date(hoje);
-		seteDiasAtras.setDate(hoje.getDate() - 7);
+		const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+		primeiroDiaMes.setHours(0, 0, 0, 0);
+		const fimHoje = new Date(hoje);
+		fimHoje.setHours(23, 59, 59, 999);
 
 		const filtros: FiltrosPeriodo = {
-			preset: "ultimos_7_dias",
-			data_inicio: seteDiasAtras.toISOString().split("T")[0] || "",
-			data_fim: hoje.toISOString().split("T")[0] || "",
+			preset: "este_mes",
+			data_inicio: primeiroDiaMes.toISOString(),
+			data_fim: fimHoje.toISOString(),
 		};
 
 		// ========================================
-		// CARREGAR DADOS DA ABA ATIVA
+		// CARREGAR DADOS DE TODAS AS ABAS
 		// ========================================
 
-		switch (abaParaCarregar) {
-			case "pedidos": {
-				const { fetchDados } =
-					await import("../features/admin/relatorios/composables/useRelatoriosPedidos").then((m) =>
-						m.useRelatoriosPedidos(),
-					);
-				await fetchDados(filtros, true);
-				break;
-			}
+		// Importar todos os composables
+		const { useRelatoriosPedidos } =
+			await import("../features/admin/relatorios/composables/useRelatoriosPedidos");
+		const { useRelatoriosVendas } =
+			await import("../features/admin/relatorios/composables/useRelatoriosVendas");
+		const { useRelatoriosProdutos } =
+			await import("../features/admin/relatorios/composables/useRelatoriosProdutos");
+		const { useRelatoriosMarketing } =
+			await import("../features/admin/relatorios/composables/useRelatoriosMarketing");
+		const { useRelatoriosFinanceiro } =
+			await import("../features/admin/relatorios/composables/useRelatoriosFinanceiro");
 
-			case "vendas": {
-				const { fetchDados } =
-					await import("../features/admin/relatorios/composables/useRelatoriosVendas").then((m) =>
-						m.useRelatoriosVendas(),
-					);
-				await fetchDados(filtros, true);
-				break;
-			}
+		// Carregar dados de todas as abas em paralelo
+		const resultados = await Promise.allSettled([
+			useRelatoriosPedidos().fetchDados(filtros),
+			useRelatoriosVendas().fetchDados(filtros),
+			useRelatoriosProdutos().fetchDados(filtros),
+			useRelatoriosMarketing().fetchDados(filtros),
+			useRelatoriosFinanceiro().fetchDados(filtros),
+		]);
 
-			case "produtos": {
-				const { fetchDados } =
-					await import("../features/admin/relatorios/composables/useRelatoriosProdutos").then((m) =>
-						m.useRelatoriosProdutos(),
-					);
-				await fetchDados(filtros, true);
-				break;
+		// Log de resultados para debug
+		resultados.forEach((resultado, index) => {
+			const nomes = ["Pedidos", "Vendas", "Produtos", "Marketing", "Financeiro"];
+			if (resultado.status === "rejected") {
+				console.warn(`[relatorios-cache] ${nomes[index]} falhou:`, resultado.reason);
 			}
-
-			case "marketing": {
-				const { fetchDados } =
-					await import("../features/admin/relatorios/composables/useRelatoriosMarketing").then(
-						(m) => m.useRelatoriosMarketing(),
-					);
-				await fetchDados(filtros, true);
-				break;
-			}
-
-			case "financeiro": {
-				const { fetchDados } =
-					await import("../features/admin/relatorios/composables/useRelatoriosFinanceiro").then(
-						(m) => m.useRelatoriosFinanceiro(),
-					);
-				await fetchDados(filtros, true);
-				break;
-			}
-		}
-
-		// Marcar cache como carregado
-		relatoriosCacheLoaded.value = true;
+		});
 	} catch (error) {
-		console.error("[RelatoriosCache] ❌ Erro ao carregar dados:", error);
-		// Mesmo com erro, marcar como "tentou carregar" para não bloquear a UI
-		relatoriosCacheLoaded.value = true;
+		console.error("[relatorios-cache] Erro ao carregar dados:", error);
 	}
 });

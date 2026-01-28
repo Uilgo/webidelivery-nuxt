@@ -160,7 +160,7 @@ const temFiltrosAtivos = computed(() => {
 
 						<!-- Botão Limpar -->
 						<template v-if="ordenacaoAtual !== 'padrao'">
-							<div class="h-px bg-[var(--cardapio-muted)] my-1"></div>
+							<div class="h-px bg-[var(--cardapio-border)] my-1"></div>
 							<button
 								type="button"
 								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--cardapio-text-muted)] hover:bg-[var(--cardapio-hover)] hover:text-[var(--cardapio-text)] transition-colors rounded-lg"
@@ -250,7 +250,7 @@ const temFiltrosAtivos = computed(() => {
 
 						<!-- Botão Limpar Filtros -->
 						<template v-if="temFiltrosAtivos">
-							<div class="h-px bg-[var(--cardapio-muted)] my-1"></div>
+							<div class="h-px bg-[var(--cardapio-border)] my-1"></div>
 							<button
 								type="button"
 								class="w-full flex items-center justify-between px-3 py-2 text-sm text-[var(--cardapio-text-muted)] hover:bg-[var(--cardapio-hover)] hover:text-[var(--cardapio-text)] transition-colors rounded-lg"

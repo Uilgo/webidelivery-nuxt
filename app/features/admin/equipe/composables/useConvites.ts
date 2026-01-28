@@ -34,7 +34,7 @@ export const useConvites = () => {
 	const fetchConvites = async (): Promise<void> => {
 		// Verificar se o cache já foi carregado pelo plugin
 		const cacheLoaded = useState<boolean>("equipe-convites-cache-loaded", () => false);
-		if (cacheLoaded.value && convites.value.length > 0) {
+		if (cacheLoaded.value) {
 			// Dados já foram carregados pelo plugin, não fazer fetch novamente
 			return;
 		}
@@ -44,10 +44,7 @@ export const useConvites = () => {
 			return;
 		}
 
-		// Só ativar loading se não tem cache carregado
-		if (!cacheLoaded.value) {
-			loading.value = true;
-		}
+		loading.value = true;
 		error.value = null;
 
 		try {
@@ -64,6 +61,7 @@ export const useConvites = () => {
 
 			if (!convitesData || convitesData.length === 0) {
 				convites.value = [];
+				cacheLoaded.value = true;
 				return;
 			}
 
@@ -89,6 +87,8 @@ export const useConvites = () => {
 				...convite,
 				criador_nome: convite.criado_por ? criadoresMap.get(convite.criado_por) : undefined,
 			}));
+
+			cacheLoaded.value = true;
 		} catch (err) {
 			console.error("Erro ao buscar convites:", err);
 			error.value = "Erro ao carregar convites";

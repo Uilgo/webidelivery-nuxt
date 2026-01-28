@@ -64,6 +64,10 @@ const containerClasses = computed(() => {
 
 // Toasts visíveis limitados pelo max
 const visibleToasts = computed(() => {
+	// Garantir que toasts.value existe e é um array
+	if (!toasts.value || !Array.isArray(toasts.value)) {
+		return [];
+	}
 	return toasts.value.slice(0, props.max);
 });
 

@@ -24,6 +24,7 @@ export type PeriodoPreset =
 	| "este_mes"
 	| "mes_passado"
 	| "este_ano"
+	| "ano_passado"
 	| "personalizado";
 
 export interface FiltrosPeriodo {

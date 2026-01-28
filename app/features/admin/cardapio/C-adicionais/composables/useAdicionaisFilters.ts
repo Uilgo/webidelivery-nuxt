@@ -3,12 +3,13 @@
  *
  * Responsável por:
  * - Aplicar filtros locais nos dados
- * - Busca por texto
+ * - Busca por texto (com debounce de 300ms)
  * - Ordenação
  * - Filtros por status
  */
 
 import type { AdicionalComputado } from "../../../types/adicional";
+import { useDebounceFn } from "@vueuse/core";
 
 export interface AdicionalFilters {
 	busca?: string;
@@ -38,11 +39,16 @@ export const useAdicionaisFilters = (): UseAdicionaisFiltersReturn => {
 		direcao: "asc",
 	});
 
+	// Debounce da busca (300ms)
+	const debouncedSetSearch = useDebounceFn((value: string) => {
+		filters.value.busca = value;
+	}, 300);
+
 	/**
-	 * Define valor da busca
+	 * Define valor da busca (com debounce de 300ms)
 	 */
 	const setSearch = (value: string): void => {
-		filters.value.busca = value;
+		debouncedSetSearch(value);
 	};
 
 	/**

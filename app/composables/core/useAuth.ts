@@ -99,6 +99,7 @@ export const useAuth = () => {
 	 */
 	const logout = async (): Promise<AuthResponse> => {
 		try {
+			// 1. Fazer logout no Supabase PRIMEIRO
 			const { error } = await supabase.auth.signOut();
 
 			if (error) {
@@ -111,28 +112,23 @@ export const useAuth = () => {
 				};
 			}
 
-			// 🔒 SEGURANÇA: Limpar TODO o cache
+			// 2. Limpar cache e stores
 			clearAllCache();
-
-			// Limpar store de usuário
 			userStore.clearUser();
 
-			// Limpar estados globais do Nuxt (incluindo dashboard)
+			// 3. Limpar estados globais do Nuxt
 			if (import.meta.client) {
 				clearNuxtState([
-					// Cardápio
 					"produtos",
 					"categorias",
 					"adicionais",
 					"grupos_adicionais",
 					"combos",
-					// Pedidos
 					"pedidos",
 					"admin-pedidos",
 					"admin-pedidos-loading",
 					"admin-pedidos-erro",
 					"admin-pedidos-cache-loaded",
-					// Dashboard
 					"admin-dashboard-kpis",
 					"admin-dashboard-charts",
 					"admin-dashboard-realtime",
@@ -142,13 +138,14 @@ export const useAuth = () => {
 				]);
 			}
 
-			// Redirecionar para login após logout
-			await navigateTo("/login");
+			// 4. Redirecionar para login
+			await navigateTo("/login", { replace: true, external: true });
 
 			return {
 				success: true,
 			};
-		} catch {
+		} catch (error) {
+			console.error("Erro no logout:", error);
 			return {
 				success: false,
 				error: {

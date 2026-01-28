@@ -32,18 +32,26 @@ const colunas = [
 	{ key: "status", label: "Status" },
 ];
 
-// Formatar dados para tabela
+// Formatar dados para tabela (converter readonly para mutável)
 const dadosTabela = computed(() => {
 	if (!props.tabela) return [];
-	return [...props.tabela].map((transacao) => ({
-		...transacao,
-		data: formatDateTime(transacao.data),
-		valor_bruto: formatCurrency(transacao.valor_bruto),
-		desconto: formatCurrency(transacao.desconto),
-		taxa_entrega: formatCurrency(transacao.taxa_entrega),
-		valor_liquido: formatCurrency(transacao.valor_liquido),
-		status: transacao.status === "concluido" ? "Concluído" : transacao.status,
-	}));
+	return props.tabela.map((transacao) => {
+		// Criar objeto completamente novo (não readonly)
+		const novaTransacao: Record<string, unknown> = {
+			id: transacao.id,
+			numero: transacao.numero,
+			data: formatDateTime(transacao.data),
+			tipo: transacao.tipo,
+			descricao: transacao.descricao,
+			forma_pagamento: transacao.forma_pagamento,
+			valor_bruto: formatCurrency(transacao.valor_bruto),
+			desconto: formatCurrency(transacao.desconto),
+			taxa_entrega: formatCurrency(transacao.taxa_entrega),
+			valor_liquido: formatCurrency(transacao.valor_liquido),
+			status: transacao.status === "concluido" ? "Concluído" : transacao.status,
+		};
+		return novaTransacao;
+	});
 });
 </script>
 
@@ -69,6 +77,6 @@ const dadosTabela = computed(() => {
 			/>
 		</div>
 
-		<UiTable v-else :columns="colunas" :data="[...dadosTabela]" />
+		<UiTable v-else :columns="colunas" :data="dadosTabela" />
 	</UiCard>
 </template>

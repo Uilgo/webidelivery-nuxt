@@ -90,6 +90,11 @@ export const useToast = () => {
 	 * Adicionar um novo toast
 	 */
 	const add = (toast: ToastData): ToastItem => {
+		// Garantir que toasts.value existe e é um array
+		if (!toasts.value || !Array.isArray(toasts.value)) {
+			toasts.value = [];
+		}
+
 		const id = toast.id || Date.now() + Math.random();
 
 		const newToast: ToastItem = {

@@ -19,19 +19,16 @@ export const useRelatoriosFinanceiro = () => {
 	const dados = useState<RelatorioFinanceiro | null>("relatorios.financeiro.dados", () => null);
 	const loading = useState<boolean>("relatorios.financeiro.loading", () => false);
 	const error = useState<string | null>("relatorios.financeiro.error", () => null);
+	const watchAtivo = useState<boolean>("relatorios.financeiro.watchAtivo", () => false);
 
 	const supabase = useSupabaseClient();
 	const estabelecimentoStore = useEstabelecimentoStore();
+	const { periodo } = useRelatoriosFiltros();
 
 	/**
 	 * Busca dados do relatório financeiro
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
-		// Se já tem dados e não é refresh forçado, não buscar novamente
-		if (dados.value && !forceRefresh) {
-			return;
-		}
-
+	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
 		loading.value = true;
 		error.value = null;
 
@@ -53,7 +50,7 @@ export const useRelatoriosFinanceiro = () => {
           desconto,
           taxa_entrega,
           total,
-          metodo_pagamento,
+          forma_pagamento,
           status
         `,
 				)
@@ -65,12 +62,24 @@ export const useRelatoriosFinanceiro = () => {
 
 			if (pedidosError) throw pedidosError;
 
+			// Se não houver pedidos, retornar estrutura vazia
+			if (!pedidos || pedidos.length === 0) {
+				dados.value = {
+					kpis: calcularKpis([]),
+					metodos_pagamento: calcularMetodosPagamento([]),
+					graficos: prepararGraficos([]),
+					tabela: [],
+					resumo: calcularResumo([]),
+				};
+				return;
+			}
+
 			// Processar dados
-			const kpis = calcularKpis(pedidos || []);
-			const metodosPagamento = calcularMetodosPagamento(pedidos || []);
-			const graficos = prepararGraficos(pedidos || []);
-			const tabela = prepararTabela(pedidos || []);
-			const resumo = calcularResumo(pedidos || []);
+			const kpis = calcularKpis(pedidos);
+			const metodosPagamento = calcularMetodosPagamento(pedidos);
+			const graficos = prepararGraficos(pedidos);
+			const tabela = prepararTabela(pedidos);
+			const resumo = calcularResumo(pedidos);
 
 			dados.value = {
 				kpis,
@@ -82,6 +91,9 @@ export const useRelatoriosFinanceiro = () => {
 		} catch (err) {
 			console.error("Erro ao buscar dados financeiros:", err);
 			error.value = err instanceof Error ? err.message : "Erro desconhecido";
+
+			// Garantir que dados seja null em caso de erro
+			dados.value = null;
 		} finally {
 			loading.value = false;
 		}
@@ -175,7 +187,7 @@ export const useRelatoriosFinanceiro = () => {
 
 		pedidos.forEach((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
-			const metodo = (pedidoData.metodo_pagamento as string)?.toLowerCase() || "";
+			const metodo = (pedidoData.forma_pagamento as string)?.toLowerCase() || "";
 			const total = pedidoData.total as number;
 
 			if (metodo.includes("dinheiro")) {
@@ -327,14 +339,21 @@ export const useRelatoriosFinanceiro = () => {
 	const prepararTabela = (pedidos: unknown[]): RelatorioFinanceiro["tabela"] => {
 		return pedidos.map((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
+			const numeroOriginal = pedidoData.numero as string | number;
+
+			// Converter número para string e remover # se existir
+			const numeroLimpo =
+				typeof numeroOriginal === "string"
+					? numeroOriginal.replace("#", "").trim()
+					: String(numeroOriginal);
 
 			return {
 				id: pedidoData.id as string,
-				numero: (pedidoData.numero as string).replace("#", "").trim() as unknown as number,
+				numero: Number(numeroLimpo),
 				data: pedidoData.created_at as string,
 				tipo: "entrada" as const,
-				descricao: `Pedido #${pedidoData.numero}`,
-				forma_pagamento: pedidoData.metodo_pagamento as string,
+				descricao: `Pedido #${numeroLimpo}`,
+				forma_pagamento: pedidoData.forma_pagamento as string,
 				valor_bruto: pedidoData.subtotal as number,
 				desconto: pedidoData.desconto as number,
 				taxa_entrega: (pedidoData.taxa_entrega as number) || 0,
@@ -381,7 +400,7 @@ export const useRelatoriosFinanceiro = () => {
 
 		pedidos.forEach((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
-			const metodo = pedidoData.metodo_pagamento as string;
+			const metodo = pedidoData.forma_pagamento as string;
 
 			distribuicaoPagamentos[metodo] = (distribuicaoPagamentos[metodo] || 0) + 1;
 		});
@@ -404,8 +423,27 @@ export const useRelatoriosFinanceiro = () => {
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value, true);
+		await fetchDados(filtros.periodo.value);
 	};
+
+	/**
+	 * Inicializa o watch do período (apenas uma vez)
+	 */
+	const inicializarWatch = () => {
+		if (watchAtivo.value) return;
+		watchAtivo.value = true;
+
+		watch(
+			periodo,
+			async (novoPeriodo: FiltrosPeriodo) => {
+				await fetchDados(novoPeriodo);
+			},
+			{ deep: true },
+		);
+	};
+
+	// Inicializar watch automaticamente
+	inicializarWatch();
 
 	return {
 		dados: readonly(dados),

@@ -11,6 +11,7 @@
 import PeriodoSelector from "./shared/PeriodoSelector.vue";
 import { useRelatoriosFiltros } from "../composables/useRelatoriosFiltros";
 import { useRelatoriosPermissions } from "../composables/useRelatoriosPermissions";
+import type { FiltrosPeriodo } from "../types/relatorios";
 
 interface Props {
 	loading?: boolean;
@@ -27,8 +28,19 @@ withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-const { periodo } = useRelatoriosFiltros();
+const { periodo, setPeriodo, setPeriodoCustomizado } = useRelatoriosFiltros();
 const { podeExportar } = useRelatoriosPermissions();
+
+// Handler para mudança de período
+const handlePeriodoChange = (novoPeriodo: FiltrosPeriodo) => {
+	// Se for personalizado, usar setPeriodoCustomizado com as datas
+	if (novoPeriodo.preset === "personalizado") {
+		setPeriodoCustomizado(novoPeriodo.data_inicio, novoPeriodo.data_fim);
+	} else {
+		// Para outros presets, usar setPeriodo que recalcula as datas
+		setPeriodo(novoPeriodo.preset);
+	}
+};
 
 // Handlers
 const handleRefresh = () => {
@@ -45,25 +57,25 @@ const handleExportar = () => {
 		class="relatorios-filtros bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
 	>
 		<div class="flex items-center justify-between gap-4 flex-wrap">
-			<!-- Seletor de Período com Info -->
-			<div class="flex items-center gap-4 flex-1">
-				<!-- Select com largura máxima -->
-				<div class="w-full max-w-xs">
-					<PeriodoSelector />
-				</div>
+			<!-- Seletor de Período -->
+			<div class="flex items-center gap-4 flex-1 min-w-0">
+				<PeriodoSelector :model-value="periodo" @update:model-value="handlePeriodoChange" />
 
 				<!-- Info do Período ao lado -->
-				<div v-if="periodo" class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-					<Icon name="lucide:calendar" class="w-4 h-4 inline mr-1" />
+				<div
+					v-if="periodo"
+					class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap hidden lg:flex items-center"
+				>
+					<Icon name="lucide:calendar" class="w-4 h-4 mr-1" />
 					<span>
-						Período: {{ new Date(periodo.data_inicio).toLocaleDateString("pt-BR") }} até
+						{{ new Date(periodo.data_inicio).toLocaleDateString("pt-BR") }} até
 						{{ new Date(periodo.data_fim).toLocaleDateString("pt-BR") }}
 					</span>
 				</div>
 			</div>
 
 			<!-- Ações -->
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2 shrink-0">
 				<!-- Botão Refresh (apenas ícone com rotação) -->
 				<UiButton
 					variant="outline"

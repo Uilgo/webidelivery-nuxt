@@ -7,6 +7,9 @@
 
 		<!-- Sistema de notificações toast -->
 		<UiToaster position="top-right" :duration="5000" :max="5" />
+
+		<!-- PWA Prompts (instalação, atualização, offline) -->
+		<SharedPWAPrompt />
 	</div>
 </template>
 

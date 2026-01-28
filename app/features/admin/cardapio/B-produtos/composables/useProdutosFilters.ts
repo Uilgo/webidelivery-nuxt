@@ -3,12 +3,13 @@
  *
  * Responsável por:
  * - Aplicar filtros locais nos dados
- * - Busca por texto
+ * - Busca por texto (com debounce de 300ms)
  * - Ordenação
  * - Filtros por categoria, destaque, promoção
  */
 
 import type { ProdutoComputado, ProdutoFilters } from "../../../types/produto";
+import { useDebounceFn } from "@vueuse/core";
 
 export interface UseProdutosFiltersReturn {
 	filters: Ref<ProdutoFilters>;
@@ -34,11 +35,16 @@ export const useProdutosFilters = (): UseProdutosFiltersReturn => {
 		direcao: "desc",
 	});
 
+	// Debounce da busca (300ms)
+	const debouncedSetSearch = useDebounceFn((value: string) => {
+		filters.value.busca = value;
+	}, 300);
+
 	/**
-	 * Define valor da busca
+	 * Define valor da busca (com debounce de 300ms)
 	 */
 	const setSearch = (value: string): void => {
-		filters.value.busca = value;
+		debouncedSetSearch(value);
 	};
 
 	/**

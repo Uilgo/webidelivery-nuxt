@@ -12,7 +12,7 @@ import MarketingGraficos from "./MarketingGraficos.vue";
 import MarketingResumo from "./MarketingResumo.vue";
 import { useRelatoriosMarketing } from "../../composables/useRelatoriosMarketing";
 
-// Composables
+// Watch já está dentro do composable
 const { dados, loading, error } = useRelatoriosMarketing();
 
 // Estado de carregamento inicial

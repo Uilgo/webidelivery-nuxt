@@ -213,7 +213,7 @@ const adicionarAoCarrinho = (): void => {
 				<!-- Imagem do produto -->
 				<div
 					v-if="produto.imagem_url"
-					class="w-full h-48 rounded-lg overflow-hidden bg-[var(--cardapio-muted)]"
+					class="w-full h-48 rounded-lg overflow-hidden bg-[var(--cardapio-secondary)]"
 				>
 					<img :src="produto.imagem_url" :alt="produto.nome" class="w-full h-full object-cover" />
 				</div>
@@ -235,7 +235,7 @@ const adicionarAoCarrinho = (): void => {
 							:class="
 								variacaoSelecionada?.id === variacao.id
 									? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10'
-									: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)]/50'
+									: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50'
 							"
 						>
 							<div class="flex items-center gap-3">
@@ -294,7 +294,7 @@ const adicionarAoCarrinho = (): void => {
 						<div
 							v-for="adicional in grupo.adicionais"
 							:key="adicional.id"
-							class="flex items-center justify-between p-3 border border-[var(--cardapio-muted)] rounded-lg"
+							class="flex items-center justify-between p-3 border border-[var(--cardapio-border)] rounded-lg"
 						>
 							<div>
 								<span class="text-[var(--text-primary)]">{{ adicional.nome }}</span>

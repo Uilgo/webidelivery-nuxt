@@ -45,7 +45,7 @@ onMounted(() => {
 			<div
 				v-for="produto in produtos"
 				:key="produto.id"
-				class="bg-[var(--cardapio-surface)] rounded-xl shadow-sm overflow-hidden"
+				class="bg-[var(--cardapio-secondary)] rounded-xl shadow-sm overflow-hidden"
 			>
 				<CardapioProdutoCard :produto="produto" />
 			</div>
@@ -56,15 +56,15 @@ onMounted(() => {
 			<div
 				v-for="i in 3"
 				:key="`skeleton-${i}`"
-				class="bg-[var(--cardapio-surface)] rounded-xl shadow-sm overflow-hidden p-4 animate-pulse"
+				class="bg-[var(--cardapio-secondary)] rounded-xl shadow-sm overflow-hidden p-4 animate-pulse"
 			>
 				<div class="flex gap-3">
 					<div class="flex-1">
-						<div class="h-4 bg-[var(--cardapio-muted)] rounded w-3/4 mb-2"></div>
-						<div class="h-3 bg-[var(--cardapio-muted)] rounded w-full mb-1"></div>
-						<div class="h-3 bg-[var(--cardapio-muted)] rounded w-2/3"></div>
+						<div class="h-4 bg-[var(--cardapio-secondary)] rounded w-3/4 mb-2"></div>
+						<div class="h-3 bg-[var(--cardapio-secondary)] rounded w-full mb-1"></div>
+						<div class="h-3 bg-[var(--cardapio-secondary)] rounded w-2/3"></div>
 					</div>
-					<div class="w-24 h-24 bg-[var(--cardapio-muted)] rounded-lg"></div>
+					<div class="w-24 h-24 bg-[var(--cardapio-secondary)] rounded-lg"></div>
 				</div>
 			</div>
 		</div>

@@ -13,7 +13,7 @@ import FinanceiroTabela from "./FinanceiroTabela.vue";
 import FinanceiroResumo from "./FinanceiroResumo.vue";
 import { useRelatoriosFinanceiro } from "../../composables/useRelatoriosFinanceiro";
 
-// Composables
+// Composables (watch já está dentro do composable)
 const { dados, loading, error } = useRelatoriosFinanceiro();
 
 // Estado de carregamento inicial

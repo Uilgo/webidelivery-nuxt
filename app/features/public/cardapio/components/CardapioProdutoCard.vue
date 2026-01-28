@@ -74,14 +74,14 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--cardapio-surface)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--cardapio-primary)]/10 transition-all duration-300 text-left border border-transparent hover:border-[var(--cardapio-primary)]/20"
+		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--cardapio-primary)]/10 transition-all duration-300 text-left border border-transparent hover:border-[var(--cardapio-primary)]/20"
 		@click="abrirDrawer(produto)"
 	>
 		<!-- Imagem com Zoom Effect -->
 		<div class="relative shrink-0 overflow-hidden rounded-lg sm:rounded-xl">
 			<!-- Container da imagem -->
 			<div
-				class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-[var(--cardapio-muted)] overflow-hidden rounded-lg sm:rounded-xl"
+				class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-[var(--cardapio-secondary)] overflow-hidden rounded-lg sm:rounded-xl"
 			>
 				<img
 					v-if="produto.imagem_url"
@@ -165,7 +165,7 @@ const temMultiplasVariacoes = computed(() => {
 					<!-- Badge de Destaque -->
 					<span
 						v-if="produto.destaque && !produto.em_promocao"
-						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-[var(--cardapio-warning-light)] dark:bg-amber-900/30 text-[var(--cardapio-warning)] dark:text-[var(--cardapio-warning)] text-[10px] sm:text-xs font-medium border border-[var(--cardapio-warning)]/20"
+						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] text-white text-[10px] sm:text-xs font-medium shadow-sm"
 					>
 						<Icon name="lucide:star" class="w-3 h-3 fill-current" />
 						Destaque

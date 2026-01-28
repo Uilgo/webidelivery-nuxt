@@ -451,7 +451,7 @@ const adicionarAoCarrinho = (): void => {
 			<div class="space-y-6 pb-24">
 				<div
 					v-if="produto.imagem_url"
-					class="w-full h-48 sm:h-64 rounded-lg overflow-hidden bg-[var(--cardapio-muted)]"
+					class="w-full h-48 sm:h-64 rounded-lg overflow-hidden bg-[var(--cardapio-secondary)]"
 				>
 					<img :src="produto.imagem_url" :alt="produto.nome" class="w-full h-full object-cover" />
 				</div>
@@ -476,11 +476,11 @@ const adicionarAoCarrinho = (): void => {
 				<div class="space-y-3">
 					<!-- Checkbox para ativar múltiplos sabores -->
 					<label
-						class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors bg-[var(--cardapio-muted)]"
+						class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors bg-[var(--cardapio-secondary)]"
 						:class="
 							multiplosSabores
 								? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5'
-								: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-hover)]'
+								: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-hover)]'
 						"
 					>
 						<input
@@ -511,7 +511,7 @@ const adicionarAoCarrinho = (): void => {
 									:class="
 										quantidadeSabores === opcao.value
 											? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-lg scale-105'
-											: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)] hover:shadow-md hover:scale-102 bg-[var(--cardapio-surface)]'
+											: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)] hover:shadow-md hover:scale-102 bg-[var(--cardapio-secondary)]'
 									"
 								>
 									<input
@@ -600,7 +600,7 @@ const adicionarAoCarrinho = (): void => {
 									:class="
 										saboresSelecionados[index - 1]
 											? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-md'
-											: 'border-[var(--cardapio-muted)] bg-[var(--cardapio-surface)] hover:border-[var(--cardapio-hover)] hover:shadow-sm'
+											: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)] hover:border-[var(--cardapio-hover)] hover:shadow-sm'
 									"
 								>
 									<div
@@ -608,7 +608,7 @@ const adicionarAoCarrinho = (): void => {
 										:class="
 											saboresSelecionados[index - 1]
 												? 'bg-[var(--cardapio-primary)] text-white shadow-lg scale-110'
-												: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)]'
+												: 'bg-[var(--cardapio-secondary)] text-[var(--cardapio-text-muted)]'
 										"
 									>
 										{{ index + 1 }}
@@ -698,7 +698,7 @@ const adicionarAoCarrinho = (): void => {
 							:class="
 								grupoSelecionado === grupo.id
 									? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/10 to-transparent shadow-lg'
-									: 'border-[var(--cardapio-muted)] hover:border-[var(--cardapio-primary)] hover:shadow-md bg-[var(--cardapio-surface)]'
+									: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)] hover:shadow-md bg-[var(--cardapio-secondary)]'
 							"
 							@click="grupoSelecionado = grupoSelecionado === grupo.id ? null : grupo.id"
 						>
@@ -843,7 +843,7 @@ const adicionarAoCarrinho = (): void => {
 										return totalSelecionado < grupo.max_selecao;
 									})()
 								"
-								class="p-3 border-2 border-dashed border-[var(--cardapio-muted)] rounded-xl bg-[var(--cardapio-surface)]"
+								class="p-3 border-2 border-dashed border-[var(--cardapio-border)] rounded-xl bg-[var(--cardapio-secondary)]"
 							>
 								<UiSelectMenu
 									:model-value="null"
@@ -984,7 +984,7 @@ const adicionarAoCarrinho = (): void => {
 
 		<template #footer>
 			<div
-				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--cardapio-muted)] bg-[var(--cardapio-background)]"
+				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--cardapio-border)] bg-[var(--cardapio-background)]"
 			>
 				<!-- Controle de quantidade -->
 				<div class="flex items-center gap-3">

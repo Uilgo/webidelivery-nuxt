@@ -69,6 +69,12 @@ const allTabs: ConfigTab[] = [
 		icon: "lucide:palette",
 		allowedRoles: ["admin", "gerente"],
 	},
+	{
+		key: "logs",
+		label: "Logs e Auditoria",
+		icon: "lucide:file-text",
+		allowedRoles: ["admin", "gerente"],
+	},
 ];
 
 /**

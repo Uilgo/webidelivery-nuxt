@@ -68,10 +68,15 @@ const onSubmit = handleSubmit(async (values) => {
 			// Login bem-sucedido - mostrar toast de sucesso
 			showSuccess({ title: "Login realizado!", description: "Bem-vindo de volta!" });
 
-			// Redirecionar para dashboard
-			await navigateTo("/admin/dashboard");
-
 			emit("submit", values);
+
+			// Aguardar um pouco para o Supabase atualizar o estado
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Forçar redirecionamento com reload completo
+			if (import.meta.client) {
+				window.location.href = "/admin/dashboard";
+			}
 		} else {
 			// Erro no login - mostrar toast de erro
 			const errorMessage = result.error?.message || "Erro ao fazer login";

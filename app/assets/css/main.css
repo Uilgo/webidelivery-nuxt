@@ -294,24 +294,36 @@ TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
 	--default-cardapio-highlight-from: #f59e0b; /* Amber 500 */
 	--default-cardapio-highlight-to: #d97706; /* Amber 600 */
 
-	/* Mapeamento para Variáveis de Uso (com suporte a override via style inline) */
+	/* ============= CORES CONFIGURÁVEIS PELO USUÁRIO ============= */
+	/* O usuário define apenas 4 cores principais */
 	--cardapio-primary: var(--cardapio-cor-primaria, var(--default-cardapio-primary));
 	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--default-cardapio-secondary));
 	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-page));
 	--cardapio-text: var(--cardapio-cor-texto, var(--text-primary));
 	--cardapio-radius: var(--cardapio-border-radius, 8px);
 
-	/* Tokens Derivados (Auto-adaptáveis) */
-	--cardapio-surface: var(
-		--cardapio-cor-surface,
-		var(
-			--cardapio-cor-secundaria,
-			color-mix(in srgb, var(--cardapio-background), var(--cardapio-text) 5%)
-		)
+	/* ============= CORES AUTOMÁTICAS (Geradas via JS) ============= */
+	/* Apenas 3 variáveis derivadas - fallback com color-mix CSS */
+
+	/* 1. Bordas (3.5% contraste da secundária) */
+	--cardapio-border: var(
+		--cardapio-cor-border,
+		color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 4%)
 	);
-	--cardapio-muted: color-mix(in srgb, var(--cardapio-surface), var(--cardapio-text) 10%);
-	--cardapio-hover: color-mix(in srgb, var(--cardapio-surface), var(--cardapio-text) 15%);
-	--cardapio-text-muted: color-mix(in srgb, var(--cardapio-text), transparent 40%);
+
+	/* 2. Hover (8.5% contraste da secundária) */
+	--cardapio-hover: var(
+		--cardapio-cor-hover,
+		color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 9%)
+	);
+
+	/* 3. Texto secundário (60% opacidade visual) */
+	--cardapio-text-muted: var(
+		--cardapio-cor-text-muted,
+		color-mix(in srgb, var(--cardapio-text), transparent 40%)
+	);
+
+	/* 4. Cor primária com transparência */
 	--cardapio-primary-light: color-mix(in srgb, var(--cardapio-primary), transparent 85%);
 
 	/* 

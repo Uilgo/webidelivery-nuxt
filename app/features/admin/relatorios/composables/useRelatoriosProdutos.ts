@@ -20,19 +20,16 @@ export const useRelatoriosProdutos = () => {
 	const dados = useState<RelatorioProdutos | null>("relatorios.produtos.dados", () => null);
 	const loading = useState<boolean>("relatorios.produtos.loading", () => false);
 	const error = useState<string | null>("relatorios.produtos.error", () => null);
+	const watchAtivo = useState<boolean>("relatorios.produtos.watchAtivo", () => false);
 
 	const supabase = useSupabaseClient();
 	const estabelecimentoStore = useEstabelecimentoStore();
+	const { periodo } = useRelatoriosFiltros();
 
 	/**
 	 * Busca dados do relatório de produtos
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
-		// Se já tem dados e não é refresh forçado, não buscar novamente
-		if (dados.value && !forceRefresh) {
-			return;
-		}
-
+	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
 		loading.value = true;
 		error.value = null;
 
@@ -532,8 +529,27 @@ export const useRelatoriosProdutos = () => {
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value, true);
+		await fetchDados(filtros.periodo.value);
 	};
+
+	/**
+	 * Inicializa o watch do período (apenas uma vez)
+	 */
+	const inicializarWatch = () => {
+		if (watchAtivo.value) return;
+		watchAtivo.value = true;
+
+		watch(
+			periodo,
+			async (novoPeriodo: FiltrosPeriodo) => {
+				await fetchDados(novoPeriodo);
+			},
+			{ deep: true },
+		);
+	};
+
+	// Inicializar watch automaticamente
+	inicializarWatch();
 
 	return {
 		dados: readonly(dados),

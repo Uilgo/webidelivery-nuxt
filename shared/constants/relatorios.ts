@@ -17,6 +17,7 @@ export const PERIODOS_PRESET = {
 	este_mes: { label: "Este mês", tipo: "mes_atual" as const },
 	mes_passado: { label: "Mês passado", tipo: "mes_anterior" as const },
 	este_ano: { label: "Este ano", tipo: "ano_atual" as const },
+	ano_passado: { label: "Ano passado", tipo: "ano_anterior" as const },
 	personalizado: { label: "Personalizado", tipo: "custom" as const },
 } as const;
 

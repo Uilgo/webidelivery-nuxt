@@ -26,18 +26,27 @@ export const useRelatoriosFiltros = () => {
 
 		switch (config.tipo) {
 			case "mes_atual": {
+				// Este mês: primeiro dia do mês atual
 				const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 				return primeiroDiaMes.toISOString();
 			}
 
 			case "mes_anterior": {
+				// Mês passado: primeiro dia do mês anterior
 				const primeiroDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
 				return primeiroDiaMesAnterior.toISOString();
 			}
 
 			case "ano_atual": {
+				// Este ano: primeiro dia do ano atual
 				const primeiroDiaAno = new Date(hoje.getFullYear(), 0, 1);
 				return primeiroDiaAno.toISOString();
+			}
+
+			case "ano_anterior": {
+				// Ano passado: 01/01 do ano anterior
+				const primeiroDiaAnoAnterior = new Date(hoje.getFullYear() - 1, 0, 1);
+				return primeiroDiaAnoAnterior.toISOString();
 			}
 
 			default:
@@ -61,17 +70,26 @@ export const useRelatoriosFiltros = () => {
 
 		switch (config.tipo) {
 			case "mes_atual":
+				// Este mês: até hoje (inteligente)
 				return hoje.toISOString();
 
 			case "mes_anterior": {
-				// Último dia do mês anterior
+				// Mês passado: último dia do mês anterior (completo)
 				const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
 				ultimoDiaMesAnterior.setHours(23, 59, 59, 999);
 				return ultimoDiaMesAnterior.toISOString();
 			}
 
 			case "ano_atual":
+				// Este ano: até hoje (inteligente)
 				return hoje.toISOString();
+
+			case "ano_anterior": {
+				// Ano passado: 31/12 do ano anterior (completo)
+				const ultimoDiaAnoAnterior = new Date(hoje.getFullYear() - 1, 11, 31);
+				ultimoDiaAnoAnterior.setHours(23, 59, 59, 999);
+				return ultimoDiaAnoAnterior.toISOString();
+			}
 
 			default:
 				return hoje.toISOString();
@@ -82,7 +100,7 @@ export const useRelatoriosFiltros = () => {
 	 * Cookie para persistir o último período selecionado
 	 */
 	const periodoCookie = useCookie<PeriodoPreset>("relatorios-periodo", {
-		default: () => "ultimos_30_dias",
+		default: () => "este_mes",
 		maxAge: 60 * 60 * 24 * 30, // 30 dias
 	});
 
@@ -91,7 +109,7 @@ export const useRelatoriosFiltros = () => {
 	 * Inicializa com o valor do cookie para evitar hydration mismatch
 	 */
 	const periodo = useState<FiltrosPeriodo>("relatorios.filtros.periodo", () => {
-		const presetInicial = periodoCookie.value || "ultimos_30_dias";
+		const presetInicial = periodoCookie.value || "este_mes";
 		return {
 			preset: presetInicial,
 			data_inicio: calcularDataInicio(presetInicial),
@@ -103,10 +121,13 @@ export const useRelatoriosFiltros = () => {
 	 * Define um novo período baseado no preset
 	 */
 	const setPeriodo = (preset: PeriodoPreset): void => {
+		const novaDataInicio = calcularDataInicio(preset);
+		const novaDataFim = calcularDataFim(preset);
+
 		periodo.value = {
 			preset,
-			data_inicio: calcularDataInicio(preset),
-			data_fim: calcularDataFim(preset),
+			data_inicio: novaDataInicio,
+			data_fim: novaDataFim,
 		};
 
 		// Salvar no cookie
@@ -131,7 +152,7 @@ export const useRelatoriosFiltros = () => {
 	 * Reseta para o período padrão
 	 */
 	const resetarPeriodo = (): void => {
-		setPeriodo("ultimos_30_dias");
+		setPeriodo("este_mes");
 	};
 
 	/**

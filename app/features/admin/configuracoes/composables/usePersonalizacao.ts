@@ -66,27 +66,19 @@ export const usePersonalizacao = (): UsePersonalizacaoReturn => {
 
 	/**
 	 * Salvar configurações de tema (UPDATE via RPC)
+	 *
+	 * ✅ A função RPC agora faz MERGE automático de JSONB
+	 * Não é mais necessário fazer merge no frontend
 	 */
 	const salvarTema = async (temaAtualizado: Partial<ConfiguracoesTema>): Promise<boolean> => {
 		saving.value = true;
 		error.value = null;
 
 		try {
-			// Mesclar com tema existente
-			const temaAtual = (estabelecimentoStore.estabelecimento?.config_tema || {}) as Record<
-				string,
-				unknown
-			>;
-
-			const novoTema = {
-				...temaAtual,
-				...temaAtualizado,
-			};
-
-			// Chamar RPC fn_rpc_admin_atualizar_estabelecimento
+			// ✅ Enviar apenas os campos alterados - RPC faz merge automático
 			const { error: rpcError } = await supabase.rpc("fn_rpc_admin_atualizar_estabelecimento", {
 				p_dados: {
-					config_tema: novoTema,
+					config_tema: temaAtualizado,
 				},
 			});
 
@@ -94,7 +86,7 @@ export const usePersonalizacao = (): UsePersonalizacaoReturn => {
 				throw rpcError;
 			}
 
-			// Atualizar store local usando função mutadora
+			// Atualizar store local fazendo merge
 			if (estabelecimentoStore.estabelecimento) {
 				estabelecimentoStore.$patch((state) => {
 					if (state.estabelecimento) {
@@ -108,7 +100,14 @@ export const usePersonalizacao = (): UsePersonalizacaoReturn => {
 			}
 
 			// Atualizar dados locais
-			tema.value = novoTema as ConfiguracoesTema;
+			const temaAtual = (estabelecimentoStore.estabelecimento?.config_tema || {}) as Record<
+				string,
+				unknown
+			>;
+			tema.value = {
+				...temaAtual,
+				...temaAtualizado,
+			} as ConfiguracoesTema;
 
 			success({
 				title: "Tema atualizado",

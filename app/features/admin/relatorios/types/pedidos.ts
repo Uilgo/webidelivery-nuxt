@@ -14,7 +14,7 @@ import type { KpiBase, DadosGrafico } from "./relatorios";
 export interface RelatorioPedidos {
 	readonly kpis: KpisPedidos;
 	readonly graficos: GraficosPedidos;
-	readonly tabela: readonly PedidoDetalhado[];
+	readonly tabela: PedidoDetalhado[];
 	readonly resumo: ResumoPedidos;
 }
 
@@ -50,6 +50,12 @@ export interface PedidoDetalhado {
 	readonly id: UUID;
 	readonly numero: number;
 	readonly codigo_rastreamento: string;
+	// Aliases para a tabela
+	readonly codigo: string; // alias para codigo_rastreamento
+	readonly data: TimestampTz; // alias para created_at
+	readonly cliente: string; // alias para cliente_nome
+	readonly valor: number; // alias para total
+	// Campos originais
 	readonly created_at: TimestampTz;
 	readonly cliente_nome: string;
 	readonly cliente_telefone: string;

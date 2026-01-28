@@ -16,11 +16,13 @@ import { useRelatoriosFiltros } from "./useRelatoriosFiltros";
 export const useRelatoriosVendas = () => {
 	const supabase = useSupabaseClient();
 	const estabelecimentoStore = useEstabelecimentoStore();
+	const { periodo } = useRelatoriosFiltros();
 
 	// Estado
 	const dados = useState<RelatorioVendas | null>("relatorios.vendas.dados", () => null);
 	const loading = useState<boolean>("relatorios.vendas.loading", () => false);
 	const error = useState<string | null>("relatorios.vendas.error", () => null);
+	const watchAtivo = useState<boolean>("relatorios.vendas.watchAtivo", () => false);
 
 	/**
 	 * Calcular variação percentual
@@ -33,12 +35,7 @@ export const useRelatoriosVendas = () => {
 	/**
 	 * Buscar dados de vendas do período
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
-		// Se já tem dados e não é refresh forçado, não buscar novamente
-		if (dados.value && !forceRefresh) {
-			return;
-		}
-
+	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
 		try {
 			loading.value = true;
 			error.value = null;
@@ -337,8 +334,27 @@ export const useRelatoriosVendas = () => {
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value, true);
+		await fetchDados(filtros.periodo.value);
 	};
+
+	/**
+	 * Inicializa o watch do período (apenas uma vez)
+	 */
+	const inicializarWatch = () => {
+		if (watchAtivo.value) return;
+		watchAtivo.value = true;
+
+		watch(
+			periodo,
+			async (novoPeriodo: FiltrosPeriodo) => {
+				await fetchDados(novoPeriodo);
+			},
+			{ deep: true },
+		);
+	};
+
+	// Inicializar watch automaticamente
+	inicializarWatch();
 
 	return {
 		dados: readonly(dados),

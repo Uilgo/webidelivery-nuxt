@@ -246,7 +246,7 @@ export const useCupons = (): UseCuponsReturn => {
 	 */
 	const fetchCupons = async (): Promise<void> => {
 		// Se já carregou do cache, não buscar novamente
-		if (cacheLoaded.value && cupons.value.length > 0) {
+		if (cacheLoaded.value) {
 			// Atualizar dados no useMarketing para contadores das tabs
 			setTabData("cupons", cupons.value);
 			return;
@@ -280,6 +280,7 @@ export const useCupons = (): UseCuponsReturn => {
 
 			// Atualizar dados no useMarketing para contadores das tabs
 			setTabData("cupons", cupons.value);
+			cacheLoaded.value = true;
 		} catch (err) {
 			error.value = "Erro ao carregar cupons";
 			console.error("Erro ao buscar cupons:", err);

@@ -203,7 +203,7 @@ export const useBanners = (): UseBannersReturn => {
 	 */
 	const fetchBanners = async (): Promise<void> => {
 		// Se já carregou do cache, não buscar novamente
-		if (cacheLoaded.value && banners.value.length > 0) {
+		if (cacheLoaded.value) {
 			return;
 		}
 
@@ -233,6 +233,7 @@ export const useBanners = (): UseBannersReturn => {
 
 			// Atualizar dados no useMarketing para contadores das tabs
 			setTabData("banners", banners.value);
+			cacheLoaded.value = true;
 		} catch {
 			error.value = "Erro ao carregar banners";
 		} finally {

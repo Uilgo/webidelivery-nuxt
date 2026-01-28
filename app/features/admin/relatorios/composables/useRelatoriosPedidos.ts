@@ -17,21 +17,18 @@ import { useRelatoriosFiltros } from "./useRelatoriosFiltros";
 export const useRelatoriosPedidos = () => {
 	const supabase = useSupabaseClient();
 	const estabelecimentoStore = useEstabelecimentoStore();
+	const { periodo } = useRelatoriosFiltros();
 
 	// Estado
 	const dados = useState<RelatorioPedidos | null>("relatorios.pedidos.dados", () => null);
 	const loading = useState<boolean>("relatorios.pedidos.loading", () => false);
 	const error = useState<string | null>("relatorios.pedidos.error", () => null);
+	const watchAtivo = useState<boolean>("relatorios.pedidos.watchAtivo", () => false);
 
 	/**
 	 * Buscar dados de pedidos do período
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
-		// Se já tem dados e não é refresh forçado, não buscar novamente
-		if (dados.value && !forceRefresh) {
-			return;
-		}
-
+	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
 		try {
 			loading.value = true;
 			error.value = null;
@@ -378,9 +375,7 @@ export const useRelatoriosPedidos = () => {
 	/**
 	 * Preparar tabela detalhada
 	 */
-	const prepararTabelaDetalhada = (
-		pedidos: Array<Record<string, unknown>>,
-	): readonly PedidoDetalhado[] => {
+	const prepararTabelaDetalhada = (pedidos: Array<Record<string, unknown>>): PedidoDetalhado[] => {
 		return pedidos.map((pedido) => {
 			// Calcular tempo de preparo (aceito_em → pronto_em)
 			let tempoPreparo = 0;
@@ -402,6 +397,12 @@ export const useRelatoriosPedidos = () => {
 				id: pedido.id as string,
 				numero: pedido.numero as number,
 				codigo_rastreamento: pedido.codigo_rastreamento as string,
+				// Campos para a tabela (aliases)
+				codigo: pedido.codigo_rastreamento as string,
+				data: pedido.created_at as string,
+				cliente: pedido.cliente_nome as string,
+				valor: pedido.total as number,
+				// Campos originais
 				created_at: pedido.created_at as string,
 				cliente_nome: pedido.cliente_nome as string,
 				cliente_telefone: pedido.cliente_telefone as string,
@@ -423,8 +424,27 @@ export const useRelatoriosPedidos = () => {
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value, true);
+		await fetchDados(filtros.periodo.value);
 	};
+
+	/**
+	 * Inicializa o watch do período (apenas uma vez)
+	 */
+	const inicializarWatch = () => {
+		if (watchAtivo.value) return;
+		watchAtivo.value = true;
+
+		watch(
+			periodo,
+			async (novoPeriodo: FiltrosPeriodo) => {
+				await fetchDados(novoPeriodo);
+			},
+			{ deep: true },
+		);
+	};
+
+	// Inicializar watch automaticamente
+	inicializarWatch();
 
 	return {
 		dados: readonly(dados),

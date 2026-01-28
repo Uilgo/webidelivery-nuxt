@@ -14,7 +14,8 @@ export type ConfiguracaoTab =
 	| "pagamentos"
 	| "frete-entrega"
 	| "personalizar"
-	| "seguranca";
+	| "seguranca"
+	| "logs";
 
 /** Interface de retorno do composable */
 export interface UseConfiguracoesReturn {
@@ -61,6 +62,7 @@ export const useConfiguracoes = (): UseConfiguracoesReturn => {
 			"frete-entrega",
 			"personalizar",
 			"seguranca",
+			"logs",
 		];
 
 		if (queryTab && validTabs.includes(queryTab as ConfiguracaoTab)) {
@@ -83,6 +85,7 @@ export const useConfiguracoes = (): UseConfiguracoesReturn => {
 		"frete-entrega": false,
 		personalizar: false,
 		seguranca: false,
+		logs: false,
 	});
 
 	// ========================================
@@ -147,6 +150,7 @@ export const useConfiguracoes = (): UseConfiguracoesReturn => {
 				"frete-entrega",
 				"personalizar",
 				"seguranca",
+				"logs",
 			];
 			const validTab = validTabs.includes(newTab as ConfiguracaoTab)
 				? (newTab as ConfiguracaoTab)

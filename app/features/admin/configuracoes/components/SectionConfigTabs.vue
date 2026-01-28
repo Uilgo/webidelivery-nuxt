@@ -11,6 +11,7 @@ import HorariosTab from "./tabs/HorariosTab.vue";
 import PagamentosTab from "./tabs/PagamentosTab.vue";
 import FreteEntregaTab from "./tabs/FreteEntregaTab.vue";
 import PersonalizarTab from "./tabs/PersonalizarTab.vue";
+import LogsTab from "./tabs/LogsTab.vue";
 
 interface Props {
 	activeTab: string;
@@ -27,6 +28,7 @@ const tabComponents: Record<string, Component> = {
 	pagamentos: PagamentosTab,
 	"frete-entrega": FreteEntregaTab,
 	personalizar: PersonalizarTab,
+	logs: LogsTab,
 };
 
 /**

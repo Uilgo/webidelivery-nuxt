@@ -167,7 +167,7 @@ const tipoEntregaConfig: Record<
 <template>
 	<div class="pedidos-tabela">
 		<TabelaRelatorio
-			:dados="(dados ? [...dados] : []) as unknown as Record<string, unknown>[]"
+			:dados="(dados || []) as unknown as Record<string, unknown>[]"
 			:colunas="colunas"
 			:loading="loading"
 			:busca="true"

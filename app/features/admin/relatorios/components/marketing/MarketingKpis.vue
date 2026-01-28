@@ -6,6 +6,7 @@
  * Exibe métricas principais: cupons usados, desconto total, taxa de conversão, economia média.
  */
 
+import KpiCard from "../shared/KpiCard.vue";
 import type { KpisMarketing } from "../../types/marketing";
 
 interface Props {
@@ -32,16 +33,28 @@ const kpisArray = computed(() => {
 </script>
 
 <template>
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-		<KpiCard
-			v-for="(kpi, index) in kpisArray"
-			:key="index"
-			:titulo="kpi.titulo"
-			:valor="kpi.valor"
-			:icone="kpi.icone"
-			:cor="kpi.cor"
-			:descricao="kpi.descricao"
-			:loading="loading"
+	<div class="marketing-kpis">
+		<!-- Loading State -->
+		<div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div
+				v-for="i in 4"
+				:key="i"
+				class="h-32 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"
+			></div>
+		</div>
+
+		<!-- KPIs Grid -->
+		<div v-else-if="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<KpiCard v-for="(kpi, index) in kpisArray" :key="index" :kpi="kpi" />
+		</div>
+
+		<!-- Empty State -->
+		<UiEmptyState
+			v-else
+			title="Nenhum dado disponível"
+			description="Não há KPIs de marketing para o período selecionado"
+			icon="lucide:megaphone"
+			size="md"
 		/>
 	</div>
 </template>

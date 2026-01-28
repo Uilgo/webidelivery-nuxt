@@ -230,8 +230,8 @@ const getSortIcon = (column: Column): string => {
 		</div>
 
 		<!-- Empty State -->
-		<div v-else-if="!data.length" class="flex-1 flex items-center justify-center">
-			<div class="flex flex-col items-center gap-3">
+		<div v-else-if="!data.length" class="flex-1 flex items-center justify-center py-16">
+			<div class="flex flex-col items-center gap-4">
 				<Icon :name="emptyIcon" class="h-12 w-12 text-[var(--text-muted)]" />
 				<p class="text-sm text-[var(--text-muted)]">{{ emptyText }}</p>
 			</div>

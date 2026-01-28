@@ -67,11 +67,11 @@ const abrirProduto = () => {
 
 <template>
 	<div
-		class="group shrink-0 w-[160px] sm:w-[180px] bg-[var(--cardapio-surface)] rounded-xl sm:rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-[var(--cardapio-primary)]/15 transition-all duration-300 cursor-pointer border border-transparent hover:border-[var(--cardapio-primary)]/20"
+		class="group shrink-0 w-[160px] sm:w-[180px] bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-[var(--cardapio-primary)]/15 transition-all duration-300 cursor-pointer border border-transparent hover:border-[var(--cardapio-primary)]/20"
 		@click="abrirProduto"
 	>
 		<!-- Imagem -->
-		<div class="relative aspect-square bg-[var(--cardapio-muted)] overflow-hidden">
+		<div class="relative aspect-square bg-[var(--cardapio-secondary)] overflow-hidden">
 			<!-- Badge de Desconto (animado) -->
 			<div
 				v-if="descontoPercentual"

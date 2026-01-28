@@ -175,13 +175,13 @@ const handleCloseSidebar = (): void => {
 
 <template>
 	<aside
-		class="fixed inset-y-0 left-0 z-50 bg-[var(--card-bg)] border-r border-[var(--border-default)] transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
+		class="fixed inset-y-0 left-0 z-50 bg-[var(--card-bg)] border-r border-[var(--border-default)] transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 w-64"
 		:class="[
 			// Mobile: slide in/out
 			isOpen ? 'translate-x-0' : '-translate-x-full',
 			// Desktop: width based on collapsed state
 			'lg:translate-x-0',
-			isCollapsed ? 'w-20' : 'w-64',
+			{ '!w-20': isCollapsed },
 		]"
 	>
 		<!-- Overlay para mobile -->
@@ -195,8 +195,8 @@ const handleCloseSidebar = (): void => {
 		<div class="relative flex flex-col h-full">
 			<!-- Cabeçalho: Logo + Nome do Estabelecimento -->
 			<div
-				class="flex items-center gap-3 h-16 border-b border-[var(--border-default)]"
-				:class="isCollapsed ? 'justify-center px-2' : 'px-6'"
+				class="flex items-center gap-3 h-16 border-b border-[var(--border-default)] px-6"
+				:class="{ 'justify-center !px-2': isCollapsed }"
 			>
 				<!-- Logo (placeholder - será substituído por logo real) -->
 				<div
@@ -235,17 +235,12 @@ const handleCloseSidebar = (): void => {
 						route.path === item.route
 							? 'bg-[var(--primary-light)] text-[var(--primary)] font-medium'
 							: 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
-						isCollapsed ? 'justify-center' : '',
+						{ 'justify-center': isCollapsed },
 					]"
-					:title="isCollapsed ? item.label : undefined"
 					@click="emit('close')"
 				>
-					<Icon
-						:name="item.icon"
-						:class="isCollapsed ? '!w-7 !h-7' : '!w-6 !h-6'"
-						class="flex-shrink-0"
-					/>
-					<span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+					<Icon :name="item.icon" class="!w-6 !h-6 flex-shrink-0" />
+					<span v-show="!isCollapsed" class="truncate">{{ item.label }}</span>
 				</NuxtLink>
 			</nav>
 
@@ -253,18 +248,17 @@ const handleCloseSidebar = (): void => {
 			<div class="p-2 border-t border-[var(--border-default)]">
 				<UiDropdown
 					:placement="isCollapsed ? 'right' : 'top-start'"
-					:class="[
-						'!block w-full',
-						isCollapsed
-							? '[&>div:last-child]:!left-full [&>div:last-child]:!bottom-0 [&>div:last-child]:!top-auto [&>div:last-child]:!w-36 [&>div:last-child]:!ml-3'
-							: '[&>div:last-child]:w-full',
-					]"
+					class="!block w-full"
+					:class="{
+						'[&>div:last-child]:!left-full [&>div:last-child]:!bottom-0 [&>div:last-child]:!top-auto [&>div:last-child]:!w-36 [&>div:last-child]:!ml-3':
+							isCollapsed,
+						'[&>div:last-child]:w-full': !isCollapsed,
+					}"
 				>
 					<template #trigger="{ toggle, isOpen: isDropdownOpen }">
 						<div
 							class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200 cursor-pointer"
-							:class="[isCollapsed ? 'justify-center' : '']"
-							:title="isCollapsed ? `${userName} - ${userEmail}` : undefined"
+							:class="{ 'justify-center': isCollapsed }"
 							@click="toggle"
 						>
 							<!-- Avatar do Usuário -->
@@ -277,7 +271,7 @@ const handleCloseSidebar = (): void => {
 							/>
 
 							<!-- Informações do Usuário (ocultas quando colapsado) -->
-							<div v-if="!isCollapsed" class="flex-1 min-w-0 text-left">
+							<div v-show="!isCollapsed" class="flex-1 min-w-0 text-left">
 								<p class="text-sm font-medium text-[var(--text-primary)] truncate">
 									{{ userName }}
 								</p>
@@ -288,7 +282,7 @@ const handleCloseSidebar = (): void => {
 
 							<!-- Ícone de dropdown (oculto quando colapsado) -->
 							<Icon
-								v-if="!isCollapsed"
+								v-show="!isCollapsed"
 								name="lucide:chevron-up"
 								class="w-4 h-4 text-[var(--text-muted)] transition-transform duration-200"
 								:class="{ 'rotate-180': !isDropdownOpen }"

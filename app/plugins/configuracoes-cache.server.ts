@@ -42,14 +42,29 @@ export default defineNuxtPlugin(async () => {
 	try {
 		const estabelecimentoId = estabelecimentoStore.estabelecimento.id;
 
+		// Tipo para os dados do estabelecimento
+		interface EstabelecimentoConfig {
+			id: string;
+			nome: string;
+			slug: string;
+			descricao: string | null;
+			logo_url: string | null;
+			logo_url_dark: string | null;
+			whatsapp: string | null;
+			config_geral: Record<string, unknown> | null;
+			config_pagamento: Record<string, unknown> | null;
+			config_tema: Record<string, unknown> | null;
+			onboarding: boolean;
+		}
+
 		// ⚡ Cache para configurações (TTL: 10 minutos - mudam raramente)
-		const configCache = createCacheWithTTL<typeof estabelecimento>(
+		const configCache = createCacheWithTTL<EstabelecimentoConfig>(
 			`config-${estabelecimentoId}`,
 			10 * 60 * 1000, // 10 minutos
 		);
 
 		// Buscar dados completos do estabelecimento com cache
-		const estabelecimento = await configCache.get(async () => {
+		const estabelecimento: EstabelecimentoConfig = await configCache.get(async () => {
 			const { data, error } = await supabase
 				.from("estabelecimentos")
 				.select(
@@ -80,7 +95,7 @@ export default defineNuxtPlugin(async () => {
 				throw new Error("Estabelecimento não encontrado");
 			}
 
-			return data;
+			return data as EstabelecimentoConfig;
 		});
 
 		// Atualizar store com dados completos

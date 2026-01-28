@@ -118,7 +118,7 @@ const abrirWhatsApp = (): void => {
 						/>
 						<!-- Logo Container -->
 						<div
-							class="relative size-20 sm:size-24 md:size-28 lg:size-32 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-surface)] shadow-2xl ring-2 ring-white/50"
+							class="relative size-20 sm:size-24 md:size-28 lg:size-32 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-2xl ring-2 ring-white/50"
 						>
 							<img
 								v-if="estabelecimento.logo"
@@ -213,8 +213,8 @@ const abrirWhatsApp = (): void => {
 	<UiModal v-model="modalInfoAberto" title="Informações" size="md">
 		<div class="space-y-5">
 			<!-- Header do Modal com Logo -->
-			<div class="flex items-center gap-4 pb-4 border-b border-[var(--cardapio-muted)]">
-				<div class="size-16 rounded-xl overflow-hidden bg-[var(--cardapio-muted)] shadow-md">
+			<div class="flex items-center gap-4 pb-4 border-b border-[var(--cardapio-border)]">
+				<div class="size-16 rounded-xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-md">
 					<img
 						v-if="estabelecimento.logo"
 						:src="estabelecimento.logo"
@@ -250,7 +250,7 @@ const abrirWhatsApp = (): void => {
 			<div class="grid grid-cols-2 gap-3">
 				<!-- Tempo de Entrega -->
 				<div
-					class="p-3 rounded-xl bg-[var(--cardapio-surface)] border border-[var(--cardapio-muted)]"
+					class="p-3 rounded-xl bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)]"
 				>
 					<div class="flex items-center gap-2 text-[var(--cardapio-primary)] mb-1">
 						<Icon name="lucide:clock" class="w-4 h-4" />

@@ -11,7 +11,7 @@
 	<div class="min-h-screen bg-[var(--cardapio-background)]">
 		<!-- Header Skeleton -->
 		<div class="sticky top-0 z-40 px-4 pt-4 pb-2 bg-[var(--cardapio-background)]">
-			<div class="max-w-3xl mx-auto bg-[var(--cardapio-surface)] rounded-xl shadow-md p-4">
+			<div class="max-w-3xl mx-auto bg-[var(--cardapio-secondary)] rounded-xl shadow-md p-4">
 				<div class="flex items-center gap-4">
 					<!-- Logo -->
 					<UiSkeleton class="w-16 h-16 rounded-full flex-shrink-0" />
@@ -60,7 +60,7 @@
 					<div
 						v-for="i in 3"
 						:key="i"
-						class="flex gap-4 p-4 bg-[var(--cardapio-surface)] rounded-lg border border-[var(--cardapio-muted)]"
+						class="flex gap-4 p-4 bg-[var(--cardapio-secondary)] rounded-lg border border-[var(--cardapio-border)]"
 					>
 						<!-- Imagem -->
 						<UiSkeleton class="w-24 h-24 rounded-lg flex-shrink-0" />
@@ -83,7 +83,7 @@
 					<div
 						v-for="i in 2"
 						:key="i"
-						class="flex gap-4 p-4 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-default)]"
+						class="flex gap-4 p-4 bg-[var(--cardapio-secondary)] rounded-lg border border-[var(--cardapio-border)]"
 					>
 						<!-- Imagem -->
 						<UiSkeleton class="w-24 h-24 rounded-lg flex-shrink-0" />
@@ -106,7 +106,7 @@
 					<div
 						v-for="i in 3"
 						:key="i"
-						class="flex gap-4 p-4 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-default)]"
+						class="flex gap-4 p-4 bg-[var(--cardapio-secondary)] rounded-lg border border-[var(--cardapio-border)]"
 					>
 						<!-- Imagem -->
 						<UiSkeleton class="w-24 h-24 rounded-lg flex-shrink-0" />

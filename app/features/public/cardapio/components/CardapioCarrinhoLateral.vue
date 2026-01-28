@@ -52,7 +52,7 @@ const finalizarPedido = () => {
 <template>
 	<aside class="sticky top-4 h-fit cardapio-theme-bridge">
 		<div
-			class="bg-[var(--cardapio-background)] rounded-2xl shadow-xl overflow-hidden border-[var(--cardapio-muted)]"
+			class="bg-[var(--cardapio-background)] rounded-2xl shadow-xl overflow-hidden border-[var(--cardapio-border)]"
 		>
 			<!-- Header Premium com Gradiente -->
 			<div
@@ -89,7 +89,7 @@ const finalizarPedido = () => {
 				class="flex flex-col items-center justify-center py-12 px-4 text-center"
 			>
 				<div
-					class="size-20 rounded-full bg-[var(--cardapio-muted)] flex items-center justify-center mb-4"
+					class="size-20 rounded-full bg-[var(--cardapio-secondary)] flex items-center justify-center mb-4"
 				>
 					<Icon name="lucide:shopping-bag" class="w-10 h-10 text-[var(--cardapio-text-muted)]" />
 				</div>
@@ -108,7 +108,7 @@ const finalizarPedido = () => {
 					<div
 						v-for="item in carrinhoStore.itens"
 						:key="item.id"
-						class="group flex gap-3 p-3 bg-[var(--cardapio-surface)] border border-[var(--cardapio-muted)] rounded-xl hover:bg-[var(--cardapio-hover)] transition-colors"
+						class="group flex gap-3 p-3 bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)] rounded-xl hover:bg-[var(--cardapio-hover)] transition-colors"
 					>
 						<!-- Imagem -->
 						<div
@@ -161,7 +161,7 @@ const finalizarPedido = () => {
 			<!-- Resumo e Ações -->
 			<div
 				v-if="montado && carrinhoStore.itens.length > 0"
-				class="p-4 border-t border-[var(--cardapio-muted)] space-y-4"
+				class="p-4 border-t border-[var(--cardapio-border)] space-y-4"
 			>
 				<!-- Resumo de Valores -->
 				<div class="space-y-2">
@@ -179,7 +179,7 @@ const finalizarPedido = () => {
 						</span>
 					</div>
 
-					<div class="h-px bg-[var(--cardapio-muted)] my-2" />
+					<div class="h-px bg-[var(--cardapio-secondary)] my-2" />
 
 					<div class="flex items-center justify-between">
 						<span class="text-base font-bold text-[var(--cardapio-text)]">Total</span>

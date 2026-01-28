@@ -5,6 +5,8 @@
  * - Aplicar filtros locais nos dados
  * - Busca por texto (número, cliente, telefone)
  * - Filtros por status, tipo de entrega, forma de pagamento, data
+ *
+ * ⚡ OTIMIZAÇÃO: Debounce de 300ms na busca para reduzir processamento
  */
 
 import type {
@@ -14,6 +16,7 @@ import type {
 	TipoEntregaPedido,
 	FormaPagamentoPedido,
 } from "~/features/admin/pedidos/types/pedidos-admin";
+import { useDebounceFn } from "@vueuse/core";
 
 export interface UsePedidosFiltersReturn {
 	filters: Ref<FiltrosPedidos>;
@@ -37,6 +40,14 @@ export const usePedidosFilters = (): UsePedidosFiltersReturn => {
 		forma_pagamento: null,
 		busca: "",
 	}));
+
+	// Estado interno para busca (não debounced) - para input responsivo
+	const searchInput = ref(filters.value.busca);
+
+	// Debounce da busca (300ms) para evitar processamento excessivo
+	const debouncedSetSearch = useDebounceFn((value: string) => {
+		filters.value.busca = value;
+	}, 300);
 
 	/**
 	 * Define filtro de status
@@ -74,10 +85,11 @@ export const usePedidosFilters = (): UsePedidosFiltersReturn => {
 	};
 
 	/**
-	 * Define valor da busca
+	 * Define valor da busca (com debounce de 300ms)
 	 */
 	const setSearch = (value: string): void => {
-		filters.value.busca = value;
+		searchInput.value = value; // Atualiza input imediatamente
+		debouncedSetSearch(value); // Aplica filtro com delay
 	};
 
 	/**

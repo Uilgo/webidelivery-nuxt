@@ -20,19 +20,16 @@ export const useRelatoriosMarketing = () => {
 	const dados = useState<RelatorioMarketing | null>("relatorios.marketing.dados", () => null);
 	const loading = useState<boolean>("relatorios.marketing.loading", () => false);
 	const error = useState<string | null>("relatorios.marketing.error", () => null);
+	const watchAtivo = useState<boolean>("relatorios.marketing.watchAtivo", () => false);
 
 	const supabase = useSupabaseClient();
 	const estabelecimentoStore = useEstabelecimentoStore();
+	const { periodo } = useRelatoriosFiltros();
 
 	/**
 	 * Busca dados do relatório de marketing
 	 */
-	const fetchDados = async (filtros: FiltrosPeriodo, forceRefresh = false): Promise<void> => {
-		// Se já tem dados e não é refresh forçado, não buscar novamente
-		if (dados.value && !forceRefresh) {
-			return;
-		}
-
+	const fetchDados = async (filtros: FiltrosPeriodo): Promise<void> => {
 		loading.value = true;
 		error.value = null;
 
@@ -42,28 +39,12 @@ export const useRelatoriosMarketing = () => {
 				throw new Error("Estabelecimento não encontrado");
 			}
 
-			// Buscar pedidos com cupons
+			// Buscar pedidos com cupons aplicados (desconto > 0)
 			const { data: pedidosComCupons, error: pedidosError } = await supabase
 				.from("pedidos")
-				.select(
-					`
-          id,
-          numero,
-          created_at,
-          subtotal,
-          desconto,
-          total,
-          cupom_id,
-          cupons (
-            id,
-            codigo,
-            tipo,
-            valor
-          )
-        `,
-				)
+				.select("id, numero, created_at, subtotal, desconto, total")
 				.eq("estabelecimento_id", estabelecimentoId)
-				.not("cupom_id", "is", null)
+				.gt("desconto", 0)
 				.gte("created_at", filtros.data_inicio)
 				.lte("created_at", filtros.data_fim);
 
@@ -154,61 +135,29 @@ export const useRelatoriosMarketing = () => {
 
 	/**
 	 * Calcula desempenho dos cupons
+	 * Nota: Por enquanto agrupa apenas por desconto, pois não há relação direta com tabela de cupons
 	 */
 	const calcularDesempenhoCupons = (pedidos: unknown[]): RelatorioMarketing["cupons"] => {
-		// Agrupar por cupom
-		const cuponsMap = new Map<
-			string,
-			{
-				id: string;
-				codigo: string;
-				tipo: string;
-				usos: number;
-				desconto_total: number;
-				receita_gerada: number;
-				created_at: string;
-			}
-		>();
-
-		pedidos.forEach((pedido) => {
+		// Agrupar pedidos com desconto
+		const cuponsArray = pedidos.map((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
-			const cupons = pedidoData.cupons as Record<string, unknown> | null;
-
-			if (cupons) {
-				const cupomId = cupons.id as string;
-				const cupomCodigo = cupons.codigo as string;
-				const cupomTipo = cupons.tipo as string;
-				const desconto = pedidoData.desconto as number;
-				const total = pedidoData.total as number;
-				const createdAt = pedidoData.created_at as string;
-
-				if (cuponsMap.has(cupomId)) {
-					const existing = cuponsMap.get(cupomId)!;
-					existing.usos += 1;
-					existing.desconto_total += desconto;
-					existing.receita_gerada += total;
-				} else {
-					cuponsMap.set(cupomId, {
-						id: cupomId,
-						codigo: cupomCodigo,
-						tipo: cupomTipo,
-						usos: 1,
-						desconto_total: desconto,
-						receita_gerada: total,
-						created_at: createdAt,
-					});
-				}
-			}
+			return {
+				id: pedidoData.id as string,
+				codigo: `DESCONTO-${(pedidoData.numero as string).replace("#", "")}`,
+				tipo: "desconto",
+				usos: 1,
+				desconto_total: pedidoData.desconto as number,
+				receita_gerada: pedidoData.total as number,
+				created_at: pedidoData.created_at as string,
+				taxa_conversao: 100, // 100% pois já foi aplicado
+				economia_media: pedidoData.desconto as number,
+			};
 		});
 
-		const cuponsArray = Array.from(cuponsMap.values()).map((cupom) => ({
-			...cupom,
-			taxa_conversao: cupom.usos > 0 ? (cupom.receita_gerada / cupom.usos) * 100 : 0,
-			economia_media: cupom.usos > 0 ? cupom.desconto_total / cupom.usos : 0,
-		}));
-
-		// Mais usados
-		const maisUsados = [...cuponsArray].sort((a, b) => b.usos - a.usos).slice(0, 10);
+		// Mais usados (por valor de desconto)
+		const maisUsados = [...cuponsArray]
+			.sort((a, b) => b.desconto_total - a.desconto_total)
+			.slice(0, 10);
 
 		return {
 			desempenho: cuponsArray,
@@ -220,25 +169,35 @@ export const useRelatoriosMarketing = () => {
 	 * Prepara dados para gráficos
 	 */
 	const prepararGraficos = (pedidos: unknown[]): RelatorioMarketing["graficos"] => {
-		// Cupons por tipo
-		const tiposMap = new Map<string, number>();
+		// Descontos por faixa de valor
+		const faixas = {
+			"Até R$ 5": 0,
+			"R$ 5 - R$ 10": 0,
+			"R$ 10 - R$ 20": 0,
+			"Acima de R$ 20": 0,
+		};
 
 		pedidos.forEach((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
-			const cupons = pedidoData.cupons as Record<string, unknown> | null;
+			const desconto = pedidoData.desconto as number;
 
-			if (cupons) {
-				const tipo = cupons.tipo as string;
-				tiposMap.set(tipo, (tiposMap.get(tipo) || 0) + 1);
+			if (desconto <= 5) {
+				faixas["Até R$ 5"] += 1;
+			} else if (desconto <= 10) {
+				faixas["R$ 5 - R$ 10"] += 1;
+			} else if (desconto <= 20) {
+				faixas["R$ 10 - R$ 20"] += 1;
+			} else {
+				faixas["Acima de R$ 20"] += 1;
 			}
 		});
 
 		const cupons_por_tipo = {
-			labels: Array.from(tiposMap.keys()),
+			labels: Object.keys(faixas),
 			datasets: [
 				{
 					label: "Quantidade",
-					data: Array.from(tiposMap.values()),
+					data: Object.values(faixas),
 					backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"],
 				},
 			],
@@ -261,7 +220,7 @@ export const useRelatoriosMarketing = () => {
 			labels: datasOrdenadas,
 			datasets: [
 				{
-					label: "Cupons Utilizados",
+					label: "Descontos Aplicados",
 					data: datasOrdenadas.map((data) => usosPorDia.get(data) || 0),
 					borderColor: "#3b82f6",
 					backgroundColor: "#3b82f620",
@@ -339,41 +298,31 @@ export const useRelatoriosMarketing = () => {
 
 		const taxaConversaoGeral = totalPedidos > 0 ? (totalCuponsUsados / totalPedidos) * 100 : 0;
 
-		// Cupom mais usado
-		const cuponsMap = new Map<string, { codigo: string; usos: number }>();
+		// Desconto mais alto
+		let descontoMaisAlto: { codigo: string; usos: number } | null = null;
+		let maiorDesconto = 0;
 
 		pedidos.forEach((pedido) => {
 			const pedidoData = pedido as Record<string, unknown>;
-			const cupons = pedidoData.cupons as Record<string, unknown> | null;
+			const desconto = pedidoData.desconto as number;
 
-			if (cupons) {
-				const cupomId = cupons.id as string;
-				const cupomCodigo = cupons.codigo as string;
-
-				if (cuponsMap.has(cupomId)) {
-					const existing = cuponsMap.get(cupomId)!;
-					existing.usos += 1;
-				} else {
-					cuponsMap.set(cupomId, { codigo: cupomCodigo, usos: 1 });
-				}
-			}
-		});
-
-		let cupomMaisUsado: { codigo: string; usos: number } | null = null;
-		cuponsMap.forEach((cupom) => {
-			if (!cupomMaisUsado || cupom.usos > cupomMaisUsado.usos) {
-				cupomMaisUsado = cupom;
+			if (desconto > maiorDesconto) {
+				maiorDesconto = desconto;
+				descontoMaisAlto = {
+					codigo: `DESCONTO-${(pedidoData.numero as string).replace("#", "")}`,
+					usos: 1,
+				};
 			}
 		});
 
 		return {
-			total_cupons_ativos: cuponsMap.size,
+			total_cupons_ativos: totalCuponsUsados, // Pedidos com desconto
 			total_cupons_usados: totalCuponsUsados,
 			desconto_total_concedido: descontoTotalConcedido,
 			receita_com_cupons: receitaComCupons,
 			economia_media_cliente: economiaMediaCliente,
 			taxa_conversao_geral: taxaConversaoGeral,
-			cupom_mais_usado: cupomMaisUsado,
+			cupom_mais_usado: descontoMaisAlto,
 			total_banners_ativos: 0, // Placeholder
 		};
 	};
@@ -383,8 +332,27 @@ export const useRelatoriosMarketing = () => {
 	 */
 	const refresh = async (): Promise<void> => {
 		const filtros = useRelatoriosFiltros();
-		await fetchDados(filtros.periodo.value, true);
+		await fetchDados(filtros.periodo.value);
 	};
+
+	/**
+	 * Inicializa o watch do período (apenas uma vez)
+	 */
+	const inicializarWatch = () => {
+		if (watchAtivo.value) return;
+		watchAtivo.value = true;
+
+		watch(
+			periodo,
+			async (novoPeriodo: FiltrosPeriodo) => {
+				await fetchDados(novoPeriodo);
+			},
+			{ deep: true },
+		);
+	};
+
+	// Inicializar watch automaticamente
+	inicializarWatch();
 
 	return {
 		dados: readonly(dados),

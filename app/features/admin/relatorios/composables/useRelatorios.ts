@@ -10,22 +10,37 @@ import { useRelatoriosFiltros } from "./useRelatoriosFiltros";
 import { useRelatoriosPermissions } from "./useRelatoriosPermissions";
 
 export const useRelatorios = () => {
+	const route = useRoute();
+	const router = useRouter();
+
+	// ========================================
+	// COOKIES PARA PERSISTÊNCIA
+	// ========================================
+
+	const lastTabCookie = useCookie<AbaRelatorio>("relatorios-last-tab", {
+		default: () => "pedidos",
+		maxAge: 60 * 60 * 24 * 30, // 30 dias
+	});
+
 	// ========================================
 	// ESTADO DAS ABAS
 	// ========================================
 
 	/**
-	 * Aba ativa atual
+	 * Determina a aba inicial baseado na URL ou cookie
 	 */
-	const abaAtiva = useState<AbaRelatorio>("relatorios.abaAtiva", () => "pedidos");
+	const getInitialTab = (): AbaRelatorio => {
+		const queryTab = route.query.tab as string;
+		const validTabs: AbaRelatorio[] = ["pedidos", "vendas", "produtos", "marketing", "financeiro"];
 
-	/**
-	 * Cookie para persistir última aba visitada (30 dias)
-	 */
-	const lastTabCookie = useCookie<AbaRelatorio>("relatorios-last-tab", {
-		default: () => "pedidos",
-		maxAge: 60 * 60 * 24 * 30, // 30 dias
-	});
+		if (queryTab && validTabs.includes(queryTab as AbaRelatorio)) {
+			return queryTab as AbaRelatorio;
+		}
+
+		return lastTabCookie.value;
+	};
+
+	const abaAtiva = ref<AbaRelatorio>(getInitialTab());
 
 	// ========================================
 	// INTEGRAÇÃO COM OUTROS COMPOSABLES
@@ -89,41 +104,49 @@ export const useRelatorios = () => {
 	const setAbaAtiva = (aba: AbaRelatorio) => {
 		abaAtiva.value = aba;
 		lastTabCookie.value = aba;
-	};
 
-	/**
-	 * Inicializa a aba a partir do cookie ou URL
-	 */
-	const inicializarAba = () => {
-		const route = useRoute();
-		const tabFromUrl = route.query.tab as AbaRelatorio | undefined;
-
-		if (tabFromUrl && abasDisponiveis.value.some((a) => a.id === tabFromUrl)) {
-			abaAtiva.value = tabFromUrl;
-		} else if (lastTabCookie.value) {
-			abaAtiva.value = lastTabCookie.value;
-		}
-	};
-
-	/**
-	 * Sincroniza aba ativa com a URL
-	 */
-	const sincronizarComUrl = () => {
-		const router = useRouter();
-		const route = useRoute();
-
-		watch(
-			abaAtiva,
-			(novaAba) => {
-				if (route.query.tab !== novaAba) {
-					router.push({
-						query: { ...route.query, tab: novaAba },
-					});
-				}
+		router.push({
+			query: {
+				...route.query,
+				tab: aba,
 			},
-			{ immediate: false },
-		);
+		});
 	};
+
+	// ========================================
+	// SINCRONIZAÇÃO COM URL
+	// ========================================
+
+	// Forçar parâmetro tab na URL se não existir
+	if (import.meta.client && !route.query.tab) {
+		router.replace({
+			query: {
+				...route.query,
+				tab: abaAtiva.value,
+			},
+		});
+	}
+
+	// Watch para sincronizar aba ativa com mudanças na URL
+	watch(
+		() => route.query.tab,
+		(newTab) => {
+			const validTabs: AbaRelatorio[] = [
+				"pedidos",
+				"vendas",
+				"produtos",
+				"marketing",
+				"financeiro",
+			];
+			const validTab = validTabs.includes(newTab as AbaRelatorio)
+				? (newTab as AbaRelatorio)
+				: "pedidos";
+
+			if (abaAtiva.value !== validTab) {
+				abaAtiva.value = validTab;
+			}
+		},
+	);
 
 	// ========================================
 	// MÉTODOS DE REFRESH
@@ -145,21 +168,12 @@ export const useRelatorios = () => {
 	};
 
 	// ========================================
-	// LIFECYCLE
-	// ========================================
-
-	onMounted(() => {
-		inicializarAba();
-		sincronizarComUrl();
-	});
-
-	// ========================================
 	// RETORNO
 	// ========================================
 
 	return {
 		// Estado
-		abaAtiva: readonly(abaAtiva),
+		abaAtiva,
 		abasDisponiveis,
 		podeAcessar,
 

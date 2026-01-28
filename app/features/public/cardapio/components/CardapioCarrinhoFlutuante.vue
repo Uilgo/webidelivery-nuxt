@@ -39,7 +39,7 @@ onMounted(() => {
 	>
 		<div
 			v-if="montado && !carrinhoStore.estaVazio"
-			class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[var(--cardapio-background)] border-t border-[var(--cardapio-muted)] shadow-lg cardapio-theme-bridge"
+			class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[var(--cardapio-background)] border-t border-[var(--cardapio-border)] shadow-lg cardapio-theme-bridge"
 		>
 			<div class="max-w-3xl mx-auto">
 				<UiButton variant="solid" color="primary" size="lg" class="w-full" @click="emit('abrir')">

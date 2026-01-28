@@ -34,7 +34,7 @@ export const useMembros = () => {
 	const fetchMembros = async (): Promise<void> => {
 		// Verificar se o cache já foi carregado pelo plugin
 		const cacheLoaded = useState<boolean>("equipe-membros-cache-loaded", () => false);
-		if (cacheLoaded.value && membros.value.length > 0) {
+		if (cacheLoaded.value) {
 			// Dados já foram carregados pelo plugin, não fazer fetch novamente
 			return;
 		}
@@ -44,10 +44,7 @@ export const useMembros = () => {
 			return;
 		}
 
-		// Só ativar loading se não tem cache carregado
-		if (!cacheLoaded.value) {
-			loading.value = true;
-		}
+		loading.value = true;
 		error.value = null;
 
 		try {
@@ -61,6 +58,7 @@ export const useMembros = () => {
 			if (fetchError) throw fetchError;
 
 			membros.value = (data as Membro[]) || [];
+			cacheLoaded.value = true;
 		} catch (err) {
 			console.error("Erro ao buscar membros:", err);
 			error.value = "Erro ao carregar membros da equipe";

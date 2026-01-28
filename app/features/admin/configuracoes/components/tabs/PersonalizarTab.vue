@@ -111,6 +111,42 @@ const secoesAbertas = ref({
 });
 
 /**
+ * 🎨 Modo de Personalização
+ * - Simples: Cor secundária gerada automaticamente (adapta ao fundo)
+ * - Avançado: Usuário define cor secundária manualmente
+ */
+const modoAvancado = ref(false);
+
+// Detectar modo inicial baseado se cor_secundaria está definida
+watch(
+	tema,
+	(newTema) => {
+		if (newTema && !isInitializing.value) {
+			// Se tem cor secundária definida e diferente do padrão → modo avançado
+			modoAvancado.value = !!(
+				newTema.cor_secundaria && newTema.cor_secundaria !== CORES_PADRAO.value.cor_secundaria
+			);
+		}
+	},
+	{ immediate: true },
+);
+
+/**
+ * Alterna entre modo simples e avançado
+ */
+const toggleModo = () => {
+	modoAvancado.value = !modoAvancado.value;
+
+	// Se alternar para modo simples, limpar cor secundária (será gerada automaticamente)
+	if (!modoAvancado.value) {
+		setFieldValue("cor_secundaria", undefined);
+	} else {
+		// Se alternar para modo avançado, definir cor padrão
+		setFieldValue("cor_secundaria", CORES_PADRAO.value.cor_secundaria);
+	}
+};
+
+/**
  * Reseta uma cor específica para o padrão
  */
 const resetarCor = (campo: keyof typeof CORES_PADRAO.value) => {
@@ -450,6 +486,38 @@ const resetarTemaCompleto = async () => {
 					</template>
 
 					<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+						<!-- 🎨 Modo de Personalização -->
+						<section
+							class="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 rounded-xl p-4 border border-primary/20"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex-1 space-y-1">
+									<div class="flex items-center gap-2">
+										<Icon
+											:name="modoAvancado ? 'lucide:settings-2' : 'lucide:zap'"
+											class="w-4 h-4 text-primary"
+										/>
+										<h4
+											class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
+										>
+											{{ modoAvancado ? "Modo Avançado" : "Modo Simples" }}
+										</h4>
+									</div>
+									<p class="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">
+										<template v-if="!modoAvancado">
+											Cores automáticas baseadas no fundo. Perfeito para começar rápido com um
+											resultado profissional.
+										</template>
+										<template v-else>
+											Controle total sobre todas as cores. Personalize cada detalhe da sua
+											identidade visual.
+										</template>
+									</p>
+								</div>
+								<UiSwitch :model-value="modoAvancado" @update:model-value="toggleModo" />
+							</div>
+						</section>
+
 						<!-- 1. Identidade Principal -->
 						<section class="space-y-4">
 							<div class="flex items-center gap-2 mb-2">
@@ -484,8 +552,8 @@ const resetarTemaCompleto = async () => {
 									/>
 								</div>
 
-								<!-- Cor Secundária -->
-								<div class="space-y-2">
+								<!-- Cor Secundária (APENAS MODO AVANÇADO) -->
+								<div v-if="modoAvancado" class="space-y-2">
 									<div class="flex items-center justify-between px-1">
 										<label class="text-[10px] font-black text-gray-400 uppercase tracking-widest"
 											>Cor Secundária</label
@@ -504,6 +572,9 @@ const resetarTemaCompleto = async () => {
 										placeholder="#10B981"
 										@update:model-value="(v) => setFieldValue('cor_secundaria', String(v))"
 									/>
+									<p class="text-[9px] text-gray-500 dark:text-gray-400 px-1">
+										Define cards, badges e elementos de UI
+									</p>
 								</div>
 
 								<!-- Cor de Fundo -->

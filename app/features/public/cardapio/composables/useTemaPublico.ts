@@ -3,10 +3,19 @@
  *
  * Composable para aplicar configurações de tema no cardápio público.
  * Aplica cores personalizadas via CSS custom properties.
+ *
+ * Modo Simples: Gera cor secundária automaticamente baseada no fundo
+ * Modo Avançado: Usuário define cor secundária manualmente
  */
 
 import type { Estabelecimento } from "../types/cardapio-publico";
 import type { ConfigTema } from "#shared/types/estabelecimentos";
+import {
+	getCardColor,
+	getBorderColor,
+	getUIHoverColor,
+	getMutedTextColor,
+} from "~/lib/utils/color";
 
 export interface UseTemaPublicoReturn {
 	// Dados
@@ -53,21 +62,55 @@ export const useTemaPublico = (
 
 		const root = document.documentElement;
 
-		// Aplica cores personalizadas base (apenas se existir valor configurado)
+		// 🎨 Aplica cores base configuráveis pelo usuário
 		if (tema.value.cor_primaria)
-			root.style.setProperty("--cardapio-cor-primaria", tema.value.cor_primaria);
-		if (tema.value.cor_secundaria)
-			root.style.setProperty("--cardapio-cor-secundaria", tema.value.cor_secundaria);
-		if (tema.value.cor_fundo) root.style.setProperty("--cardapio-cor-fundo", tema.value.cor_fundo);
-		if (tema.value.cor_texto) root.style.setProperty("--cardapio-cor-texto", tema.value.cor_texto);
+			root.style.setProperty("--cardapio-primary", tema.value.cor_primaria);
+
+		if (tema.value.cor_fundo) root.style.setProperty("--cardapio-background", tema.value.cor_fundo);
+
+		if (tema.value.cor_texto) root.style.setProperty("--cardapio-text", tema.value.cor_texto);
+
+		// 🎨 Cor Secundária: Manual (Modo Avançado) ou Automática (Modo Simples)
+		let corSecundaria: string;
+
+		if (tema.value.cor_secundaria) {
+			// Modo Avançado: Usuário definiu cor secundária manualmente
+			corSecundaria = tema.value.cor_secundaria;
+			root.style.setProperty("--cardapio-secondary", corSecundaria);
+		} else if (tema.value.cor_fundo) {
+			// Modo Simples: Gera cor secundária automaticamente baseada no fundo
+			corSecundaria = getCardColor(tema.value.cor_fundo);
+			root.style.setProperty("--cardapio-secondary", corSecundaria);
+		} else {
+			// Fallback: usa cor padrão
+			corSecundaria = "";
+		}
+
+		// 🎨 Gera cores automáticas derivadas (apenas 3 variáveis)
+
+		// 1. Bordas (3.5% de contraste da secundária)
+		if (corSecundaria) {
+			const corBorder = getBorderColor(corSecundaria);
+			root.style.setProperty("--cardapio-border", corBorder);
+		}
+
+		// 2. Hover (8.5% de contraste da secundária)
+		if (corSecundaria) {
+			const corHover = getUIHoverColor(corSecundaria);
+			root.style.setProperty("--cardapio-hover", corHover);
+		}
+
+		// 3. Texto muted (60% de opacidade visual)
+		if (tema.value.cor_texto && tema.value.cor_fundo) {
+			const corTextMuted = getMutedTextColor(tema.value.cor_texto, tema.value.cor_fundo);
+			root.style.setProperty("--cardapio-text-muted", corTextMuted);
+		}
 
 		// Aplica cores semânticas (se definidas)
 		if (tema.value.cor_sucesso)
-			root.style.setProperty("--cardapio-cor-success", tema.value.cor_sucesso);
-		if (tema.value.cor_erro) root.style.setProperty("--cardapio-cor-danger", tema.value.cor_erro);
-		if (tema.value.cor_aviso)
-			root.style.setProperty("--cardapio-cor-warning", tema.value.cor_aviso);
-		// if (tema.value.cor_info) root.style.setProperty("--cardapio-cor-info", tema.value.cor_info);
+			root.style.setProperty("--cardapio-success", tema.value.cor_sucesso);
+		if (tema.value.cor_erro) root.style.setProperty("--cardapio-danger", tema.value.cor_erro);
+		if (tema.value.cor_aviso) root.style.setProperty("--cardapio-warning", tema.value.cor_aviso);
 
 		// Aplica gradientes (se definidos)
 		if (tema.value.gradiente_promo_inicio)
@@ -80,15 +123,6 @@ export const useTemaPublico = (
 		if (tema.value.gradiente_destaque_fim)
 			root.style.setProperty("--cardapio-highlight-to", tema.value.gradiente_destaque_fim);
 
-		// Opcional: Se o backend enviar cores semânticas personalizadas no futuro,
-		// podemos aplicá-las aqui. Por enquanto, usamos os defaults do CSS (Emerald/Red/Amber)
-		// mas deixamos a estrutura pronta se quiser sobrescrever.
-		/*
-		if (tema.value.cor_success) root.style.setProperty("--cardapio-cor-success", tema.value.cor_success);
-		if (tema.value.cor_danger) root.style.setProperty("--cardapio-cor-danger", tema.value.cor_danger);
-		if (tema.value.cor_warning) root.style.setProperty("--cardapio-cor-warning", tema.value.cor_warning);
-		*/
-
 		// Aplica estilo de botões
 		root.style.setProperty(
 			"--cardapio-border-radius",
@@ -98,7 +132,23 @@ export const useTemaPublico = (
 		// Adiciona classe para identificar tema personalizado
 		root.classList.add("cardapio-tema-personalizado");
 
-		console.log("🎨 Tema aplicado:", tema.value);
+		// Debug: mostra cores aplicadas no console
+		console.log("🎨 Tema Aplicado:", {
+			modo: tema.value.cor_secundaria ? "Avançado" : "Simples",
+			primaria: tema.value.cor_primaria,
+			secundaria: corSecundaria,
+			secundariaManual: !!tema.value.cor_secundaria,
+			fundo: tema.value.cor_fundo,
+			texto: tema.value.cor_texto,
+			derivadas: {
+				border: corSecundaria ? getBorderColor(corSecundaria) : null,
+				hover: corSecundaria ? getUIHoverColor(corSecundaria) : null,
+				textMuted:
+					tema.value.cor_texto && tema.value.cor_fundo
+						? getMutedTextColor(tema.value.cor_texto, tema.value.cor_fundo)
+						: null,
+			},
+		});
 	};
 
 	/**
@@ -109,17 +159,20 @@ export const useTemaPublico = (
 
 		const root = document.documentElement;
 
-		// Remove propriedades personalizadas base
-		root.style.removeProperty("--cardapio-cor-primaria");
-		root.style.removeProperty("--cardapio-cor-secundaria");
-		root.style.removeProperty("--cardapio-cor-fundo");
-		root.style.removeProperty("--cardapio-cor-texto");
+		// Remove propriedades personalizadas
+		root.style.removeProperty("--cardapio-primary");
+		root.style.removeProperty("--cardapio-secondary");
+		root.style.removeProperty("--cardapio-background");
+		root.style.removeProperty("--cardapio-text");
+		root.style.removeProperty("--cardapio-border");
+		root.style.removeProperty("--cardapio-hover");
+		root.style.removeProperty("--cardapio-text-muted");
 		root.style.removeProperty("--cardapio-border-radius");
 
 		// Remove propriedades opcionais
-		root.style.removeProperty("--cardapio-cor-success");
-		root.style.removeProperty("--cardapio-cor-danger");
-		root.style.removeProperty("--cardapio-cor-warning");
+		root.style.removeProperty("--cardapio-success");
+		root.style.removeProperty("--cardapio-danger");
+		root.style.removeProperty("--cardapio-warning");
 		root.style.removeProperty("--cardapio-promo-from");
 		root.style.removeProperty("--cardapio-promo-to");
 		root.style.removeProperty("--cardapio-highlight-from");

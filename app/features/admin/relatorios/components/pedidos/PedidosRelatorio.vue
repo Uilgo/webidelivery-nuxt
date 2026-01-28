@@ -13,20 +13,9 @@ import PedidosKpis from "./PedidosKpis.vue";
 import PedidosGraficos from "./PedidosGraficos.vue";
 import PedidosTabela from "./PedidosTabela.vue";
 import { useRelatoriosPedidos } from "../../composables/useRelatoriosPedidos";
-import { useRelatoriosFiltros } from "../../composables/useRelatoriosFiltros";
 
+// Watch já está dentro do composable
 const { dados, loading, error } = useRelatoriosPedidos();
-const { periodo } = useRelatoriosFiltros();
-
-// Buscar dados quando o período mudar
-watch(
-	periodo,
-	async (novoPeriodo) => {
-		const { fetchDados } = useRelatoriosPedidos();
-		await fetchDados(novoPeriodo);
-	},
-	{ immediate: true },
-);
 </script>
 
 <template>

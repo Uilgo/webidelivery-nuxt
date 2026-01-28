@@ -59,10 +59,12 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@typescript-eslint/eslint-plugin": "^8.53.0",
 		"@typescript-eslint/parser": "^8.53.0",
+		"@vite-pwa/nuxt": "^1.1.0",
 		"husky": "^8.0.0",
 		"lint-staged": "^16.2.7",
 		"prettier": "^3.7.4",
 		"prettier-plugin-vue": "^1.1.6",
-		"tailwindcss": "^4.1.18"
+		"tailwindcss": "^4.1.18",
+		"workbox-window": "^7.4.0"
 	}
 }
