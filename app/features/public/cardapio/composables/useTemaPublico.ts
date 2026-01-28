@@ -15,6 +15,9 @@ import {
 	getBorderColor,
 	getUIHoverColor,
 	getMutedTextColor,
+	getLuminance,
+	getContrastText,
+	getAdaptiveShadow,
 } from "~/lib/utils/color";
 
 export interface UseTemaPublicoReturn {
@@ -86,6 +89,116 @@ export const useTemaPublico = (
 			corSecundaria = "";
 		}
 
+		// 🎨 Define --cardapio-surface (usado para modais/drawers)
+		// Surface é a mesma cor que secondary (cards/superfícies elevadas)
+		if (corSecundaria) {
+			root.style.setProperty("--cardapio-surface", corSecundaria);
+		}
+
+		// 🎨 Define --cardapio-muted (usado para fundos sutis)
+		// Muted é a mesma cor que hover (fundos desabilitados/sutis)
+		if (corSecundaria) {
+			const corMuted = getUIHoverColor(corSecundaria);
+			root.style.setProperty("--cardapio-muted", corMuted);
+		}
+
+		// 🎨 Calcula e aplica shadow adaptativa baseada na luminosidade do fundo
+		if (tema.value.cor_fundo) {
+			const luminosidade = getLuminance(tema.value.cor_fundo);
+			const isDark = luminosidade < 0.5;
+
+			// Shadow adaptativa: mais forte em fundos escuros, mais suave em fundos claros
+			if (isDark) {
+				// Fundo escuro: shadow forte + ring branco visível
+				root.style.setProperty("--cardapio-shadow", "0 8px 32px rgba(0, 0, 0, 0.6)");
+				root.style.setProperty("--cardapio-ring", "rgba(255, 255, 255, 0.15)");
+			} else {
+				// Fundo claro: shadow suave + ring sutil
+				root.style.setProperty("--cardapio-shadow", "0 4px 16px rgba(0, 0, 0, 0.1)");
+				root.style.setProperty("--cardapio-ring", "rgba(0, 0, 0, 0.05)");
+			}
+		}
+
+		// 🎨 Texto adaptativo para badges de promoção
+		if (tema.value.gradiente_promo_inicio) {
+			const textoPromo = getContrastText(tema.value.gradiente_promo_inicio);
+			root.style.setProperty("--cardapio-promo-text", textoPromo);
+		}
+
+		// 🎨 Texto adaptativo para badges de destaque
+		if (tema.value.gradiente_destaque_inicio) {
+			const textoDestaque = getContrastText(tema.value.gradiente_destaque_inicio);
+			root.style.setProperty("--cardapio-highlight-text", textoDestaque);
+		}
+
+		// 🎨 Texto adaptativo para badge de status (Aberto/Fechado)
+		if (tema.value.cor_sucesso) {
+			const textoSucesso = getContrastText(tema.value.cor_sucesso);
+			root.style.setProperty("--cardapio-success-text", textoSucesso);
+		}
+
+		if (tema.value.cor_erro) {
+			const textoErro = getContrastText(tema.value.cor_erro);
+			root.style.setProperty("--cardapio-danger-text", textoErro);
+		}
+
+		if (tema.value.cor_aviso) {
+			const textoAviso = getContrastText(tema.value.cor_aviso);
+			root.style.setProperty("--cardapio-warning-text", textoAviso);
+		}
+
+		// 🎨 Shadow adaptativa para cards
+		if (tema.value.cor_fundo) {
+			const cardShadow = getAdaptiveShadow(tema.value.cor_fundo, "normal");
+			root.style.setProperty("--cardapio-card-shadow", cardShadow);
+
+			const cardShadowHover = getAdaptiveShadow(tema.value.cor_fundo, "strong");
+			root.style.setProperty("--cardapio-card-shadow-hover", cardShadowHover);
+		}
+
+		// 🎨 Border adaptativa para cards no hover
+		if (tema.value.cor_primaria && tema.value.cor_fundo) {
+			const luminosidade = getLuminance(tema.value.cor_fundo);
+			const borderOpacity = luminosidade < 0.5 ? "0.3" : "0.2";
+			root.style.setProperty("--cardapio-card-hover-border-opacity", borderOpacity);
+		}
+
+		// 🎨 Shadow adaptativa para botão "Adicionar"
+		if (tema.value.cor_primaria) {
+			// Extrai valores RGB da cor primária para criar shadow com opacidade
+			const primaryRgb = tema.value.cor_primaria
+				.replace("#", "")
+				.match(/.{2}/g)
+				?.map((hex) => parseInt(hex, 16))
+				.join(", ");
+
+			if (primaryRgb) {
+				root.style.setProperty("--cardapio-button-shadow", `0 4px 12px rgba(${primaryRgb}, 0.2)`);
+				root.style.setProperty(
+					"--cardapio-button-shadow-hover",
+					`0 6px 20px rgba(${primaryRgb}, 0.3)`,
+				);
+			}
+		}
+
+		// 🎨 Glassmorphism adaptativo (menu de categorias)
+		if (tema.value.cor_fundo) {
+			const luminosidade = getLuminance(tema.value.cor_fundo);
+			const glassOpacity = luminosidade < 0.5 ? "0.8" : "0.9";
+			const glassBorder = luminosidade < 0.5 ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)";
+
+			root.style.setProperty("--cardapio-glass-opacity", glassOpacity);
+			root.style.setProperty("--cardapio-glass-border", glassBorder);
+		}
+
+		// 🎨 Overlay adaptativo do header
+		if (tema.value.cor_fundo) {
+			const luminosidade = getLuminance(tema.value.cor_fundo);
+			// Se o fundo já é escuro, overlay mais suave
+			const overlayOpacity = luminosidade < 0.3 ? "0.5" : "0.8";
+			root.style.setProperty("--cardapio-overlay-opacity", overlayOpacity);
+		}
+
 		// 🎨 Gera cores automáticas derivadas (apenas 3 variáveis)
 
 		// 1. Bordas (3.5% de contraste da secundária)
@@ -132,6 +245,12 @@ export const useTemaPublico = (
 		// Adiciona classe para identificar tema personalizado
 		root.classList.add("cardapio-tema-personalizado");
 
+		// 🔥 CRÍTICO: Remove classe 'dark' do sistema para evitar conflito
+		// A classe 'dark' sobrescreve as variáveis do cardápio
+		if (root.classList.contains("dark")) {
+			root.classList.remove("dark");
+		}
+
 		// Debug: mostra cores aplicadas no console
 		console.log("🎨 Tema Aplicado:", {
 			modo: tema.value.cor_secundaria ? "Avançado" : "Simples",
@@ -162,12 +281,31 @@ export const useTemaPublico = (
 		// Remove propriedades personalizadas
 		root.style.removeProperty("--cardapio-primary");
 		root.style.removeProperty("--cardapio-secondary");
+		root.style.removeProperty("--cardapio-surface");
+		root.style.removeProperty("--cardapio-muted");
 		root.style.removeProperty("--cardapio-background");
 		root.style.removeProperty("--cardapio-text");
 		root.style.removeProperty("--cardapio-border");
 		root.style.removeProperty("--cardapio-hover");
 		root.style.removeProperty("--cardapio-text-muted");
 		root.style.removeProperty("--cardapio-border-radius");
+		root.style.removeProperty("--cardapio-shadow");
+		root.style.removeProperty("--cardapio-ring");
+
+		// Remove propriedades adaptativas
+		root.style.removeProperty("--cardapio-promo-text");
+		root.style.removeProperty("--cardapio-highlight-text");
+		root.style.removeProperty("--cardapio-success-text");
+		root.style.removeProperty("--cardapio-danger-text");
+		root.style.removeProperty("--cardapio-warning-text");
+		root.style.removeProperty("--cardapio-card-shadow");
+		root.style.removeProperty("--cardapio-card-shadow-hover");
+		root.style.removeProperty("--cardapio-card-hover-border-opacity");
+		root.style.removeProperty("--cardapio-button-shadow");
+		root.style.removeProperty("--cardapio-button-shadow-hover");
+		root.style.removeProperty("--cardapio-glass-opacity");
+		root.style.removeProperty("--cardapio-glass-border");
+		root.style.removeProperty("--cardapio-overlay-opacity");
 
 		// Remove propriedades opcionais
 		root.style.removeProperty("--cardapio-success");
@@ -182,7 +320,8 @@ export const useTemaPublico = (
 		root.classList.remove("cardapio-tema-personalizado");
 	};
 
-	// Aplica tema quando estabelecimento muda
+	// 🎨 Aplica tema quando estabelecimento muda (navegação SPA)
+	// Plugin SSR já injeta CSS no HTML inicial, então não precisa de immediate
 	watch(
 		estabelecimento,
 		(novoEstabelecimento) => {
@@ -192,7 +331,7 @@ export const useTemaPublico = (
 				removerTema();
 			}
 		},
-		{ immediate: true },
+		{ immediate: false }, // Plugin SSR já aplicou no primeiro render
 	);
 
 	// Remove tema ao desmontar

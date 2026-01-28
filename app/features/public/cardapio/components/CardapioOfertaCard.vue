@@ -75,7 +75,7 @@ const abrirProduto = () => {
 			<!-- Badge de Desconto (animado) -->
 			<div
 				v-if="descontoPercentual"
-				class="absolute top-2 left-2 z-10 px-2 py-1 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-white text-xs font-bold shadow-lg animate-pulse"
+				class="absolute top-2 left-2 z-10 px-2 py-1 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-xs font-bold shadow-lg animate-pulse"
 			>
 				<span class="flex items-center gap-1">
 					<Icon name="lucide:percent" class="w-3 h-3" />

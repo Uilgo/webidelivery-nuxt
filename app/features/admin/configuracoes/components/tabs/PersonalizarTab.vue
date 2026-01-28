@@ -191,6 +191,162 @@ const resetarTemaCompleto = async () => {
 	// Salva no banco
 	await onSubmit();
 };
+
+// ========================================
+// PALETAS PREDEFINIDAS
+// ========================================
+
+/**
+ * Interface para paletas de cores
+ */
+interface PaletaCores {
+	id: string;
+	nome: string;
+	descricao: string;
+	tipo: "light" | "dark";
+	cores: {
+		cor_primaria: string;
+		cor_secundaria: string;
+		cor_fundo: string;
+		cor_texto: string;
+	};
+}
+
+/**
+ * Paletas predefinidas (4 Light + 4 Dark)
+ */
+const PALETAS_PREDEFINIDAS: PaletaCores[] = [
+	// Light themes
+	{
+		id: "light-appetite-orange",
+		nome: "Appetite Orange",
+		descricao: "Lanchonetes e Fast-foods",
+		tipo: "light",
+		cores: {
+			cor_primaria: "#EA580C",
+			cor_secundaria: "#0D9488",
+			cor_fundo: "#FFFBF7",
+			cor_texto: "#1C1917",
+		},
+	},
+	{
+		id: "light-fresh-garden",
+		nome: "Fresh Garden",
+		descricao: "Comida Saudável",
+		tipo: "light",
+		cores: {
+			cor_primaria: "#16A34A",
+			cor_secundaria: "#D97706",
+			cor_fundo: "#F8FBF6",
+			cor_texto: "#14532D",
+		},
+	},
+	{
+		id: "light-gourmet-red",
+		nome: "Gourmet Red",
+		descricao: "Restaurantes Finos",
+		tipo: "light",
+		cores: {
+			cor_primaria: "#B91C1C",
+			cor_secundaria: "#92400E",
+			cor_fundo: "#FFFAF5",
+			cor_texto: "#450A0A",
+		},
+	},
+	{
+		id: "light-tropical-vibes",
+		nome: "Tropical Vibes",
+		descricao: "Açaí e Sorveterias",
+		tipo: "light",
+		cores: {
+			cor_primaria: "#DB2777",
+			cor_secundaria: "#7C3AED",
+			cor_fundo: "#FDF4FF",
+			cor_texto: "#4A044E",
+		},
+	},
+	// Dark themes
+	{
+		id: "dark-midnight-flame",
+		nome: "Midnight Flame",
+		descricao: "Design Premium",
+		tipo: "dark",
+		cores: {
+			cor_primaria: "#FB923C",
+			cor_secundaria: "#14B8A6",
+			cor_fundo: "#0C0A09",
+			cor_texto: "#FAFAF9",
+		},
+	},
+	{
+		id: "dark-emerald-night",
+		nome: "Emerald Night",
+		descricao: "Restaurantes Orgânicos",
+		tipo: "dark",
+		cores: {
+			cor_primaria: "#4ADE80",
+			cor_secundaria: "#FBBF24",
+			cor_fundo: "#052E16",
+			cor_texto: "#ECFDF5",
+		},
+	},
+	{
+		id: "dark-royal-burgundy",
+		nome: "Royal Burgundy",
+		descricao: "Steakhouses e Wine Bars",
+		tipo: "dark",
+		cores: {
+			cor_primaria: "#F87171",
+			cor_secundaria: "#FCD34D",
+			cor_fundo: "#1C0909",
+			cor_texto: "#FEF2F2",
+		},
+	},
+	{
+		id: "dark-neon-purple",
+		nome: "Neon Purple",
+		descricao: "Delivery Jovem e Trendy",
+		tipo: "dark",
+		cores: {
+			cor_primaria: "#A855F7",
+			cor_secundaria: "#F472B6",
+			cor_fundo: "#0F0A1A",
+			cor_texto: "#FAF5FF",
+		},
+	},
+];
+
+// Estado das paletas
+const paletaTipo = ref<"light" | "dark">("dark");
+const paletaSelecionada = ref<string | null>(null);
+
+/**
+ * Paletas filtradas pelo tipo selecionado
+ */
+const paletasFiltradas = computed(() => {
+	return PALETAS_PREDEFINIDAS.filter((p) => p.tipo === paletaTipo.value);
+});
+
+/**
+ * Aplica uma paleta ao formulário
+ */
+const aplicarPaleta = (paleta: PaletaCores) => {
+	paletaSelecionada.value = paleta.id;
+
+	// Aplica as cores da paleta
+	setFieldValue("cor_primaria", paleta.cores.cor_primaria);
+	setFieldValue("cor_fundo", paleta.cores.cor_fundo);
+	setFieldValue("cor_texto", paleta.cores.cor_texto);
+
+	// Cor secundária só é aplicada no modo avançado
+	// No modo simples, ela é gerada automaticamente pelo sistema
+	if (modoAvancado.value) {
+		setFieldValue("cor_secundaria", paleta.cores.cor_secundaria);
+	} else {
+		// FIX: Limpa valor residual para garantir cálculo automático
+		setFieldValue("cor_secundaria", undefined);
+	}
+};
 </script>
 
 <template>
@@ -515,6 +671,121 @@ const resetarTemaCompleto = async () => {
 									</p>
 								</div>
 								<UiSwitch :model-value="modoAvancado" @update:model-value="toggleModo" />
+							</div>
+						</section>
+
+						<!-- 🎨 Paletas Predefinidas -->
+						<section class="space-y-4">
+							<div class="flex items-center gap-2 mb-2">
+								<div
+									class="w-1 h-4 bg-gradient-to-b from-pink-500 to-purple-600 rounded-full"
+								></div>
+								<h4
+									class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
+								>
+									Paletas Prontas
+								</h4>
+								<span
+									class="ml-auto text-[9px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full"
+								>
+									Clique para aplicar
+								</span>
+							</div>
+
+							<p class="text-[10px] text-gray-500 dark:text-gray-400 -mt-2 mb-3">
+								Escolha um tema pronto ou personalize as cores individualmente abaixo.
+							</p>
+
+							<!-- Tabs Light/Dark -->
+							<div class="flex gap-2 mb-3">
+								<button
+									type="button"
+									class="flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2"
+									:class="
+										paletaTipo === 'light'
+											? 'bg-white text-gray-800 shadow-md border border-gray-200'
+											: 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+									"
+									@click="paletaTipo = 'light'"
+								>
+									<Icon name="lucide:sun" class="w-3.5 h-3.5" />
+									Temas Claros
+								</button>
+								<button
+									type="button"
+									class="flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2"
+									:class="
+										paletaTipo === 'dark'
+											? 'bg-gray-900 text-white shadow-md border border-gray-700'
+											: 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+									"
+									@click="paletaTipo = 'dark'"
+								>
+									<Icon name="lucide:moon" class="w-3.5 h-3.5" />
+									Temas Escuros
+								</button>
+							</div>
+
+							<!-- Grid de Paletas -->
+							<div class="grid grid-cols-2 gap-3">
+								<button
+									v-for="paleta in paletasFiltradas"
+									:key="paleta.id"
+									type="button"
+									class="group relative p-3 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+									:class="
+										paletaSelecionada === paleta.id
+											? 'border-primary shadow-lg shadow-primary/20'
+											: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+									"
+									:style="{ backgroundColor: paleta.cores.cor_fundo }"
+									@click="aplicarPaleta(paleta)"
+								>
+									<!-- Layout: Textos à esquerda, cores à direita -->
+									<div class="flex items-center justify-between gap-3">
+										<!-- Nome e Descrição -->
+										<div class="flex-1 min-w-0 text-left">
+											<h5
+												class="text-sm font-bold truncate"
+												:style="{ color: paleta.cores.cor_texto }"
+											>
+												{{ paleta.nome }}
+											</h5>
+											<p
+												class="text-xs truncate opacity-60"
+												:style="{ color: paleta.cores.cor_texto }"
+											>
+												{{ paleta.descricao }}
+											</p>
+										</div>
+										<!-- Preview das cores -->
+										<div class="flex items-center gap-1.5 shrink-0">
+											<div
+												class="w-5 h-5 rounded-full shadow-sm border border-white/20"
+												:style="{ backgroundColor: paleta.cores.cor_primaria }"
+												title="Primária"
+											></div>
+											<div
+												class="w-5 h-5 rounded-full shadow-sm border border-white/20"
+												:style="{ backgroundColor: paleta.cores.cor_secundaria }"
+												title="Secundária"
+											></div>
+											<div
+												class="w-5 h-5 rounded-full shadow-sm border border-black/10"
+												:style="{ backgroundColor: paleta.cores.cor_texto }"
+												title="Texto"
+											></div>
+										</div>
+									</div>
+
+									<!-- Indicador de seleção -->
+									<div
+										v-if="paletaSelecionada === paleta.id"
+										class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-md"
+									>
+										<Icon name="lucide:check" class="w-3 h-3 text-white" />
+									</div>
+								</button>
 							</div>
 						</section>
 

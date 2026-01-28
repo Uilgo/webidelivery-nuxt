@@ -219,13 +219,13 @@ const adicionarAoCarrinho = (): void => {
 				</div>
 
 				<!-- Descrição -->
-				<p v-if="produto.descricao" class="text-sm text-[var(--text-secondary)]">
+				<p v-if="produto.descricao" class="text-sm text-[var(--cardapio-text-muted)]">
 					{{ produto.descricao }}
 				</p>
 
 				<!-- Variações -->
 				<div v-if="produto.variacoes.length > 1" class="space-y-3">
-					<h3 class="font-medium text-[var(--text-primary)]">Escolha uma opção</h3>
+					<h3 class="font-medium text-[var(--cardapio-text)]">Escolha uma opção</h3>
 
 					<div class="space-y-2">
 						<label
@@ -245,17 +245,17 @@ const adicionarAoCarrinho = (): void => {
 									v-model="variacaoSelecionada"
 									class="w-4 h-4 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)] accent-[var(--cardapio-primary)]"
 								/>
-								<span class="text-[var(--text-primary)]">{{ variacao.nome }}</span>
+								<span class="text-[var(--cardapio-text)]">{{ variacao.nome }}</span>
 							</div>
 
 							<div class="flex items-center gap-2">
 								<span
 									v-if="variacao.preco_promocional"
-									class="text-sm text-[var(--text-muted)] line-through"
+									class="text-sm text-[var(--cardapio-text-muted)] line-through"
 								>
 									{{ formatCurrency(variacao.preco) }}
 								</span>
-								<span class="font-medium text-[var(--text-primary)]">
+								<span class="font-medium text-[var(--cardapio-text)]">
 									{{ formatCurrency(variacao.preco_promocional ?? variacao.preco) }}
 								</span>
 							</div>
@@ -267,8 +267,8 @@ const adicionarAoCarrinho = (): void => {
 				<div v-for="grupo in produto.grupos_adicionais" :key="grupo.id" class="space-y-3">
 					<div class="flex items-center justify-between">
 						<div>
-							<h3 class="font-medium text-[var(--text-primary)]">{{ grupo.nome }}</h3>
-							<p v-if="grupo.descricao" class="text-sm text-[var(--text-muted)]">
+							<h3 class="font-medium text-[var(--cardapio-text)]">{{ grupo.nome }}</h3>
+							<p v-if="grupo.descricao" class="text-sm text-[var(--cardapio-text-muted)]">
 								{{ grupo.descricao }}
 							</p>
 						</div>
@@ -282,7 +282,7 @@ const adicionarAoCarrinho = (): void => {
 						</UiBadge>
 					</div>
 
-					<p class="text-xs text-[var(--text-muted)]">
+					<p class="text-xs text-[var(--cardapio-text-muted)]">
 						Escolha
 						<span v-if="grupo.min_selecao === grupo.max_selecao">
 							{{ grupo.min_selecao }} {{ grupo.min_selecao === 1 ? "opção" : "opções" }}
@@ -297,8 +297,11 @@ const adicionarAoCarrinho = (): void => {
 							class="flex items-center justify-between p-3 border border-[var(--cardapio-border)] rounded-lg"
 						>
 							<div>
-								<span class="text-[var(--text-primary)]">{{ adicional.nome }}</span>
-								<span v-if="adicional.preco > 0" class="text-sm text-[var(--text-muted)] ml-2">
+								<span class="text-[var(--cardapio-text)]">{{ adicional.nome }}</span>
+								<span
+									v-if="adicional.preco > 0"
+									class="text-sm text-[var(--cardapio-text-muted)] ml-2"
+								>
 									+ {{ formatCurrency(adicional.preco) }}
 								</span>
 							</div>
@@ -315,7 +318,7 @@ const adicionarAoCarrinho = (): void => {
 									<Icon name="lucide:minus" class="w-4 h-4" />
 								</UiButton>
 
-								<span class="w-6 text-center font-medium text-[var(--text-primary)]">
+								<span class="w-6 text-center font-medium text-[var(--cardapio-text)]">
 									{{ getQuantidadeAdicional(adicional.id) }}
 								</span>
 
@@ -334,7 +337,7 @@ const adicionarAoCarrinho = (): void => {
 
 				<!-- Observação -->
 				<div class="space-y-2">
-					<label class="font-medium text-[var(--text-primary)]">Alguma observação?</label>
+					<label class="font-medium text-[var(--cardapio-text)]">Alguma observação?</label>
 					<UiTextarea v-model="observacao" :rows="2" placeholder="Ex: Sem cebola, bem passado..." />
 				</div>
 			</div>
@@ -355,7 +358,7 @@ const adicionarAoCarrinho = (): void => {
 						<Icon name="lucide:minus" class="w-5 h-5" />
 					</UiButton>
 
-					<span class="w-8 text-center font-semibold text-lg text-[var(--text-primary)]">
+					<span class="w-8 text-center font-semibold text-lg text-[var(--cardapio-text)]">
 						{{ quantidade }}
 					</span>
 

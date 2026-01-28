@@ -444,7 +444,7 @@ const adicionarAoCarrinho = (): void => {
 	<UiDrawer
 		v-model="isOpen"
 		:title="produto?.nome ?? 'Produto'"
-		size="xl"
+		size="lg"
 		class="cardapio-theme-bridge"
 	>
 		<template v-if="produto">
@@ -457,7 +457,7 @@ const adicionarAoCarrinho = (): void => {
 				</div>
 
 				<!-- Descrição -->
-				<p v-if="produto.descricao" class="text-sm text-[var(--text-secondary)]">
+				<p v-if="produto.descricao" class="text-sm text-[var(--cardapio-text-muted)]">
 					{{ produto.descricao }}
 				</p>
 
@@ -489,8 +489,8 @@ const adicionarAoCarrinho = (): void => {
 							class="w-5 h-5 mt-0.5 text-[var(--cardapio-primary)] rounded focus:ring-[var(--cardapio-primary)] accent-[var(--cardapio-primary)]"
 						/>
 						<div class="flex-1">
-							<h3 class="font-semibold text-[var(--text-primary)]">Adicionar mais sabores?</h3>
-							<p class="text-sm text-[var(--text-muted)] mt-0.5">
+							<h3 class="font-semibold text-[var(--cardapio-text)]">Adicionar mais sabores?</h3>
+							<p class="text-sm text-[var(--cardapio-text-muted)] mt-0.5">
 								Personalize com até 4 sabores diferentes
 							</p>
 						</div>
@@ -500,8 +500,8 @@ const adicionarAoCarrinho = (): void => {
 					<div v-if="multiplosSabores" class="space-y-4">
 						<!-- Blocos de quantidade de sabores -->
 						<div>
-							<label class="block text-sm font-medium text-[var(--text-primary)] mb-3">
-								Quantos sabores? <span class="text-[var(--error)]">*</span>
+							<label class="block text-sm font-medium text-[var(--cardapio-text)] mb-3">
+								Quantos sabores? <span class="text-[var(--cardapio-danger)]">*</span>
 							</label>
 							<div class="grid grid-cols-3 gap-3">
 								<label
@@ -530,7 +530,7 @@ const adicionarAoCarrinho = (): void => {
 										:class="
 											quantidadeSabores === opcao.value
 												? 'text-[var(--cardapio-primary)] scale-110'
-												: 'text-[var(--text-muted)] group-hover:text-[var(--cardapio-primary)] group-hover:scale-105'
+												: 'text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)] group-hover:scale-105'
 										"
 									/>
 
@@ -540,7 +540,7 @@ const adicionarAoCarrinho = (): void => {
 										:class="
 											quantidadeSabores === opcao.value
 												? 'text-[var(--cardapio-primary)]'
-												: 'text-[var(--text-primary)] group-hover:text-[var(--cardapio-primary)]'
+												: 'text-[var(--cardapio-text)] group-hover:text-[var(--cardapio-primary)]'
 										"
 									>
 										{{ opcao.label }}
@@ -559,7 +559,7 @@ const adicionarAoCarrinho = (): void => {
 
 						<!-- Lista de sabores para selecionar -->
 						<div class="space-y-3">
-							<label class="block text-sm font-medium text-[var(--text-primary)]">
+							<label class="block text-sm font-medium text-[var(--cardapio-text)]">
 								Escolha os sabores
 							</label>
 
@@ -569,7 +569,7 @@ const adicionarAoCarrinho = (): void => {
 									name="lucide:loader-2"
 									class="w-6 h-6 animate-spin text-[var(--cardapio-primary)] mx-auto"
 								/>
-								<p class="text-sm text-[var(--text-muted)] mt-2">Carregando sabores...</p>
+								<p class="text-sm text-[var(--cardapio-text-muted)] mt-2">Carregando sabores...</p>
 							</div>
 
 							<!-- Slots de sabores -->
@@ -584,10 +584,10 @@ const adicionarAoCarrinho = (): void => {
 										1
 									</div>
 									<div class="flex-1">
-										<p class="text-sm font-semibold text-[var(--text-primary)]">
+										<p class="text-sm font-semibold text-[var(--cardapio-text)]">
 											{{ produto?.nome }}
 										</p>
-										<p class="text-xs text-[var(--text-muted)]">Sabor principal</p>
+										<p class="text-xs text-[var(--cardapio-text-muted)]">Sabor principal</p>
 									</div>
 									<Icon name="lucide:lock" class="w-5 h-5 text-[var(--cardapio-primary)]" />
 								</div>
@@ -620,14 +620,14 @@ const adicionarAoCarrinho = (): void => {
 										class="flex-1 flex items-center justify-between"
 									>
 										<div class="flex-1 min-w-0">
-											<p class="text-sm font-semibold text-[var(--text-primary)] truncate">
+											<p class="text-sm font-semibold text-[var(--cardapio-text)] truncate">
 												{{
 													produtosDisponiveisFiltrados.find(
 														(p) => p.id === saboresSelecionados[index - 1],
 													)?.nome
 												}}
 											</p>
-											<p class="text-xs text-[var(--text-muted)]">Sabor adicional</p>
+											<p class="text-xs text-[var(--cardapio-text-muted)]">Sabor adicional</p>
 										</div>
 
 										<button
@@ -673,7 +673,7 @@ const adicionarAoCarrinho = (): void => {
 									<Icon
 										v-else
 										name="lucide:circle-dashed"
-										class="w-5 h-5 text-[var(--text-muted)] flex-shrink-0"
+										class="w-5 h-5 text-[var(--cardapio-text-muted)] flex-shrink-0"
 									/>
 								</div>
 							</div>
@@ -681,7 +681,7 @@ const adicionarAoCarrinho = (): void => {
 							<!-- Mensagem quando não há produtos disponíveis -->
 							<div
 								v-if="!carregandoProdutos && produtosDisponiveisFiltrados.length === 0"
-								class="text-center py-4 text-sm text-[var(--text-muted)]"
+								class="text-center py-4 text-sm text-[var(--cardapio-text-muted)]"
 							>
 								Nenhum sabor disponível para esta categoria
 							</div>
@@ -720,11 +720,11 @@ const adicionarAoCarrinho = (): void => {
 									:class="
 										grupoSelecionado === grupo.id
 											? 'text-[var(--cardapio-primary)]'
-											: 'text-[var(--text-primary)] group-hover:text-[var(--cardapio-primary)]'
+											: 'text-[var(--cardapio-text)] group-hover:text-[var(--cardapio-primary)]'
 									"
 								>
 									{{ grupo.nome }}
-									<span v-if="grupo.obrigatorio" class="text-[var(--error)] ml-1">*</span>
+									<span v-if="grupo.obrigatorio" class="text-[var(--cardapio-danger)] ml-1">*</span>
 								</h3>
 								<p
 									class="text-xs mt-0.5 transition-colors duration-200"
@@ -736,9 +736,9 @@ const adicionarAoCarrinho = (): void => {
 											);
 											// Se atingiu o limite, mostra em amarelo/warning
 											if (totalSelecionado >= grupo.max_selecao) {
-												return 'text-[var(--warning)] font-medium';
+												return 'text-[var(--cardapio-warning)] font-medium';
 											}
-											return 'text-[var(--text-muted)]';
+											return 'text-[var(--cardapio-text-muted)]';
 										})()
 									"
 								>
@@ -770,7 +770,7 @@ const adicionarAoCarrinho = (): void => {
 										);
 										return totalSelecionado > 0
 											? 'text-[var(--cardapio-primary)]'
-											: 'text-[var(--text-muted)]';
+											: 'text-[var(--cardapio-text-muted)]';
 									})()
 								"
 							>
@@ -957,7 +957,7 @@ const adicionarAoCarrinho = (): void => {
 										<!-- Botão remover (sempre aparece) -->
 										<button
 											type="button"
-											class="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--error)] text-white hover:bg-[var(--error)]/80 transition-colors duration-200"
+											class="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--cardapio-danger)] text-white hover:bg-[var(--cardapio-danger)]/80 transition-colors duration-200"
 											@click="
 												() => {
 													adicionaisSelecionados.delete(adicional.id);
@@ -976,7 +976,7 @@ const adicionarAoCarrinho = (): void => {
 
 				<!-- Observação -->
 				<div class="space-y-2">
-					<label class="font-medium text-[var(--text-primary)]">Alguma observação?</label>
+					<label class="font-medium text-[var(--cardapio-text)]">Alguma observação?</label>
 					<UiTextarea v-model="observacao" :rows="2" placeholder="Ex: Sem cebola, bem passado..." />
 				</div>
 			</div>
@@ -984,7 +984,7 @@ const adicionarAoCarrinho = (): void => {
 
 		<template #footer>
 			<div
-				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--cardapio-border)] bg-[var(--cardapio-background)]"
+				class="flex items-center justify-between gap-4 p-4 border-t border-[var(--cardapio-border)]"
 			>
 				<!-- Controle de quantidade -->
 				<div class="flex items-center gap-3">
@@ -998,7 +998,7 @@ const adicionarAoCarrinho = (): void => {
 						<Icon name="lucide:minus" class="w-5 h-5" />
 					</UiButton>
 
-					<span class="w-8 text-center font-semibold text-lg text-[var(--text-primary)]">
+					<span class="w-8 text-center font-semibold text-lg text-[var(--cardapio-text)]">
 						{{ quantidade }}
 					</span>
 

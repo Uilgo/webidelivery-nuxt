@@ -45,7 +45,7 @@ const {
 } = useCardapioPublico(props.slug);
 
 // Aplica tema personalizado do estabelecimento
-const { tema } = useTemaPublico(estabelecimento);
+useTemaPublico(estabelecimento);
 
 // Estado da busca
 const termoBusca = ref("");

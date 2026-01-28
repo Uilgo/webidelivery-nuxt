@@ -278,12 +278,12 @@ TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
 	 * Cores Base (Herdam do global mas permitem override)
 	 * Padrão: Cores do sistema atual
 	 */
-	/* ============= DEFAULTS DO CARDÁPIO (HEX para Leitura via JS) ============= */
-	/* Fonte da verdade para o Painel Admin e Fallbacks */
-	--default-cardapio-primary: #fb923c; /* Orange 400 */
-	--default-cardapio-secondary: #0d9488; /* Teal 600 */
-	--default-cardapio-bg: #020618; /* Slate 950 (Dark Default) */
-	--default-cardapio-text: #f1f5f9; /* Slate 100 (Light Text) */
+	/* ============= DEFAULTS DO CARDÁPIO (Neutros para evitar FOUC) ============= */
+	/* Valores neutros que não causam flash visual durante carregamento SSR */
+	--default-cardapio-primary: transparent;
+	--default-cardapio-secondary: transparent;
+	--default-cardapio-bg: transparent;
+	--default-cardapio-text: transparent;
 	--default-cardapio-success: #16a34a; /* Green 600 */
 	--default-cardapio-danger: #dc2626; /* Red 600 */
 	--default-cardapio-warning: #f59e0b; /* Amber 500 */
@@ -325,6 +325,62 @@ TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
 
 	/* 4. Cor primária com transparência */
 	--cardapio-primary-light: color-mix(in srgb, var(--cardapio-primary), transparent 85%);
+
+	/* 5. Shadow adaptativa (calculada via JS baseada na luminosidade) */
+	--cardapio-shadow: var(--cardapio-cor-shadow, 0 4px 16px rgba(0, 0, 0, 0.1));
+
+	/* 6. Ring adaptativo (calculado via JS baseado na luminosidade) */
+	--cardapio-ring: var(--cardapio-cor-ring, rgba(0, 0, 0, 0.05));
+
+	/* ============= TEXTOS ADAPTATIVOS PARA BADGES ============= */
+	/* Calculados via JS para garantir contraste WCAG AA */
+
+	/* Texto para badges de promoção (branco ou preto baseado no gradiente) */
+	--cardapio-promo-text: var(--cardapio-cor-promo-text, #ffffff);
+
+	/* Texto para badges de destaque (branco ou preto baseado no gradiente) */
+	--cardapio-highlight-text: var(--cardapio-cor-highlight-text, #ffffff);
+
+	/* Texto para badge de sucesso (Aberto) */
+	--cardapio-success-text: var(--cardapio-cor-success-text, #ffffff);
+
+	/* Texto para badge de erro (Fechado) */
+	--cardapio-danger-text: var(--cardapio-cor-danger-text, #ffffff);
+
+	/* Texto para badge de aviso (Frete Grátis) */
+	--cardapio-warning-text: var(--cardapio-cor-warning-text, #000000);
+
+	/* ============= SHADOWS ADAPTATIVOS ============= */
+
+	/* Shadow para cards (normal e hover) */
+	--cardapio-card-shadow: var(--cardapio-cor-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+	--cardapio-card-shadow-hover: var(
+		--cardapio-cor-card-shadow-hover,
+		0 4px 12px rgba(0, 0, 0, 0.15)
+	);
+
+	/* Border hover adaptativo (opacidade) */
+	--cardapio-card-hover-border-opacity: var(--cardapio-cor-card-hover-border-opacity, 0.2);
+
+	/* Shadow para botão "Adicionar" */
+	--cardapio-button-shadow: var(--cardapio-cor-button-shadow, 0 4px 12px rgba(251, 146, 60, 0.2));
+	--cardapio-button-shadow-hover: var(
+		--cardapio-cor-button-shadow-hover,
+		0 6px 20px rgba(251, 146, 60, 0.3)
+	);
+
+	/* ============= GLASSMORPHISM ADAPTATIVO ============= */
+
+	/* Opacidade do background glassmorphism */
+	--cardapio-glass-opacity: var(--cardapio-cor-glass-opacity, 0.8);
+
+	/* Border do glassmorphism */
+	--cardapio-glass-border: var(--cardapio-cor-glass-border, rgba(255, 255, 255, 0.1));
+
+	/* ============= OVERLAY ADAPTATIVO ============= */
+
+	/* Opacidade do overlay do header */
+	--cardapio-overlay-opacity: var(--cardapio-cor-overlay-opacity, 0.8);
 
 	/* 
 	 * Cores Semânticas do Cardápio (Tokens Específicos)
@@ -468,39 +524,44 @@ SCROLLBAR PERSONALIZADO
 */
 .cardapio-theme-bridge {
 	/* Superfícies e Fundos */
-	--bg-surface: var(--cardapio-surface);
-	--bg-page: var(--cardapio-background);
-	--bg-muted: var(--cardapio-muted);
-	--bg-hover: var(--cardapio-hover);
+	--bg-surface: var(--cardapio-surface, var(--color-neutral-50));
+	--bg-page: var(--cardapio-background, var(--color-neutral-50));
+	--bg-muted: var(--cardapio-muted, var(--color-neutral-100));
+	--bg-hover: var(--cardapio-hover, var(--color-neutral-100));
 
 	/* Textos */
-	--text-primary: var(--cardapio-text);
-	--text-secondary: var(--cardapio-text-muted);
-	--text-muted: var(--cardapio-text-muted);
+	--text-primary: var(--cardapio-text, var(--color-neutral-900));
+	--text-secondary: var(--cardapio-text-muted, var(--color-neutral-600));
+	--text-muted: var(--cardapio-text-muted, var(--color-neutral-400));
 
 	/* Bordas */
-	--border-default: var(--cardapio-muted);
-	--border-muted: var(--cardapio-muted);
-	--border-hover: var(--cardapio-hover);
-	--border-strong: color-mix(in srgb, var(--cardapio-muted), var(--cardapio-text) 10%);
+	--border-default: var(--cardapio-muted, var(--color-neutral-200));
+	--border-muted: var(--cardapio-muted, var(--color-neutral-100));
+	--border-hover: var(--cardapio-hover, var(--color-neutral-200));
+	--border-strong: color-mix(
+		in srgb,
+		var(--cardapio-muted, var(--color-neutral-200)),
+		var(--cardapio-text, var(--color-neutral-900)) 10%
+	);
 
 	/* Cores de Ação */
-	--primary: var(--cardapio-primary);
-	--primary-light: var(--cardapio-primary-light);
-	--primary-hover: color-mix(in srgb, var(--cardapio-primary), black 10%);
+	--primary: var(--cardapio-primary, var(--color-brand-500));
+	--primary-light: var(--cardapio-primary-light, var(--color-brand-100));
+	--primary-hover: color-mix(in srgb, var(--cardapio-primary, var(--color-brand-500)), black 10%);
 
 	/* Mapeamento de Inputs */
-	--input-bg: var(--cardapio-surface);
-	--input-border: var(--cardapio-muted);
-	--input-text: var(--cardapio-text);
-	--input-placeholder: var(--cardapio-text-muted);
-	--input-border-focus: var(--cardapio-primary);
+	--input-bg: var(--cardapio-surface, var(--color-neutral-50));
+	--input-border: var(--cardapio-muted, var(--color-neutral-200));
+	--input-text: var(--cardapio-text, var(--color-neutral-900));
+	--input-placeholder: var(--cardapio-text-muted, var(--color-neutral-400));
+	--input-border-focus: var(--cardapio-primary, var(--color-brand-500));
 
 	/* Cards e Outros */
-	--card-bg: var(--cardapio-surface);
-	--bg-active: var(--cardapio-hover);
+	--card-bg: var(--cardapio-surface, var(--color-neutral-50));
+	--bg-active: var(--cardapio-hover, var(--color-neutral-100));
 
 	/* Cores Semânticas */
-	--success: var(--cardapio-success);
-	--error: var(--cardapio-danger);
+	--success: var(--cardapio-success, var(--color-success-600));
+	--error: var(--cardapio-danger, var(--color-error-600));
+	--warning: var(--cardapio-warning, var(--color-warning-500));
 }

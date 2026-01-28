@@ -163,24 +163,6 @@ watch(
 				:disabled="disabled"
 				@click="openColorPicker"
 			>
-				<!-- Padrão de transparência (checkerboard) -->
-				<div
-					class="absolute inset-0 opacity-20"
-					style="
-						background-image:
-							linear-gradient(45deg, #ccc 25%, transparent 25%),
-							linear-gradient(-45deg, #ccc 25%, transparent 25%),
-							linear-gradient(45deg, transparent 75%, #ccc 75%),
-							linear-gradient(-45deg, transparent 75%, #ccc 75%);
-						background-size: 8px 8px;
-						background-position:
-							0 0,
-							0 4px,
-							4px -4px,
-							-4px 0px;
-					"
-				></div>
-
 				<!-- Ícone de pipeta -->
 				<div
 					class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors duration-200"
@@ -236,35 +218,6 @@ watch(
 					title="Formato inválido"
 				></div>
 			</div>
-		</div>
-
-		<!-- Cores Pré-definidas (Paleta Rápida) -->
-		<div class="flex items-center gap-2 flex-wrap">
-			<button
-				v-for="presetColor in [
-					'#000000',
-					'#ffffff',
-					'#ff0000',
-					'#00ff00',
-					'#0000ff',
-					'#ffff00',
-					'#ff00ff',
-					'#00ffff',
-					'#ffa500',
-					'#800080',
-				]"
-				:key="presetColor"
-				type="button"
-				class="w-6 h-6 rounded border-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-				:class="{
-					'border-[var(--primary)] ring-2 ring-[var(--primary)]/30': colorValue === presetColor,
-					'border-[var(--border-default)]': colorValue !== presetColor,
-				}"
-				:style="{ backgroundColor: presetColor }"
-				:disabled="disabled"
-				:title="presetColor"
-				@click="colorValue = presetColor"
-			></button>
 		</div>
 	</div>
 </template>

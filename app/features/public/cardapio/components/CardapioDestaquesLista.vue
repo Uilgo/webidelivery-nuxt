@@ -24,7 +24,11 @@ const props = defineProps<Props>();
 			<div
 				class="relative size-8 sm:size-10 rounded-xl bg-gradient-to-br from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] flex items-center justify-center shadow-lg shadow-[var(--cardapio-warning)]/25"
 			>
-				<Icon name="lucide:star" class="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
+				<Icon
+					name="lucide:star"
+					class="w-4 h-4 sm:w-5 sm:h-5 fill-current"
+					:style="{ color: 'var(--cardapio-highlight-text)' }"
+				/>
 				<!-- Brilho animado -->
 				<div
 					class="absolute inset-0 rounded-xl bg-white/30 animate-ping opacity-0"

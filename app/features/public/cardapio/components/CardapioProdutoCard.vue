@@ -74,7 +74,13 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg hover:shadow-[var(--cardapio-primary)]/10 transition-all duration-300 text-left border border-transparent hover:border-[var(--cardapio-primary)]/20"
+		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl shadow-[var(--cardapio-card-shadow)] hover:shadow-[var(--cardapio-card-shadow-hover)] transition-all duration-300 text-left border border-transparent"
+		:style="{
+			'--tw-border-opacity': 'var(--cardapio-card-hover-border-opacity)',
+		}"
+		:class="{
+			'hover:!border-[var(--cardapio-primary)]': true,
+		}"
 		@click="abrirDrawer(produto)"
 	>
 		<!-- Imagem com Zoom Effect -->
@@ -104,7 +110,7 @@ const temMultiplasVariacoes = computed(() => {
 			<!-- Badge de Desconto (se houver) -->
 			<div
 				v-if="percentualDesconto"
-				class="absolute top-1.5 left-1.5 px-1.5 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-white text-[10px] sm:text-xs font-bold shadow-lg"
+				class="absolute top-1.5 left-1.5 px-1.5 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-[10px] sm:text-xs font-bold shadow-lg"
 			>
 				-{{ percentualDesconto }}%
 			</div>
@@ -165,7 +171,7 @@ const temMultiplasVariacoes = computed(() => {
 					<!-- Badge de Destaque -->
 					<span
 						v-if="produto.destaque && !produto.em_promocao"
-						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] text-white text-[10px] sm:text-xs font-medium shadow-sm"
+						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] text-[var(--cardapio-highlight-text)] text-[10px] sm:text-xs font-medium shadow-sm"
 					>
 						<Icon name="lucide:star" class="w-3 h-3 fill-current" />
 						Destaque
@@ -174,7 +180,7 @@ const temMultiplasVariacoes = computed(() => {
 					<!-- Badge de Promoção -->
 					<span
 						v-if="produto.em_promocao"
-						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-white text-[10px] sm:text-xs font-medium shadow-sm"
+						class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-[10px] sm:text-xs font-medium shadow-sm"
 					>
 						<Icon name="lucide:flame" class="w-3 h-3" />
 						Promoção
@@ -182,7 +188,7 @@ const temMultiplasVariacoes = computed(() => {
 
 					<!-- Botão Adicionar -->
 					<div
-						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-lg shadow-[var(--cardapio-primary)]/20 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-[var(--cardapio-primary)]/30 transition-all duration-300"
+						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-[var(--cardapio-button-shadow)] group-hover:scale-110 group-hover:shadow-[var(--cardapio-button-shadow-hover)] transition-all duration-300"
 					>
 						<Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5" />
 					</div>

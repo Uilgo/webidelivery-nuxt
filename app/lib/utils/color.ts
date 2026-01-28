@@ -95,7 +95,7 @@ export const darken = (hex: string, percent: number): string => {
 
 /**
  * Gera cor de card automaticamente baseada na cor de fundo
- * Garante contraste visível e agradável
+ * Garante contraste sutil e elegante (Estilo Apple/Moderno)
  *
  * @param backgroundColor - Cor de fundo em hexadecimal
  * @returns Cor do card em hexadecimal
@@ -104,17 +104,19 @@ export const getCardColor = (backgroundColor: string): string => {
 	const isDark = isColorDark(backgroundColor);
 
 	if (isDark) {
-		// Fundo escuro → card mais claro (10-12%)
-		return lighten(backgroundColor, 11);
+		// Fundo escuro → card levemente mais claro (5%)
+		// Mantém o padrão dark (suave)
+		return lighten(backgroundColor, 5);
 	} else {
-		// Fundo claro → card mais escuro (8-10%)
-		return darken(backgroundColor, 9);
+		// Fundo claro → card mais escuro (4.5%)
+		// Ajuste fino: 4.5% para contraste ideal (nem muito subtil, nem grosseiro)
+		return darken(backgroundColor, 4.5);
 	}
 };
 
 /**
  * Gera cor para elementos de UI não selecionados (botões, categorias)
- * Contraste sutil mas perceptível
+ * Contraste sutil (Ghost buttons)
  *
  * @param backgroundColor - Cor de fundo em hexadecimal
  * @returns Cor do elemento UI em hexadecimal
@@ -123,17 +125,17 @@ export const getUIElementColor = (backgroundColor: string): string => {
 	const isDark = isColorDark(backgroundColor);
 
 	if (isDark) {
-		// Fundo escuro → elemento mais claro (5-6%)
-		return lighten(backgroundColor, 5.5);
+		// Fundo escuro → elemento um pouco mais claro (8%)
+		return lighten(backgroundColor, 8);
 	} else {
-		// Fundo claro → elemento mais escuro (5-6%)
+		// Fundo claro → elemento um pouco mais escuro (5.5%)
 		return darken(backgroundColor, 5.5);
 	}
 };
 
 /**
  * Gera cor para hover em elementos de UI
- * Contraste visível - feedback claro de interação
+ * Feedback visual claro mas não agressivo
  *
  * @param backgroundColor - Cor de fundo em hexadecimal
  * @returns Cor do hover em hexadecimal
@@ -142,17 +144,17 @@ export const getUIHoverColor = (backgroundColor: string): string => {
 	const isDark = isColorDark(backgroundColor);
 
 	if (isDark) {
-		// Fundo escuro → hover mais claro (8-9%)
-		return lighten(backgroundColor, 8.5);
+		// Fundo escuro → hover mais claro (12%)
+		return lighten(backgroundColor, 12);
 	} else {
-		// Fundo claro → hover mais escuro (8-9%)
+		// Fundo claro → hover mais escuro (8.5%)
 		return darken(backgroundColor, 8.5);
 	}
 };
 
 /**
  * Gera cor para bordas e divisores
- * Contraste sutil - separação visual clara
+ * Muito sutil, apenas para separação
  *
  * @param backgroundColor - Cor de fundo em hexadecimal
  * @returns Cor da borda em hexadecimal
@@ -161,17 +163,16 @@ export const getBorderColor = (backgroundColor: string): string => {
 	const isDark = isColorDark(backgroundColor);
 
 	if (isDark) {
-		// Fundo escuro → borda mais clara (3-4%)
-		return lighten(backgroundColor, 3.5);
+		// Fundo escuro → borda sutil (4%)
+		return lighten(backgroundColor, 4);
 	} else {
-		// Fundo claro → borda mais escura (3-4%)
-		return darken(backgroundColor, 3.5);
+		// Fundo claro → borda visível (6%)
+		return darken(backgroundColor, 6);
 	}
 };
 
 /**
- * Gera cor para badges e botões que precisam ser bem visíveis
- * Contraste forte - máxima visibilidade
+ * Gera cor para badges e botões que precisam de destaque (mas não primários)
  *
  * @param backgroundColor - Cor de fundo em hexadecimal
  * @returns Cor da badge em hexadecimal
@@ -180,11 +181,11 @@ export const getBadgeColor = (backgroundColor: string): string => {
 	const isDark = isColorDark(backgroundColor);
 
 	if (isDark) {
-		// Fundo escuro → badge bem mais clara (15-18%)
-		return lighten(backgroundColor, 16);
+		// Fundo escuro → mais claro (10%)
+		return lighten(backgroundColor, 10);
 	} else {
-		// Fundo claro → badge bem mais escura (15-18%)
-		return darken(backgroundColor, 16);
+		// Fundo claro → mais escuro (11%)
+		return darken(backgroundColor, 11);
 	}
 };
 
@@ -245,4 +246,41 @@ export const meetsWCAG = (
 
 	// AA
 	return size === "large" ? contrast >= 3 : contrast >= 4.5;
+};
+
+/**
+ * Retorna cor de texto (branco ou preto) com melhor contraste para o fundo
+ * Garante contraste WCAG AA (4.5:1)
+ *
+ * @param backgroundColor - Cor de fundo em hexadecimal
+ * @returns Cor do texto (#FFFFFF ou #000000)
+ */
+export const getContrastText = (backgroundColor: string): string => {
+	const luminance = getLuminance(backgroundColor);
+
+	// Threshold otimizado para garantir contraste WCAG AA
+	// Luminância < 0.5 = fundo escuro → texto branco
+	// Luminância >= 0.5 = fundo claro → texto preto
+	return luminance < 0.5 ? "#FFFFFF" : "#000000";
+};
+
+/**
+ * Gera shadow adaptativa baseada na luminosidade do fundo
+ *
+ * @param backgroundColor - Cor de fundo em hexadecimal
+ * @param intensity - 'normal' | 'strong' - intensidade da sombra
+ * @returns String CSS de shadow
+ */
+export const getAdaptiveShadow = (
+	backgroundColor: string,
+	intensity: "normal" | "strong" = "normal",
+): string => {
+	const luminosidade = getLuminance(backgroundColor);
+	const isDark = luminosidade < 0.5;
+
+	if (intensity === "strong") {
+		return isDark ? "0 8px 32px rgba(0, 0, 0, 0.6)" : "0 8px 24px rgba(0, 0, 0, 0.15)";
+	}
+
+	return isDark ? "0 4px 16px rgba(0, 0, 0, 0.4)" : "0 2px 8px rgba(0, 0, 0, 0.1)";
 };

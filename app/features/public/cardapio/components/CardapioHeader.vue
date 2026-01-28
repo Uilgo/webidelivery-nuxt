@@ -104,7 +104,10 @@ const abrirWhatsApp = (): void => {
 					class="w-full h-full bg-gradient-to-br from-[var(--cardapio-primary)] via-[var(--cardapio-primary)] to-[var(--cardapio-primary)]"
 				/>
 				<!-- Overlay gradiente escuro para legibilidade -->
-				<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+				<div
+					class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20"
+					:style="{ opacity: 'var(--cardapio-overlay-opacity)' }"
+				/>
 			</div>
 
 			<!-- Conteúdo do Header -->
@@ -164,8 +167,8 @@ const abrirWhatsApp = (): void => {
 									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-semibold shadow-lg backdrop-blur-sm transition-colors duration-300"
 									:class="
 										estaAberto
-											? 'bg-[var(--cardapio-success)] text-white'
-											: 'bg-[var(--cardapio-danger)] text-white'
+											? 'bg-[var(--cardapio-success)] text-[var(--cardapio-success-text)]'
+											: 'bg-[var(--cardapio-danger)] text-[var(--cardapio-danger-text)]'
 									"
 								>
 									<span
@@ -186,7 +189,7 @@ const abrirWhatsApp = (): void => {
 								<!-- Frete Grátis -->
 								<div
 									v-if="valorEntregaGratis"
-									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium text-white shadow-lg bg-[var(--cardapio-warning)]"
+									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium text-[var(--cardapio-warning-text)] shadow-lg bg-[var(--cardapio-warning)]"
 								>
 									<Icon name="lucide:truck" class="w-3.5 h-3.5" />
 									Grátis {{ valorEntregaGratis }}

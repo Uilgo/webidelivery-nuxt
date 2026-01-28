@@ -92,7 +92,13 @@ watch(
 	<nav class="sticky top-0 z-30 py-3 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4">
 		<!-- Container com Glassmorphism -->
 		<div
-			class="relative bg-[var(--cardapio-secondary)]/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg border border-white/10 dark:border-white/5 p-2"
+			class="relative backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg p-2"
+			:style="{
+				backgroundColor: `color-mix(in srgb, var(--cardapio-secondary), transparent calc(100% - var(--cardapio-glass-opacity) * 100%))`,
+				borderWidth: '1px',
+				borderStyle: 'solid',
+				borderColor: 'var(--cardapio-glass-border)',
+			}"
 		>
 			<!-- Fade gradient esquerda -->
 			<div
