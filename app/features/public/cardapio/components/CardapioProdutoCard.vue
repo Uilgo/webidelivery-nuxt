@@ -176,7 +176,7 @@ const temMultiplasVariacoes = computed(() => {
 <template>
 	<button
 		type="button"
-		class="group w-full flex gap-3 sm:gap-4 p-3 sm:p-4 h-[155px] sm:h-[165px] md:h-[175px] bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl shadow-[var(--cardapio-card-shadow)] hover:shadow-[var(--cardapio-card-shadow-hover)] transition-all duration-300 text-left border border-transparent"
+		class="group w-full flex gap-2 xs:gap-3 sm:gap-4 p-2 xs:p-3 sm:p-4 h-[140px] xs:h-[155px] sm:h-[165px] md:h-[175px] bg-[var(--cardapio-secondary)] rounded-xl sm:rounded-2xl shadow-[var(--cardapio-card-shadow)] hover:shadow-[var(--cardapio-card-shadow-hover)] transition-all duration-300 text-left border border-transparent"
 		:style="{
 			'--tw-border-opacity': 'var(--cardapio-card-hover-border-opacity)',
 		}"
@@ -187,7 +187,7 @@ const temMultiplasVariacoes = computed(() => {
 	>
 		<!-- Imagem com Zoom Effect -->
 		<div
-			class="relative shrink-0 self-stretch overflow-hidden rounded-lg sm:rounded-xl aspect-square"
+			class="relative shrink-0 w-[85px] h-[85px] xs:w-[100px] xs:h-[100px] sm:w-auto sm:h-auto sm:self-stretch overflow-hidden rounded-lg sm:rounded-xl aspect-square"
 		>
 			<!-- Container da imagem com fundo de fallback -->
 			<div
@@ -229,14 +229,14 @@ const temMultiplasVariacoes = computed(() => {
 		</div>
 
 		<!-- Conteúdo -->
-		<div class="flex-1 min-w-0 flex flex-col justify-between gap-2 py-0.5">
+		<div class="flex-1 min-w-0 flex flex-col justify-between gap-1 xs:gap-2 py-0.5">
 			<!-- Grupo Superior: Nome + Descrição + Badges -->
 			<div>
 				<!-- Nome + Descrição + Badges -->
 				<div>
 					<!-- Nome -->
 					<h3
-						class="text-sm sm:text-base font-semibold text-[var(--cardapio-text)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
+						class="text-[13px] xs:text-sm sm:text-base font-semibold text-[var(--cardapio-text)] line-clamp-2 leading-snug group-hover:text-[var(--cardapio-primary)] transition-colors"
 					>
 						{{ produto.nome }}
 					</h3>
@@ -244,13 +244,13 @@ const temMultiplasVariacoes = computed(() => {
 					<!-- Descrição -->
 					<p
 						v-if="produto.descricao"
-						class="mt-1 text-xs sm:text-sm text-[var(--cardapio-text-muted)] line-clamp-2 leading-relaxed"
+						class="mt-0.5 xs:mt-1 text-[11px] xs:text-xs sm:text-sm text-[var(--cardapio-text-muted)] line-clamp-2 leading-relaxed"
 					>
 						{{ produto.descricao }}
 					</p>
 
 					<!-- Badges (abaixo da descrição em todos os tamanhos) -->
-					<div class="flex flex-wrap gap-1 mt-1.5">
+					<div class="flex flex-wrap gap-0.5 xs:gap-1 mt-0.5 xs:mt-1.5">
 						<!-- Badge de Promoção -->
 						<span
 							v-if="temPromocao"
@@ -280,21 +280,21 @@ const temMultiplasVariacoes = computed(() => {
 						<!-- Preço Original Riscado (linha separada, compacta) -->
 						<span
 							v-if="precoOriginal"
-							class="text-[9px] sm:text-[10px] text-[var(--cardapio-text-muted)] line-through leading-tight"
+							class="text-[8px] xs:text-[9px] sm:text-[10px] text-[var(--cardapio-text-muted)] line-through leading-tight"
 						>
 							{{ formatCurrency(precoOriginal) }}
 						</span>
 
 						<!-- Preço Atual (principal, destacado) -->
-						<div class="flex items-baseline gap-1.5">
+						<div class="flex items-baseline gap-1">
 							<span
 								v-if="temMultiplasVariacoes"
-								class="text-[10px] sm:text-xs text-[var(--cardapio-text-muted)]"
+								class="text-[9px] xs:text-[10px] sm:text-xs text-[var(--cardapio-text-muted)] whitespace-nowrap"
 							>
 								A partir de
 							</span>
 							<span
-								class="text-base sm:text-lg font-bold leading-tight"
+								class="text-sm xs:text-base sm:text-lg font-bold leading-tight"
 								:class="
 									temPromocao
 										? 'text-[var(--cardapio-success)] dark:text-[var(--cardapio-success)]'
@@ -308,9 +308,9 @@ const temMultiplasVariacoes = computed(() => {
 
 					<!-- Botão Adicionar -->
 					<div
-						class="size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-[var(--cardapio-button-shadow)] group-hover:scale-110 group-hover:shadow-[var(--cardapio-button-shadow-hover)] transition-all duration-300"
+						class="size-7 xs:size-8 sm:size-9 cardapio-rounded bg-[var(--cardapio-primary)] text-white flex items-center justify-center shadow-[var(--cardapio-button-shadow)] group-hover:scale-110 group-hover:shadow-[var(--cardapio-button-shadow-hover)] transition-all duration-300"
 					>
-						<Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5" />
+						<Icon name="lucide:plus" class="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
 					</div>
 				</div>
 			</div>

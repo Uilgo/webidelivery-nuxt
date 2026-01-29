@@ -111,8 +111,8 @@ const abrirWhatsApp = (): void => {
 			</div>
 
 			<!-- Conteúdo do Header -->
-			<div class="relative z-10 p-3 sm:p-4 md:p-5 lg:p-6">
-				<div class="flex items-start gap-3 sm:gap-4 md:gap-5">
+			<div class="relative z-10 p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7">
+				<div class="flex items-start gap-2 sm:gap-3 md:gap-4 lg:gap-5">
 					<!-- Logo com Glow Effect -->
 					<div class="relative shrink-0 group">
 						<!-- Glow ring -->
@@ -121,7 +121,7 @@ const abrirWhatsApp = (): void => {
 						/>
 						<!-- Logo Container -->
 						<div
-							class="relative size-20 sm:size-24 md:size-28 lg:size-32 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-2xl ring-2 ring-white/50"
+							class="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 xl:w-36 xl:h-36 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-2xl ring-2 ring-white/50"
 						>
 							<img
 								v-if="estabelecimento.logo"
@@ -146,7 +146,7 @@ const abrirWhatsApp = (): void => {
 					<div class="flex-1 min-w-0 pt-1">
 						<!-- Nome do Estabelecimento -->
 						<h1
-							class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight drop-shadow-lg"
+							class="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight drop-shadow-lg"
 						>
 							{{ estabelecimento.nome ?? "Estabelecimento" }}
 						</h1>
@@ -154,17 +154,17 @@ const abrirWhatsApp = (): void => {
 						<!-- Descrição -->
 						<p
 							v-if="estabelecimento.descricao"
-							class="mt-1 text-sm sm:text-base text-white/80 line-clamp-2 drop-shadow"
+							class="mt-1 sm:mt-1.5 md:mt-2 text-sm sm:text-base md:text-lg text-white/80 line-clamp-2 drop-shadow"
 						>
 							{{ estabelecimento.descricao }}
 						</p>
 
 						<!-- Chips Informativos + Botão Ver Mais -->
-						<div class="mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-2">
+						<div class="mt-2.5 sm:mt-3 md:mt-4 flex flex-wrap items-center justify-between gap-2">
 							<div class="flex flex-wrap items-center gap-2">
 								<!-- Badge Status (Aberto/Fechado) com pulse -->
 								<div
-									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-semibold shadow-lg backdrop-blur-sm transition-colors duration-300"
+									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm md:text-base font-semibold shadow-lg backdrop-blur-sm transition-colors duration-300"
 									:class="
 										estaAberto
 											? 'bg-[var(--cardapio-success)] text-[var(--cardapio-success-text)]'
@@ -178,18 +178,18 @@ const abrirWhatsApp = (): void => {
 									{{ estaAberto ? "Aberto" : "Fechado" }}
 								</div>
 
-								<!-- Tempo de Entrega -->
+								<!-- Tempo de Entrega (oculto no mobile) -->
 								<div
-									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm"
+									class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm"
 								>
 									<Icon name="lucide:clock" class="w-3.5 h-3.5" />
 									{{ tempoEntrega }}
 								</div>
 
-								<!-- Frete Grátis -->
+								<!-- Frete Grátis (oculto no mobile) -->
 								<div
 									v-if="valorEntregaGratis"
-									class="inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium text-[var(--cardapio-warning-text)] shadow-lg bg-[var(--cardapio-warning)]"
+									class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium text-[var(--cardapio-warning-text)] shadow-lg bg-[var(--cardapio-warning)]"
 								>
 									<Icon name="lucide:truck" class="w-3.5 h-3.5" />
 									Grátis {{ valorEntregaGratis }}
@@ -199,10 +199,10 @@ const abrirWhatsApp = (): void => {
 							<!-- Botão Ver Mais -->
 							<button
 								type="button"
-								class="inline-flex items-center gap-1.5 px-3 py-1.5 cardapio-rounded text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
+								class="inline-flex items-center gap-1.5 px-3 py-1.5 cardapio-rounded text-xs sm:text-sm md:text-base font-medium bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
 								@click="modalInfoAberto = true"
 							>
-								<Icon name="lucide:info" class="w-3.5 h-3.5" />
+								<Icon name="lucide:info" class="w-4 h-4" />
 								Ver Mais
 							</button>
 						</div>
