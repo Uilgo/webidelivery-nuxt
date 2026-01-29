@@ -1,17 +1,14 @@
 /**
- * 📌 useProdutoDrawer
+ * 📌 useSobreDrawer
  *
- * Composable para gerenciar o drawer/bottom sheet de produto no cardápio público.
- * Detecta o tamanho da tela e usa Bottom Sheet no mobile ou Drawer no tablet+.
+ * Composable para gerenciar modal/bottom sheet do "Sobre" do estabelecimento.
+ * Detecta o tamanho da tela e usa Bottom Sheet no mobile ou Modal no tablet+.
  */
 
-import type { ProdutoPublico } from "../types/cardapio-publico";
-
-const drawerAberto = ref(false);
+const modalAberto = ref(false);
 const bottomSheetAberto = ref(false);
-const produtoSelecionado = ref<ProdutoPublico | null>(null);
 
-export const useProdutoDrawer = () => {
+export const useSobreDrawer = () => {
 	// Detecta se é mobile (< 640px)
 	const isMobile = ref(false);
 
@@ -35,27 +32,23 @@ export const useProdutoDrawer = () => {
 		}
 	});
 
-	const abrir = (produto: ProdutoPublico) => {
-		produtoSelecionado.value = produto;
-
-		// Abre Bottom Sheet no mobile, Drawer no tablet+
+	const abrir = () => {
+		// Abre Bottom Sheet no mobile, Modal no tablet+
 		if (isMobile.value) {
 			bottomSheetAberto.value = true;
 		} else {
-			drawerAberto.value = true;
+			modalAberto.value = true;
 		}
 	};
 
 	const fechar = () => {
-		drawerAberto.value = false;
+		modalAberto.value = false;
 		bottomSheetAberto.value = false;
-		produtoSelecionado.value = null;
 	};
 
 	return {
-		drawerAberto,
+		modalAberto,
 		bottomSheetAberto,
-		produtoSelecionado: readonly(produtoSelecionado),
 		isMobile: readonly(isMobile),
 		abrir,
 		fechar,

@@ -524,9 +524,9 @@ SCROLLBAR PERSONALIZADO
 */
 .cardapio-theme-bridge {
 	/* Superfícies e Fundos */
-	--bg-surface: var(--cardapio-surface, var(--color-neutral-50));
+	--bg-surface: var(--cardapio-background, var(--color-neutral-50));
 	--bg-page: var(--cardapio-background, var(--color-neutral-50));
-	--bg-muted: var(--cardapio-muted, var(--color-neutral-100));
+	--bg-muted: var(--cardapio-hover, var(--color-neutral-100));
 	--bg-hover: var(--cardapio-hover, var(--color-neutral-100));
 
 	/* Textos */
@@ -535,14 +535,10 @@ SCROLLBAR PERSONALIZADO
 	--text-muted: var(--cardapio-text-muted, var(--color-neutral-400));
 
 	/* Bordas */
-	--border-default: var(--cardapio-muted, var(--color-neutral-200));
-	--border-muted: var(--cardapio-muted, var(--color-neutral-100));
+	--border-default: var(--cardapio-border, var(--color-neutral-200));
+	--border-muted: var(--cardapio-border, var(--color-neutral-100));
 	--border-hover: var(--cardapio-hover, var(--color-neutral-200));
-	--border-strong: color-mix(
-		in srgb,
-		var(--cardapio-muted, var(--color-neutral-200)),
-		var(--cardapio-text, var(--color-neutral-900)) 10%
-	);
+	--border-strong: var(--cardapio-border, var(--color-neutral-300));
 
 	/* Cores de Ação */
 	--primary: var(--cardapio-primary, var(--color-brand-500));
@@ -550,14 +546,14 @@ SCROLLBAR PERSONALIZADO
 	--primary-hover: color-mix(in srgb, var(--cardapio-primary, var(--color-brand-500)), black 10%);
 
 	/* Mapeamento de Inputs */
-	--input-bg: var(--cardapio-surface, var(--color-neutral-50));
-	--input-border: var(--cardapio-muted, var(--color-neutral-200));
+	--input-bg: var(--cardapio-secondary, var(--color-neutral-50));
+	--input-border: var(--cardapio-border, var(--color-neutral-200));
 	--input-text: var(--cardapio-text, var(--color-neutral-900));
 	--input-placeholder: var(--cardapio-text-muted, var(--color-neutral-400));
 	--input-border-focus: var(--cardapio-primary, var(--color-brand-500));
 
 	/* Cards e Outros */
-	--card-bg: var(--cardapio-surface, var(--color-neutral-50));
+	--card-bg: var(--cardapio-secondary, var(--color-neutral-50));
 	--bg-active: var(--cardapio-hover, var(--color-neutral-100));
 
 	/* Cores Semânticas */

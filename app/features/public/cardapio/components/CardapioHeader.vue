@@ -8,6 +8,8 @@
  */
 
 import type { Estabelecimento } from "../types/cardapio-publico";
+import { useSobreDrawer } from "../composables/useSobreDrawer";
+import CardapioSobreBottomSheet from "./CardapioSobreBottomSheet.vue";
 
 interface Props {
 	estabelecimento: Estabelecimento;
@@ -18,8 +20,8 @@ const props = defineProps<Props>();
 // Status aberto/fechado vem direto do banco
 const estaAberto = computed(() => props.estabelecimento.aberto);
 
-// Estado do modal de informações
-const modalInfoAberto = ref(false);
+// Usar composable para gerenciar modal/bottom sheet
+const { modalAberto, bottomSheetAberto, abrir: abrirSobre } = useSobreDrawer();
 
 /**
  * Formata endereço completo
@@ -200,7 +202,7 @@ const abrirWhatsApp = (): void => {
 							<button
 								type="button"
 								class="inline-flex items-center gap-1.5 px-3 py-1.5 cardapio-rounded text-xs sm:text-sm md:text-base font-medium bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
-								@click="modalInfoAberto = true"
+								@click="abrirSobre"
 							>
 								<Icon name="lucide:info" class="w-4 h-4" />
 								Ver Mais
@@ -212,8 +214,8 @@ const abrirWhatsApp = (): void => {
 		</div>
 	</header>
 
-	<!-- Modal de Informações Premium -->
-	<UiModal v-model="modalInfoAberto" title="Informações" size="md">
+	<!-- Modal de Informações Premium (Tablet+) -->
+	<UiModal v-model="modalAberto" title="Informações" size="md">
 		<div class="space-y-5">
 			<!-- Header do Modal com Logo -->
 			<div class="flex items-center gap-4 pb-4 border-b border-[var(--cardapio-border)]">
@@ -331,4 +333,7 @@ const abrirWhatsApp = (): void => {
 			</div>
 		</template>
 	</UiModal>
+
+	<!-- Bottom Sheet de Informações (Mobile) -->
+	<CardapioSobreBottomSheet v-model="bottomSheetAberto" :estabelecimento="estabelecimento" />
 </template>

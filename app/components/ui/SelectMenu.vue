@@ -516,7 +516,7 @@ defineExpose({
 							v-model="searchQuery"
 							type="text"
 							:placeholder="searchPlaceholder"
-							class="w-full pl-9 pr-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200"
+							class="w-full pl-9 pr-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200 placeholder-[var(--input-placeholder)]"
 							@input="handleSearch"
 							@click.stop
 						/>

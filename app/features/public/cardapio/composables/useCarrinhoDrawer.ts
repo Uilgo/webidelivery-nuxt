@@ -1,17 +1,14 @@
 /**
- * 📌 useProdutoDrawer
+ * 📌 useCarrinhoDrawer
  *
- * Composable para gerenciar o drawer/bottom sheet de produto no cardápio público.
+ * Composable para gerenciar o drawer/bottom sheet do carrinho no cardápio público.
  * Detecta o tamanho da tela e usa Bottom Sheet no mobile ou Drawer no tablet+.
  */
 
-import type { ProdutoPublico } from "../types/cardapio-publico";
-
 const drawerAberto = ref(false);
 const bottomSheetAberto = ref(false);
-const produtoSelecionado = ref<ProdutoPublico | null>(null);
 
-export const useProdutoDrawer = () => {
+export const useCarrinhoDrawer = () => {
 	// Detecta se é mobile (< 640px)
 	const isMobile = ref(false);
 
@@ -35,9 +32,7 @@ export const useProdutoDrawer = () => {
 		}
 	});
 
-	const abrir = (produto: ProdutoPublico) => {
-		produtoSelecionado.value = produto;
-
+	const abrir = () => {
 		// Abre Bottom Sheet no mobile, Drawer no tablet+
 		if (isMobile.value) {
 			bottomSheetAberto.value = true;
@@ -49,13 +44,11 @@ export const useProdutoDrawer = () => {
 	const fechar = () => {
 		drawerAberto.value = false;
 		bottomSheetAberto.value = false;
-		produtoSelecionado.value = null;
 	};
 
 	return {
 		drawerAberto,
 		bottomSheetAberto,
-		produtoSelecionado: readonly(produtoSelecionado),
 		isMobile: readonly(isMobile),
 		abrir,
 		fechar,

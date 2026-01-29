@@ -74,7 +74,6 @@ const verificarImagemQuebrada = (img: HTMLImageElement | null) => {
 	nextTick(() => {
 		// Verifica se a imagem está completa mas não carregou (erro em cache)
 		if (img.complete && img.naturalHeight === 0) {
-			console.log(`[${props.produto.nome}] Imagem com erro detectada (cache)`);
 			imagemErro.value = true;
 		}
 	});
@@ -103,11 +102,7 @@ watch(
  * Handler para erro de carregamento de imagem
  */
 const handleImageError = () => {
-	console.error(`[${props.produto.nome}] Erro ao carregar imagem:`, props.produto.imagem_url);
-	console.log(`[${props.produto.nome}] Setando imagemErro = true`);
 	imagemErro.value = true;
-	console.log(`[${props.produto.nome}] imagemErro agora é:`, imagemErro.value);
-	console.log(`[${props.produto.nome}] tentarCarregarImagem agora é:`, tentarCarregarImagem.value);
 };
 
 /**
@@ -119,12 +114,9 @@ const handleImageLoad = (event: Event) => {
 
 	// Verifica se a imagem realmente carregou
 	if (img.naturalHeight === 0) {
-		console.log(`[${props.produto.nome}] Evento load disparou mas imagem está quebrada`);
 		imagemErro.value = true;
 		return;
 	}
-
-	console.log(`[${props.produto.nome}] Imagem carregada com sucesso`);
 };
 
 /**
@@ -185,9 +177,14 @@ const temMultiplasVariacoes = computed(() => {
 		}"
 		@click="abrirDrawer(produto)"
 	>
-		<!-- Imagem com Zoom Effect -->
+		<!-- Imagem com Zoom Effect - Cresce progressivamente -->
 		<div
-			class="relative shrink-0 w-[85px] h-[85px] xs:w-[100px] xs:h-[100px] sm:w-auto sm:h-auto sm:self-stretch overflow-hidden rounded-lg sm:rounded-xl aspect-square"
+			class="relative shrink-0 overflow-hidden rounded-lg sm:rounded-xl aspect-square"
+			:class="[
+				'w-[85px] h-[85px]',
+				'xs:w-[100px] xs:h-[100px]',
+				'min-[425px]:w-auto min-[425px]:h-auto min-[425px]:self-stretch',
+			]"
 		>
 			<!-- Container da imagem com fundo de fallback -->
 			<div

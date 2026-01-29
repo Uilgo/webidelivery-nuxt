@@ -8,6 +8,8 @@
 
 import { useCardapioPublico } from "~/features/public/cardapio/composables/useCardapioPublico";
 import { useProdutoDrawer } from "~/features/public/cardapio/composables/useProdutoDrawer";
+import { useCarrinhoDrawer } from "~/features/public/cardapio/composables/useCarrinhoDrawer";
+import { useSobreDrawer } from "~/features/public/cardapio/composables/useSobreDrawer";
 import { useTemaPublico } from "~/features/public/cardapio/composables/useTemaPublico";
 import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-publico";
 
@@ -21,8 +23,10 @@ import CardapioOfertasScroll from "~/features/public/cardapio/components/Cardapi
 import CardapioDestaquesLista from "~/features/public/cardapio/components/CardapioDestaquesLista.vue";
 import CardapioProdutoCard from "~/features/public/cardapio/components/CardapioProdutoCard.vue";
 import CardapioProdutoDrawer from "~/features/public/cardapio/components/CardapioProdutoDrawer.vue";
+import CardapioProdutoBottomSheet from "~/features/public/cardapio/components/CardapioProdutoBottomSheet.vue";
 import CardapioCarrinhoLateral from "~/features/public/cardapio/components/CardapioCarrinhoLateral.vue";
 import CardapioCarrinhoFlutuante from "~/features/public/cardapio/components/CardapioCarrinhoFlutuante.vue";
+import CardapioCarrinhoBottomSheet from "~/features/public/cardapio/components/CardapioCarrinhoBottomSheet.vue";
 
 // Props recebidas da rota
 interface Props {
@@ -54,7 +58,18 @@ const ordenacaoAtual = ref("padrao");
 const categoriaSelecionada = ref<string | null>(null);
 
 // Estado do drawer de produto (usando composable)
-const { drawerAberto: drawerProdutoAberto, produtoSelecionado } = useProdutoDrawer();
+const {
+	drawerAberto: drawerProdutoAberto,
+	bottomSheetAberto: bottomSheetProdutoAberto,
+	produtoSelecionado,
+} = useProdutoDrawer();
+
+// Estado do drawer/bottom sheet do carrinho
+const { drawerAberto: drawerCarrinhoAberto, bottomSheetAberto: bottomSheetCarrinhoAberto } =
+	useCarrinhoDrawer();
+
+// Estado do drawer/bottom sheet do sobre
+const { bottomSheetAberto: bottomSheetSobreAberto } = useSobreDrawer();
 
 // Produtos filtrados (reativo)
 const produtosFiltrados = computed<readonly ProdutoPublico[]>(() => {
@@ -312,12 +327,12 @@ const handleLoadMore = async () => {
 				</div>
 			</div>
 
-			<!-- Carrinho Flutuante (Mobile Only) -->
-			<div class="lg:hidden">
+			<!-- Carrinho Flutuante (Mobile Only) - Esconde quando bottom sheet do sobre está aberto -->
+			<div v-show="!bottomSheetSobreAberto" class="lg:hidden">
 				<CardapioCarrinhoFlutuante />
 			</div>
 
-			<!-- Drawer de Produto -->
+			<!-- Drawer de Produto (Tablet/Desktop) -->
 			<CardapioProdutoDrawer
 				v-model="drawerProdutoAberto"
 				:produto="produtoSelecionado"
@@ -325,6 +340,22 @@ const handleLoadMore = async () => {
 				:estabelecimento-slug="estabelecimento.slug"
 				:categorias="categorias"
 				@adicionado="handleProdutoAdicionado"
+			/>
+
+			<!-- Bottom Sheet de Produto (Mobile) -->
+			<CardapioProdutoBottomSheet
+				v-model="bottomSheetProdutoAberto"
+				:produto="produtoSelecionado"
+				:estabelecimento-id="estabelecimento.id"
+				:estabelecimento-slug="estabelecimento.slug"
+				:categorias="categorias"
+				@adicionado="handleProdutoAdicionado"
+			/>
+
+			<!-- Bottom Sheet do Carrinho (Mobile) -->
+			<CardapioCarrinhoBottomSheet
+				v-model="bottomSheetCarrinhoAberto"
+				:esta-aberto="estabelecimento.aberto"
 			/>
 		</div>
 	</div>
