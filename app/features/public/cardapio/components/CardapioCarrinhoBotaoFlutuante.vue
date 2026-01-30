@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * 📌 CardapioCarrinhoFlutuante
+ * 📌 CardapioCarrinhoBotaoFlutuante
  *
- * Botão flutuante do carrinho que mostra quantidade e total.
- * Abre o bottom sheet/drawer do carrinho ao clicar.
+ * Botão flutuante fixo na parte inferior (mobile/tablet) que mostra quantidade e total.
+ * Abre o CardapioCarrinhoBottomSheet ao clicar.
  * Oculta quando o bottom sheet de produto está aberto.
  */
 

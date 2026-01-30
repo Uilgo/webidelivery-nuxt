@@ -25,7 +25,7 @@ import CardapioProdutoCard from "~/features/public/cardapio/components/CardapioP
 import CardapioProdutoDrawer from "~/features/public/cardapio/components/CardapioProdutoDrawer.vue";
 import CardapioProdutoBottomSheet from "~/features/public/cardapio/components/CardapioProdutoBottomSheet.vue";
 import CardapioCarrinhoLateral from "~/features/public/cardapio/components/CardapioCarrinhoLateral.vue";
-import CardapioCarrinhoFlutuante from "~/features/public/cardapio/components/CardapioCarrinhoFlutuante.vue";
+import CardapioCarrinhoBotaoFlutuante from "~/features/public/cardapio/components/CardapioCarrinhoBotaoFlutuante.vue";
 import CardapioCarrinhoBottomSheet from "~/features/public/cardapio/components/CardapioCarrinhoBottomSheet.vue";
 
 // Props recebidas da rota
@@ -327,9 +327,9 @@ const handleLoadMore = async () => {
 				</div>
 			</div>
 
-			<!-- Carrinho Flutuante (Mobile Only) - Esconde quando bottom sheet do sobre está aberto -->
+			<!-- Carrinho Botão Flutuante (Mobile Only) - Esconde quando bottom sheet do sobre está aberto -->
 			<div v-show="!bottomSheetSobreAberto" class="lg:hidden">
-				<CardapioCarrinhoFlutuante />
+				<CardapioCarrinhoBotaoFlutuante />
 			</div>
 
 			<!-- Drawer de Produto (Tablet/Desktop) -->

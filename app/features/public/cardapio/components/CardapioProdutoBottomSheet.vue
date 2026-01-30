@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 📌 CardapioProdutoBottomSheet
- * Bottom Sheet mobile com TODAS as funcionalidades do Drawer
+ * Bottom Sheet mobile com design moderno e funcionalidades completas
  */
 
 import type {
@@ -44,7 +44,7 @@ const saboresSelecionados = ref<string[]>([]);
 const produtosDisponiveis = ref<ProdutoPublico[]>([]);
 const carregandoProdutos = ref(false);
 const gruposAdicionais = ref<GrupoAdicionalPublico[]>([]);
-const grupoSelecionado = ref<string | null>(null);
+const grupoExpandido = ref<string | null>(null);
 
 const variacaoSelecionada = computed<VariacaoPublica | null>(() => {
 	if (!variacaoSelecionadaId.value || !props.produto) return null;
@@ -67,7 +67,7 @@ watch(
 			multiplosSabores.value = false;
 			quantidadeSabores.value = 2;
 			saboresSelecionados.value = [];
-			grupoSelecionado.value = null;
+			grupoExpandido.value = null;
 			await Promise.all([carregarProdutosSabores(), carregarGruposAdicionais()]);
 		}
 	},
@@ -224,6 +224,30 @@ const getQuantidadeAdicional = (adicionalId: string): number => {
 	return adicionaisSelecionados.value.get(adicionalId) ?? 0;
 };
 
+const alterarAdicional = (
+	grupo: GrupoAdicionalPublico,
+	adicional: { id: string; preco: number; permite_multiplas_unidades: boolean },
+	delta: number,
+): void => {
+	const atual = getQuantidadeAdicional(adicional.id);
+	const novo = Math.max(0, atual + delta);
+
+	const totalGrupo = grupo.adicionais.reduce((acc, a) => {
+		if (a.id === adicional.id) return acc + novo;
+		return acc + (adicionaisSelecionados.value.get(a.id) ?? 0);
+	}, 0);
+
+	if (totalGrupo > grupo.max_selecao) return;
+
+	if (novo === 0) {
+		adicionaisSelecionados.value.delete(adicional.id);
+	} else {
+		adicionaisSelecionados.value.set(adicional.id, novo);
+	}
+
+	adicionaisSelecionados.value = new Map(adicionaisSelecionados.value);
+};
+
 const adicionarAoCarrinho = (): void => {
 	if (!props.produto || !variacaoSelecionada.value || !podeAdicionar.value) return;
 
@@ -264,6 +288,69 @@ const adicionarAoCarrinho = (): void => {
 	emit("adicionado");
 	emit("update:modelValue", false);
 };
+
+const toggleGrupo = (grupoId: string) => {
+	grupoExpandido.value = grupoExpandido.value === grupoId ? null : grupoId;
+};
+
+const getGrupoIcon = (nome: string): string => {
+	const nomeLower = nome.toLowerCase();
+	if (nomeLower.includes("borda")) return "lucide:pizza";
+	if (nomeLower.includes("extra") || nomeLower.includes("adicional")) return "lucide:plus-circle";
+	if (nomeLower.includes("bebida")) return "lucide:cup-soda";
+	if (nomeLower.includes("sobremesa")) return "lucide:cake";
+	if (nomeLower.includes("molho")) return "lucide:flame";
+	return "lucide:plus-circle";
+};
+
+const getGrupoProgressLabel = (grupo: GrupoAdicionalPublico): string => {
+	const totalSelecionado = grupo.adicionais.reduce(
+		(acc, a) => acc + getQuantidadeAdicional(a.id),
+		0,
+	);
+
+	if (grupo.min_selecao === 0 && grupo.max_selecao === 1) {
+		return totalSelecionado > 0 ? "1 item selecionado" : "Escolha até 1 item";
+	}
+
+	if (grupo.min_selecao === 0) {
+		return totalSelecionado > 0
+			? `${totalSelecionado} de ${grupo.max_selecao} selecionados`
+			: `Escolha até ${grupo.max_selecao} itens`;
+	}
+
+	if (grupo.min_selecao === grupo.max_selecao) {
+		const faltam = grupo.max_selecao - totalSelecionado;
+		if (totalSelecionado === 0) {
+			return `Escolha ${grupo.max_selecao} ${grupo.max_selecao === 1 ? "item" : "itens"}`;
+		}
+		if (faltam > 0) {
+			return `${totalSelecionado} de ${grupo.max_selecao} (faltam ${faltam})`;
+		}
+		return `${totalSelecionado} de ${grupo.max_selecao} completo`;
+	}
+
+	if (totalSelecionado === 0) {
+		return `Escolha de ${grupo.min_selecao} a ${grupo.max_selecao} itens`;
+	}
+	if (totalSelecionado < grupo.min_selecao) {
+		const faltam = grupo.min_selecao - totalSelecionado;
+		return `${totalSelecionado} de ${grupo.max_selecao} (faltam ${faltam})`;
+	}
+	return `${totalSelecionado} de ${grupo.max_selecao} selecionados`;
+};
+
+const isGrupoLimiteAtingido = (grupo: GrupoAdicionalPublico): boolean => {
+	const totalSelecionado = grupo.adicionais.reduce(
+		(acc, a) => acc + getQuantidadeAdicional(a.id),
+		0,
+	);
+	return totalSelecionado >= grupo.max_selecao;
+};
+
+const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
+	return grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0);
+};
 </script>
 
 <template>
@@ -274,11 +361,23 @@ const adicionarAoCarrinho = (): void => {
 		:close-on-click-outside="true"
 		class="cardapio-theme-bridge"
 	>
-		<div v-if="produto" class="space-y-3 p-3 sm:p-4 pb-24">
+		<div v-if="produto" class="space-y-4 p-4 pb-36">
+			<!-- Header com Nome e Preço -->
+			<div class="text-center pb-2 border-b border-[var(--cardapio-border)]">
+				<h2 class="text-xl font-bold text-[var(--cardapio-text)]">{{ produto.nome }}</h2>
+				<p class="text-sm text-[var(--cardapio-text-muted)] mt-1">
+					<span v-if="variacaoSelecionada" class="font-semibold text-[var(--cardapio-primary)]">
+						{{ formatCurrency(precoVariacao) }}
+					</span>
+					<span v-if="variacaoSelecionada" class="mx-1.5">•</span>
+					<span>{{ variacaoSelecionada?.nome || "Selecione uma opção" }}</span>
+				</p>
+			</div>
+
 			<!-- Imagem -->
 			<div
 				v-if="produto.imagem_url"
-				class="w-full h-36 sm:h-40 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+				class="relative w-full aspect-video rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-lg"
 			>
 				<img
 					:src="produto.imagem_url"
@@ -286,114 +385,196 @@ const adicionarAoCarrinho = (): void => {
 					class="w-full h-full object-cover"
 					loading="lazy"
 				/>
+				<div
+					class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"
+				/>
 			</div>
 
-			<!-- Nome e descrição -->
-			<div>
-				<h2 class="text-xl font-bold text-[var(--cardapio-text)] mb-1">{{ produto.nome }}</h2>
-				<p v-if="produto.descricao" class="text-sm text-[var(--cardapio-text-muted)]">
+			<!-- Badges do produto -->
+			<div v-if="produto.destaque || produto.em_promocao" class="flex flex-wrap gap-2">
+				<!-- Badge Destaque -->
+				<div
+					v-if="produto.destaque"
+					class="px-2.5 py-1 bg-gradient-to-r from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] text-[var(--cardapio-highlight-text)] text-xs font-semibold rounded-full shadow-md flex items-center gap-1"
+				>
+					<Icon name="lucide:star" class="w-3 h-3" />
+					Destaque
+				</div>
+
+				<!-- Badge Promoção -->
+				<div
+					v-if="produto.em_promocao"
+					class="px-2.5 py-1 bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-xs font-semibold rounded-full shadow-md flex items-center gap-1"
+				>
+					<Icon name="lucide:tag" class="w-3 h-3" />
+					Promoção
+				</div>
+			</div>
+
+			<!-- Descrição -->
+			<div
+				v-if="produto.descricao"
+				class="p-3 rounded-xl bg-[var(--cardapio-secondary)]/50 border border-[var(--cardapio-border)]"
+			>
+				<div class="flex items-center gap-2 mb-1.5">
+					<Icon name="lucide:info" class="w-3.5 h-3.5 text-[var(--cardapio-primary)]" />
+					<h3 class="text-xs font-semibold text-[var(--cardapio-text)]">Sobre este produto</h3>
+				</div>
+				<p class="text-xs text-[var(--cardapio-text-muted)] leading-relaxed">
 					{{ produto.descricao }}
 				</p>
 			</div>
 
-			<!-- Variações -->
+			<!-- Variações em Cards -->
 			<div v-if="produto.variacoes.length > 1" class="space-y-2">
-				<UiSelect
-					v-model="variacaoSelecionadaId"
-					:options="variacoesOptions"
-					label="Escolha uma opção"
-					:required="true"
-					size="md"
-				/>
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:ruler" class="w-3.5 h-3.5 text-[var(--cardapio-primary)]" />
+					<h3 class="text-xs font-semibold text-[var(--cardapio-text)]">
+						Escolha o tamanho <span class="text-[var(--cardapio-danger)]">*</span>
+					</h3>
+				</div>
+				<div class="grid grid-cols-1 gap-2">
+					<button
+						v-for="(variacao, index) in produto.variacoes"
+						:key="variacao.id"
+						type="button"
+						class="relative flex items-center gap-3 p-3 border-2 rounded-xl transition-all duration-200 text-left"
+						:class="[
+							variacaoSelecionadaId === variacao.id
+								? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent'
+								: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]',
+						]"
+						@click="variacaoSelecionadaId = variacao.id"
+					>
+						<div
+							class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+							:class="[
+								variacaoSelecionadaId === variacao.id
+									? 'bg-[var(--cardapio-primary)] text-white'
+									: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+							]"
+						>
+							{{ index + 1 }}
+						</div>
+						<div class="flex-1 min-w-0">
+							<p
+								class="font-semibold text-sm truncate"
+								:class="[
+									variacaoSelecionadaId === variacao.id
+										? 'text-[var(--cardapio-primary)]'
+										: 'text-[var(--cardapio-text)]',
+								]"
+							>
+								{{ variacao.nome }}
+							</p>
+							<p class="text-xs text-[var(--cardapio-text-muted)]">
+								{{ formatCurrency(variacao.preco_promocional ?? variacao.preco) }}
+							</p>
+						</div>
+						<div
+							v-if="variacaoSelecionadaId === variacao.id"
+							class="w-5 h-5 rounded-full bg-[var(--cardapio-primary)] flex items-center justify-center flex-shrink-0"
+						>
+							<Icon name="lucide:check" class="w-3 h-3 text-white" />
+						</div>
+					</button>
+				</div>
 			</div>
 
 			<!-- Múltiplos Sabores -->
-			<div v-if="produtosDisponiveisFiltrados.length > 0" class="space-y-2.5">
-				<label
-					class="flex items-start gap-2.5 p-3 sm:p-3.5 border rounded-2xl cursor-pointer transition-colors bg-[var(--cardapio-secondary)]"
-					:class="
+			<div v-if="produtosDisponiveisFiltrados.length > 0" class="space-y-3">
+				<!-- Toggle Switch -->
+				<div
+					class="p-3 rounded-xl border-2 transition-all duration-200"
+					:class="[
 						multiplosSabores
-							? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5'
-							: 'border-[var(--cardapio-border)]'
-					"
+							? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/5 to-transparent'
+							: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]',
+					]"
 				>
-					<input
-						type="checkbox"
-						v-model="multiplosSabores"
-						class="w-4 h-4 mt-0.5 text-[var(--cardapio-primary)] rounded accent-[var(--cardapio-primary)]"
-					/>
-					<div class="flex-1">
-						<h3 class="font-semibold text-sm text-[var(--cardapio-text)]">
-							Adicionar mais sabores?
-						</h3>
-						<p class="text-xs text-[var(--cardapio-text-muted)] mt-0.5">
-							Personalize com até 4 sabores
-						</p>
-					</div>
-				</label>
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2.5">
+							<div
+								class="w-9 h-9 rounded-lg flex items-center justify-center"
+								:class="[
+									multiplosSabores
+										? 'bg-[var(--cardapio-primary)] text-white'
+										: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+								]"
+							>
+								<Icon name="lucide:git-compare" class="w-4 h-4" />
+							</div>
+							<div>
+								<h3 class="font-semibold text-sm text-[var(--cardapio-text)]">
+									Quer dividir seu sabor?
+								</h3>
+								<p class="text-[10px] text-[var(--cardapio-text-muted)]">
+									Personalize com até 4 sabores
+								</p>
+							</div>
+						</div>
 
-				<div v-if="multiplosSabores" class="space-y-2.5">
-					<div>
-						<label class="block text-xs sm:text-sm font-medium text-[var(--cardapio-text)] mb-2"
-							>Quantos sabores? <span class="text-[var(--cardapio-danger)]">*</span></label
+						<button
+							type="button"
+							class="relative w-11 h-6 rounded-full transition-colors duration-200"
+							:class="[
+								multiplosSabores ? 'bg-[var(--cardapio-primary)]' : 'bg-[var(--cardapio-border)]',
+							]"
+							@click="multiplosSabores = !multiplosSabores"
 						>
-						<div class="grid grid-cols-3 gap-2">
-							<label
+							<span
+								class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200"
+								:class="multiplosSabores ? 'translate-x-5' : 'translate-x-0'"
+							/>
+						</button>
+					</div>
+				</div>
+
+				<!-- Conteúdo quando ativado -->
+				<div v-if="multiplosSabores" class="space-y-3 animate-in slide-in-from-top-2 duration-300">
+					<!-- Segmented Control -->
+					<div>
+						<label class="text-xs font-medium text-[var(--cardapio-text)] mb-2 block">
+							Quantos sabores? <span class="text-[var(--cardapio-danger)]">*</span>
+						</label>
+						<div class="flex p-0.5 bg-[var(--cardapio-secondary)] rounded-lg">
+							<button
 								v-for="opcao in opcoesSabores"
 								:key="opcao.value"
-								class="relative flex items-center justify-center gap-1 p-2.5 sm:p-3 border-2 rounded-2xl cursor-pointer transition-all"
-								:class="
+								type="button"
+								class="flex-1 py-2 px-2 rounded-md text-xs font-medium transition-all duration-200"
+								:class="[
 									quantidadeSabores === opcao.value
-										? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10 scale-105'
-										: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]'
-								"
+										? 'bg-[var(--cardapio-primary)] text-white shadow-sm'
+										: 'text-[var(--cardapio-text-muted)]',
+								]"
+								@click="quantidadeSabores = opcao.value as 2 | 3 | 4"
 							>
-								<input
-									type="radio"
-									:value="opcao.value"
-									v-model="quantidadeSabores"
-									class="sr-only"
-								/>
-								<Icon
-									:name="
-										quantidadeSabores === opcao.value ? 'lucide:check-circle-2' : 'lucide:circle'
-									"
-									class="w-3 h-3"
-									:class="
-										quantidadeSabores === opcao.value
-											? 'text-[var(--cardapio-primary)]'
-											: 'text-[var(--cardapio-text-muted)]'
-									"
-								/>
-								<span
-									class="font-semibold text-xs"
-									:class="
-										quantidadeSabores === opcao.value
-											? 'text-[var(--cardapio-primary)]'
-											: 'text-[var(--cardapio-text)]'
-									"
-									>{{ opcao.label }}</span
-								>
-							</label>
+								{{ opcao.label }}
+							</button>
 						</div>
 					</div>
 
+					<!-- Lista de sabores -->
 					<div class="space-y-2">
-						<label class="block text-xs sm:text-sm font-medium text-[var(--cardapio-text)]"
+						<label class="text-xs font-medium text-[var(--cardapio-text)] block"
 							>Escolha os sabores</label
 						>
-						<div v-if="carregandoProdutos" class="text-center py-3">
+
+						<div v-if="carregandoProdutos" class="text-center py-4">
 							<Icon
 								name="lucide:loader-2"
 								class="w-5 h-5 animate-spin text-[var(--cardapio-primary)] mx-auto"
 							/>
 						</div>
+
 						<div v-else class="space-y-2">
+							<!-- Slot 1: Produto atual -->
 							<div
-								class="flex items-center gap-2 p-2.5 sm:p-3 border-2 rounded-2xl bg-[var(--cardapio-primary)]/10 border-[var(--cardapio-primary)]"
+								class="flex items-center gap-2.5 p-3 border-2 rounded-xl bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent border-[var(--cardapio-primary)]"
 							>
 								<div
-									class="w-6 h-6 rounded-full bg-[var(--cardapio-primary)] flex items-center justify-center text-white font-bold text-[10px]"
+									class="w-7 h-7 rounded-full bg-[var(--cardapio-primary)] flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
 								>
 									1
 								</div>
@@ -401,30 +582,33 @@ const adicionarAoCarrinho = (): void => {
 									<p class="text-xs font-semibold text-[var(--cardapio-text)] truncate">
 										{{ produto?.nome }}
 									</p>
+									<p class="text-[10px] text-[var(--cardapio-text-muted)]">Sabor principal</p>
 								</div>
-								<Icon name="lucide:lock" class="w-3 h-3 text-[var(--cardapio-primary)]" />
+								<Icon name="lucide:lock" class="w-4 h-4 text-[var(--cardapio-primary)]" />
 							</div>
 
+							<!-- Slots 2, 3, 4 -->
 							<div
 								v-for="index in maxSaboresAdicionais"
 								:key="index"
-								class="flex items-center gap-2 p-2.5 sm:p-3 border-2 rounded-2xl"
-								:class="
+								class="flex items-center gap-2.5 p-3 border-2 rounded-xl transition-all duration-200"
+								:class="[
 									saboresSelecionados[index - 1]
-										? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10'
-										: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]'
-								"
+										? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent'
+										: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]',
+								]"
 							>
 								<div
-									class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]"
-									:class="
+									class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+									:class="[
 										saboresSelecionados[index - 1]
 											? 'bg-[var(--cardapio-primary)] text-white'
-											: 'bg-[var(--cardapio-secondary)] text-[var(--cardapio-text-muted)]'
-									"
+											: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+									]"
 								>
 									{{ index + 1 }}
 								</div>
+
 								<div
 									v-if="saboresSelecionados[index - 1]"
 									class="flex-1 flex items-center justify-between min-w-0"
@@ -438,7 +622,7 @@ const adicionarAoCarrinho = (): void => {
 									</p>
 									<button
 										type="button"
-										class="ml-1 px-2 py-1 text-xs font-medium text-[var(--cardapio-primary)] border border-[var(--cardapio-primary)] rounded-lg"
+										class="ml-1 px-2 py-1 text-[10px] font-medium text-[var(--cardapio-primary)] border border-[var(--cardapio-primary)] rounded-md"
 										@click="
 											() => {
 												const n = [...saboresSelecionados];
@@ -450,7 +634,7 @@ const adicionarAoCarrinho = (): void => {
 										Trocar
 									</button>
 								</div>
-								<div v-else class="flex-1 min-w-0">
+								<div v-else class="flex-1 min-w-0 relative">
 									<UiSelectMenu
 										v-model="saboresSelecionados[index - 1]"
 										:options="
@@ -464,6 +648,7 @@ const adicionarAoCarrinho = (): void => {
 										searchPlaceholder="Buscar..."
 										:searchable="true"
 										size="sm"
+										class="select-menu-force-upward"
 									/>
 								</div>
 							</div>
@@ -473,164 +658,158 @@ const adicionarAoCarrinho = (): void => {
 			</div>
 
 			<!-- Grupos de Adicionais -->
-			<div v-if="gruposAdicionais.length > 0" class="space-y-2.5">
-				<div v-for="grupo in gruposAdicionais" :key="grupo.id" class="space-y-2">
-					<label
-						class="relative flex items-center justify-between gap-2 p-2.5 sm:p-3 border-2 rounded-2xl cursor-pointer transition-all"
-						:class="
-							grupoSelecionado === grupo.id
-								? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10'
-								: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]'
-						"
-						@click="grupoSelecionado = grupoSelecionado === grupo.id ? null : grupo.id"
+			<div v-if="gruposAdicionais.length > 0" class="space-y-3">
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:plus-circle" class="w-3.5 h-3.5 text-[var(--cardapio-primary)]" />
+					<h3 class="text-xs font-semibold text-[var(--cardapio-text)]">Personalize seu pedido</h3>
+				</div>
+
+				<div class="space-y-2">
+					<div
+						v-for="grupo in gruposAdicionais"
+						:key="grupo.id"
+						class="border-2 rounded-xl overflow-hidden transition-all duration-200"
+						:class="[
+							grupoExpandido === grupo.id
+								? 'border-[var(--cardapio-primary)]'
+								: 'border-[var(--cardapio-border)]',
+						]"
 					>
-						<Icon
-							:name="grupoSelecionado === grupo.id ? 'lucide:check-circle-2' : 'lucide:circle'"
-							class="w-3 h-3 flex-shrink-0"
-							:class="
-								grupoSelecionado === grupo.id
-									? 'text-[var(--cardapio-primary)]'
-									: 'text-[var(--cardapio-text-muted)]'
-							"
-						/>
-						<div class="flex-1 min-w-0">
-							<h3
-								class="font-semibold text-sm"
-								:class="
-									grupoSelecionado === grupo.id
-										? 'text-[var(--cardapio-primary)]'
-										: 'text-[var(--cardapio-text)]'
-								"
+						<button
+							type="button"
+							class="w-full flex items-center gap-2.5 p-3 text-left transition-colors"
+							:class="[
+								grupoExpandido === grupo.id
+									? 'bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent'
+									: 'bg-[var(--cardapio-secondary)]',
+							]"
+							@click="toggleGrupo(grupo.id)"
+						>
+							<div
+								class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+								:class="[
+									grupoExpandido === grupo.id
+										? 'bg-[var(--cardapio-primary)] text-white'
+										: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+								]"
 							>
-								{{ grupo.nome
-								}}<span v-if="grupo.obrigatorio" class="text-[var(--cardapio-danger)]">*</span>
-							</h3>
-							<p class="text-xs mt-0.5 text-[var(--cardapio-text-muted)]">
-								{{ grupo.descricao || "Escolha seus adicionais" }}
-							</p>
-						</div>
-						<span
-							class="text-xs font-medium whitespace-nowrap"
-							:class="
-								grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0) > 0
-									? 'text-[var(--cardapio-primary)]'
-									: 'text-[var(--cardapio-text-muted)]'
-							"
-							>{{ grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0) }}/{{
-								grupo.max_selecao
-							}}</span
-						>
-					</label>
+								<Icon :name="getGrupoIcon(grupo.nome)" class="w-4 h-4" />
+							</div>
 
-					<div v-if="grupoSelecionado === grupo.id" class="space-y-2 pl-2 sm:pl-3">
-						<div
-							v-if="
-								grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0) <
-								grupo.max_selecao
-							"
-							class="p-2 sm:p-2.5 border-2 border-dashed border-[var(--cardapio-border)] rounded-2xl"
-						>
-							<UiSelectMenu
-								:model-value="null"
-								@update:model-value="
-									(v) => {
-										if (!v) return;
-										const q = getQuantidadeAdicional(v as string) + 1;
-										const t = grupo.adicionais.reduce((acc, a) => {
-											if (a.id === v) return acc + q;
-											return acc + getQuantidadeAdicional(a.id);
-										}, 0);
-										if (t <= grupo.max_selecao) {
-											adicionaisSelecionados.set(v as string, q);
-											adicionaisSelecionados = new Map(adicionaisSelecionados);
-										}
-									}
-								"
-								:options="
-									grupo.adicionais.map((a) => ({
-										label: `${a.nome}${a.preco > 0 ? ' - ' + formatCurrency(a.preco) : ''}`,
-										value: a.id,
-									}))
-								"
-								placeholder="Adicionar"
-								searchPlaceholder="Buscar..."
-								:searchable="true"
-								size="sm"
-							/>
-						</div>
-
-						<div
-							v-for="adicional in grupo.adicionais.filter((a) => getQuantidadeAdicional(a.id) > 0)"
-							:key="adicional.id"
-							class="flex items-center justify-between p-2.5 sm:p-3 border-2 border-[var(--cardapio-primary)] rounded-2xl bg-[var(--cardapio-primary)]/10"
-						>
 							<div class="flex-1 min-w-0">
-								<p class="text-sm font-semibold text-[var(--cardapio-text)] truncate">
-									{{ adicional.nome }}
-									<span class="text-[var(--cardapio-text-muted)]"
-										>({{ getQuantidadeAdicional(adicional.id) }}x)</span
-									>
+								<h4
+									class="font-semibold text-sm"
+									:class="[
+										grupoExpandido === grupo.id
+											? 'text-[var(--cardapio-primary)]'
+											: 'text-[var(--cardapio-text)]',
+									]"
+								>
+									{{ grupo.nome }}
+									<span v-if="grupo.obrigatorio" class="text-[var(--cardapio-danger)]">*</span>
+								</h4>
+								<p class="text-[10px] text-[var(--cardapio-text-muted)]">
+									{{ getGrupoProgressLabel(grupo) }}
 								</p>
 							</div>
-							<div class="flex items-center gap-1.5 sm:gap-2">
-								<span
-									v-if="adicional.preco > 0"
-									class="text-sm font-semibold text-[var(--cardapio-primary)] whitespace-nowrap"
-									>+
-									{{ formatCurrency(adicional.preco * getQuantidadeAdicional(adicional.id)) }}</span
-								>
-								<div class="flex items-center gap-1">
-									<button
-										v-if="adicional.permite_multiplas_unidades"
-										type="button"
-										class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
-										@click="
-											() => {
-												const q = getQuantidadeAdicional(adicional.id);
-												if (q > 1) {
-													adicionaisSelecionados.set(adicional.id, q - 1);
-												} else {
-													adicionaisSelecionados.delete(adicional.id);
-												}
+
+							<Icon
+								name="lucide:chevron-down"
+								class="w-4 h-4 text-[var(--cardapio-text-muted)] transition-transform duration-200"
+								:class="{ 'rotate-180': grupoExpandido === grupo.id }"
+							/>
+						</button>
+
+						<div
+							v-if="grupoExpandido === grupo.id"
+							class="p-3 space-y-2 animate-in slide-in-from-top-2 duration-200"
+						>
+							<div
+								v-if="!isGrupoLimiteAtingido(grupo)"
+								class="p-2 border-2 border-dashed border-[var(--cardapio-border)] rounded-lg bg-[var(--cardapio-secondary)]/50 relative"
+							>
+								<UiSelectMenu
+									:model-value="null"
+									@update:model-value="
+										(v) => {
+											if (!v) return;
+											const q = getQuantidadeAdicional(v as string) + 1;
+											const t = grupo.adicionais.reduce((acc, a) => {
+												if (a.id === v) return acc + q;
+												return acc + getQuantidadeAdicional(a.id);
+											}, 0);
+											if (t <= grupo.max_selecao) {
+												adicionaisSelecionados.set(v as string, q);
 												adicionaisSelecionados = new Map(adicionaisSelecionados);
 											}
-										"
+										}
+									"
+									:options="
+										grupo.adicionais.map((a) => ({
+											label: `${a.nome}${a.preco > 0 ? ' - ' + formatCurrency(a.preco) : ''}`,
+											value: a.id,
+										}))
+									"
+									placeholder="Adicionar"
+									searchPlaceholder="Buscar..."
+									:searchable="true"
+									size="sm"
+									class="select-menu-force-upward"
+								/>
+							</div>
+
+							<div
+								v-for="adicional in grupo.adicionais.filter(
+									(a) => getQuantidadeAdicional(a.id) > 0,
+								)"
+								:key="adicional.id"
+								class="flex items-center justify-between p-2.5 border-2 border-[var(--cardapio-primary)] rounded-lg bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent"
+							>
+								<div class="flex-1 min-w-0">
+									<p class="text-xs font-semibold text-[var(--cardapio-text)]">
+										{{ adicional.nome }}
+										<span class="text-[var(--cardapio-text-muted)] font-normal">
+											({{ getQuantidadeAdicional(adicional.id) }}x)
+										</span>
+									</p>
+								</div>
+								<div class="flex items-center gap-1.5">
+									<span
+										v-if="adicional.preco > 0"
+										class="text-xs font-semibold text-[var(--cardapio-primary)] whitespace-nowrap"
 									>
-										<Icon name="lucide:minus" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-									</button>
-									<button
-										v-if="adicional.permite_multiplas_unidades"
-										type="button"
-										class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
-										@click="
-											() => {
-												const q = getQuantidadeAdicional(adicional.id) + 1;
-												const t = grupo.adicionais.reduce((acc, a) => {
-													if (a.id === adicional.id) return acc + q;
-													return acc + getQuantidadeAdicional(a.id);
-												}, 0);
-												if (t <= grupo.max_selecao) {
-													adicionaisSelecionados.set(adicional.id, q);
+										+ {{ formatCurrency(adicional.preco * getQuantidadeAdicional(adicional.id)) }}
+									</span>
+									<div class="flex items-center gap-0.5">
+										<button
+											v-if="adicional.permite_multiplas_unidades"
+											type="button"
+											class="w-7 h-7 flex items-center justify-center rounded-md border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
+											@click="alterarAdicional(grupo, adicional, -1)"
+										>
+											<Icon name="lucide:minus" class="w-3 h-3" />
+										</button>
+										<button
+											v-if="adicional.permite_multiplas_unidades"
+											type="button"
+											class="w-7 h-7 flex items-center justify-center rounded-md border-2 border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
+											@click="alterarAdicional(grupo, adicional, 1)"
+										>
+											<Icon name="lucide:plus" class="w-3 h-3" />
+										</button>
+										<button
+											type="button"
+											class="w-7 h-7 flex items-center justify-center rounded-md bg-[var(--cardapio-danger)] text-white hover:bg-[var(--cardapio-danger)]/80 transition-colors"
+											@click="
+												() => {
+													adicionaisSelecionados.delete(adicional.id);
 													adicionaisSelecionados = new Map(adicionaisSelecionados);
 												}
-											}
-										"
-									>
-										<Icon name="lucide:plus" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-									</button>
-									<button
-										v-if="!adicional.permite_multiplas_unidades"
-										type="button"
-										class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
-										@click="
-											() => {
-												adicionaisSelecionados.delete(adicional.id);
-												adicionaisSelecionados = new Map(adicionaisSelecionados);
-											}
-										"
-									>
-										<Icon name="lucide:trash-2" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-									</button>
+											"
+										>
+											<Icon name="lucide:trash-2" class="w-3 h-3" />
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -639,59 +818,86 @@ const adicionarAoCarrinho = (): void => {
 			</div>
 
 			<!-- Observações -->
-			<div class="space-y-1.5">
-				<label class="text-sm font-medium text-[var(--cardapio-text)]">Alguma observação?</label>
+			<div class="space-y-2">
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:message-square" class="w-3.5 h-3.5 text-[var(--cardapio-primary)]" />
+					<h3 class="text-xs font-semibold text-[var(--cardapio-text)]">Alguma observação?</h3>
+				</div>
 				<UiTextarea v-model="observacao" :rows="2" placeholder="Ex: Sem cebola..." />
+				<p class="text-[10px] text-[var(--cardapio-text-muted)] flex items-center gap-1">
+					<Icon name="lucide:info" class="w-3 h-3" />
+					O estabelecimento fará o possível para atender
+				</p>
 			</div>
 		</div>
 
 		<template #footer>
-			<div
-				class="p-3 sm:p-4 space-y-3 bg-[var(--cardapio-secondary)] border-t border-[var(--cardapio-border)]"
-			>
-				<div class="flex items-center justify-between">
+			<div class="p-4 bg-[var(--cardapio-secondary)] border-t border-[var(--cardapio-border)]">
+				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border border-[var(--cardapio-border)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] transition-colors disabled:opacity-50"
+							class="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--cardapio-border)] text-[var(--cardapio-text)] hover:border-[var(--cardapio-primary)] hover:text-[var(--cardapio-primary)] transition-colors disabled:opacity-50"
 							:disabled="quantidade <= 1"
 							@click="quantidade--"
 						>
 							<Icon name="lucide:minus" class="w-4 h-4" />
 						</button>
-						<span
-							class="text-base sm:text-lg font-semibold text-[var(--cardapio-text)] w-10 text-center"
-							>{{ quantidade }}</span
-						>
+						<span class="text-base font-bold text-[var(--cardapio-text)] w-8 text-center">
+							{{ quantidade }}
+						</span>
 						<button
 							type="button"
-							class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
+							class="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--cardapio-primary)] text-[var(--cardapio-primary)] hover:bg-[var(--cardapio-primary)] hover:text-white transition-colors"
 							@click="quantidade++"
 						>
 							<Icon name="lucide:plus" class="w-4 h-4" />
 						</button>
 					</div>
 					<div class="text-right">
-						<p class="text-xs text-[var(--cardapio-text-muted)]">Total</p>
-						<p class="text-xl font-bold text-[var(--cardapio-primary)]">
+						<p class="text-[10px] text-[var(--cardapio-text-muted)]">Total</p>
+						<p class="text-lg font-bold text-[var(--cardapio-primary)]">
 							{{ formatCurrency(precoTotal) }}
 						</p>
 					</div>
 				</div>
 				<button
 					type="button"
-					class="w-full py-3 sm:py-3.5 px-4 rounded-2xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 text-base"
-					:class="
+					class="w-full py-3 px-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 text-sm"
+					:class="[
 						podeAdicionar
-							? 'bg-[var(--cardapio-primary)] text-white hover:opacity-90'
-							: 'bg-[var(--cardapio-secondary)] text-[var(--cardapio-text-muted)] opacity-50'
-					"
+							? 'bg-[var(--cardapio-primary)] text-white hover:opacity-90 active:scale-[0.98]'
+							: 'bg-[var(--cardapio-border)] text-[var(--cardapio-text-muted)] opacity-50',
+					]"
 					:disabled="!podeAdicionar"
 					@click="adicionarAoCarrinho"
 				>
-					<Icon name="lucide:shopping-cart" class="w-5 h-5" />Adicionar ao carrinho
+					<Icon name="lucide:shopping-cart" class="w-4 h-4" />
+					Adicionar ao carrinho
 				</button>
 			</div>
 		</template>
 	</UiBottomSheet>
 </template>
+
+<style scoped>
+@keyframes slide-in-from-top {
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.animate-in {
+	animation-fill-mode: both;
+}
+
+.slide-in-from-top-2 {
+	animation-name: slide-in-from-top;
+	animation-duration: 200ms;
+}
+</style>

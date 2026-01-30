@@ -97,8 +97,9 @@ const searchQuery = ref("");
 const selectRef = ref<HTMLElement>();
 const searchInputRef = ref<HTMLInputElement>();
 const shouldOpenUpward = ref(false);
+const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 
-// Detectar se deve abrir para cima
+// Detectar se deve abrir para cima e calcular posição
 const checkDropdownPosition = (): void => {
 	if (!selectRef.value) return;
 
@@ -110,7 +111,23 @@ const checkDropdownPosition = (): void => {
 
 	// Abrir para cima se não há espaço suficiente embaixo E há espaço suficiente em cima
 	shouldOpenUpward.value = spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
+
+	// Calcular posição fixa para o dropdown (com margem)
+	dropdownPosition.value = {
+		top: shouldOpenUpward.value ? rect.top - 4 : rect.bottom + 4,
+		left: rect.left,
+		width: rect.width,
+	};
 };
+
+// Estilo computado para posicionamento do dropdown
+const dropdownPositionStyle = computed(() => {
+	return {
+		top: `${dropdownPosition.value.top}px`,
+		left: `${dropdownPosition.value.left}px`,
+		width: `${dropdownPosition.value.width}px`,
+	};
+});
 
 // Gerar ID único usando useId() do Nuxt
 const generatedSelectId = useId();
@@ -227,8 +244,9 @@ const open = (): void => {
 	checkDropdownPosition();
 	isOpen.value = true;
 
-	// Focar no input de busca quando abrir
+	// Atualizar posição ao abrir
 	nextTick(() => {
+		checkDropdownPosition();
 		if (props.searchable && searchInputRef.value) {
 			searchInputRef.value.focus();
 		}
@@ -498,121 +516,124 @@ defineExpose({
 				</div>
 			</div>
 
-			<!-- Dropdown Content -->
-			<div
-				v-if="isOpen"
-				:class="[dropdownClasses, shouldOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1']"
-				class="absolute left-0 right-0 z-[9999]"
-			>
-				<!-- Input de busca -->
-				<div v-if="searchable" class="p-2 border-b border-[var(--border-muted)]">
-					<div class="relative">
-						<Icon
-							name="lucide:search"
-							class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]"
-						/>
-						<input
-							ref="searchInputRef"
-							v-model="searchQuery"
-							type="text"
-							:placeholder="searchPlaceholder"
-							class="w-full pl-9 pr-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200 placeholder-[var(--input-placeholder)]"
-							@input="handleSearch"
-							@click.stop
-						/>
-					</div>
-				</div>
-
-				<!-- Lista de opções -->
-				<div class="max-h-60 overflow-y-auto py-2">
-					<!-- Loading state -->
-					<div
-						v-if="loading"
-						class="flex items-center justify-center py-8 text-[var(--text-muted)]"
-					>
-						<Icon name="lucide:loader-2" class="w-5 h-5 animate-spin mr-2" />
-						Carregando...
-					</div>
-
-					<!-- Opções -->
-					<template v-else-if="filteredOptions.length > 0">
-						<div
-							v-for="option in filteredOptions"
-							:key="option.value"
-							class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1 my-1"
-							:class="{
-								'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
-									!option.disabled && !normalizedValue.includes(option.value),
-								'text-[var(--primary)] bg-[var(--primary-light)]': normalizedValue.includes(
-									option.value,
-								),
-								'text-[var(--text-muted)] cursor-not-allowed opacity-50': option.disabled,
-								'cursor-not-allowed opacity-50':
-									!canSelectMore && !normalizedValue.includes(option.value) && multiple,
-							}"
-							@click="selectOption(option)"
-						>
-							<!-- Ícone da opção -->
-							<Icon v-if="option.icon" :name="option.icon" class="w-4 h-4 mr-2 flex-shrink-0" />
-
-							<!-- Conteúdo da opção -->
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-medium truncate">{{ option.label }}</div>
-								<div v-if="option.description" class="text-xs text-[var(--text-muted)] truncate">
-									{{ option.description }}
-								</div>
-							</div>
-
-							<!-- Checkbox para múltipla seleção -->
-							<div v-if="multiple" class="ml-2 flex-shrink-0">
-								<div
-									class="w-4 h-4 border-2 rounded flex items-center justify-center transition-colors duration-150"
-									:class="{
-										'border-[var(--primary)] bg-[var(--primary)]': normalizedValue.includes(
-											option.value,
-										),
-										'border-[var(--border-default)]': !normalizedValue.includes(option.value),
-									}"
-								>
-									<Icon
-										v-if="normalizedValue.includes(option.value)"
-										name="lucide:check"
-										class="w-3 h-3 text-white"
-									/>
-								</div>
-							</div>
-
-							<!-- Ícone de selecionado para seleção única -->
+			<!-- Dropdown Content - Teleport para body para evitar overflow -->
+			<Teleport to="body">
+				<div
+					v-if="isOpen"
+					:class="[dropdownClasses, 'select-menu-dropdown', 'cardapio-theme-bridge']"
+					:style="dropdownPositionStyle"
+					class="fixed z-[9999]"
+				>
+					<!-- Input de busca -->
+					<div v-if="searchable" class="p-2 border-b border-[var(--border-muted)]">
+						<div class="relative">
 							<Icon
-								v-else-if="normalizedValue.includes(option.value)"
-								name="lucide:check"
-								class="w-4 h-4 ml-2 text-[var(--primary)] flex-shrink-0"
+								name="lucide:search"
+								class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]"
+							/>
+							<input
+								ref="searchInputRef"
+								v-model="searchQuery"
+								type="text"
+								:placeholder="searchPlaceholder"
+								class="w-full pl-9 pr-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200 placeholder-[var(--input-placeholder)]"
+								@input="handleSearch"
+								@click.stop
 							/>
 						</div>
-					</template>
-
-					<!-- Estado sem resultados -->
-					<div
-						v-else-if="searchQuery.trim()"
-						class="px-3 py-8 text-sm text-[var(--text-muted)] text-center"
-					>
-						<Icon name="lucide:search-x" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-						{{ noResultsText }}
 					</div>
 
-					<!-- Estado vazio -->
-					<div v-else class="px-3 py-8 text-sm text-[var(--text-muted)] text-center">
-						<Icon name="lucide:inbox" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-						{{ emptyText }}
+					<!-- Lista de opções -->
+					<div class="max-h-60 overflow-y-auto py-2">
+						<!-- Loading state -->
+						<div
+							v-if="loading"
+							class="flex items-center justify-center py-8 text-[var(--text-muted)]"
+						>
+							<Icon name="lucide:loader-2" class="w-5 h-5 animate-spin mr-2" />
+							Carregando...
+						</div>
+
+						<!-- Opções -->
+						<template v-else-if="filteredOptions.length > 0">
+							<div
+								v-for="option in filteredOptions"
+								:key="option.value"
+								class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1 my-1"
+								:class="{
+									'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
+										!option.disabled && !normalizedValue.includes(option.value),
+									'text-[var(--primary)] bg-[var(--primary-light)]': normalizedValue.includes(
+										option.value,
+									),
+									'text-[var(--text-muted)] cursor-not-allowed opacity-50': option.disabled,
+									'cursor-not-allowed opacity-50':
+										!canSelectMore && !normalizedValue.includes(option.value) && multiple,
+								}"
+								@click="selectOption(option)"
+							>
+								<!-- Ícone da opção -->
+								<Icon v-if="option.icon" :name="option.icon" class="w-4 h-4 mr-2 flex-shrink-0" />
+
+								<!-- Conteúdo da opção -->
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium truncate">{{ option.label }}</div>
+									<div v-if="option.description" class="text-xs text-[var(--text-muted)] truncate">
+										{{ option.description }}
+									</div>
+								</div>
+
+								<!-- Checkbox para múltipla seleção -->
+								<div v-if="multiple" class="ml-2 flex-shrink-0">
+									<div
+										class="w-4 h-4 border-2 rounded flex items-center justify-center transition-colors duration-150"
+										:class="{
+											'border-[var(--primary)] bg-[var(--primary)]': normalizedValue.includes(
+												option.value,
+											),
+											'border-[var(--border-default)]': !normalizedValue.includes(option.value),
+										}"
+									>
+										<Icon
+											v-if="normalizedValue.includes(option.value)"
+											name="lucide:check"
+											class="w-3 h-3 text-white"
+										/>
+									</div>
+								</div>
+
+								<!-- Ícone de selecionado para seleção única -->
+								<Icon
+									v-else-if="normalizedValue.includes(option.value)"
+									name="lucide:check"
+									class="w-4 h-4 ml-2 text-[var(--primary)] flex-shrink-0"
+								/>
+							</div>
+						</template>
+
+						<!-- Estado sem resultados -->
+						<div
+							v-else-if="searchQuery.trim()"
+							class="px-3 py-8 text-sm text-[var(--text-muted)] text-center"
+						>
+							<Icon name="lucide:search-x" class="w-8 h-8 mx-auto mb-2 opacity-50" />
+							{{ noResultsText }}
+						</div>
+
+						<!-- Estado vazio -->
+						<div v-else class="px-3 py-8 text-sm text-[var(--text-muted)] text-center">
+							<Icon name="lucide:inbox" class="w-8 h-8 mx-auto mb-2 opacity-50" />
+							{{ emptyText }}
+						</div>
 					</div>
 				</div>
-			</div>
-		</div>
+			</Teleport>
 
-		<!-- Mensagem de ajuda ou erro -->
-		<div v-if="helpText || errorMessage" class="mt-1.5">
-			<span v-if="errorMessage" class="text-sm text-[var(--error)]">{{ errorMessage }}</span>
-			<span v-else-if="helpText" class="text-sm text-[var(--text-muted)]">{{ helpText }}</span>
+			<!-- Mensagem de ajuda ou erro -->
+			<div v-if="helpText || errorMessage" class="mt-1.5">
+				<span v-if="errorMessage" class="text-sm text-[var(--error)]">{{ errorMessage }}</span>
+				<span v-else-if="helpText" class="text-sm text-[var(--text-muted)]">{{ helpText }}</span>
+			</div>
 		</div>
 	</div>
 </template>

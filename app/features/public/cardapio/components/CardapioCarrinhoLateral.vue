@@ -26,6 +26,14 @@ const limparCarrinho = () => {
 };
 
 /**
+ * Verifica se o item pode ter quantidade alterada
+ * Bloqueia se tiver adicionais selecionados (evita cobrar adicionais não solicitados)
+ */
+const podeAlterarQuantidade = (item: (typeof carrinhoStore.itens)[0]): boolean => {
+	return !item.adicionais || item.adicionais.length === 0;
+};
+
+/**
  * Slug do estabelecimento
  */
 const route = useRoute();
@@ -145,8 +153,9 @@ const finalizarPedido = () => {
 
 						<!-- Linha de Controles: Seletor + Preço Total (largura total) -->
 						<div class="flex items-center justify-between px-3 pb-3 pt-3">
-							<!-- Controles +/- -->
+							<!-- Controles +/- (se permitido) -->
 							<div
+								v-if="podeAlterarQuantidade(item)"
 								class="flex items-center gap-1.5 bg-[var(--cardapio-background)] rounded-lg p-1 ring-1 ring-[var(--cardapio-border)]"
 							>
 								<button
@@ -169,6 +178,21 @@ const finalizarPedido = () => {
 								>
 									<Icon name="lucide:plus" class="w-4 h-4" />
 								</button>
+							</div>
+
+							<!-- Quantidade fixa + texto explicativo (se bloqueado) -->
+							<div v-else class="flex items-start gap-3">
+								<div
+									class="flex items-center gap-2 px-3 py-1.5 bg-[var(--cardapio-secondary)] rounded-lg ring-1 ring-[var(--cardapio-border)]"
+								>
+									<Icon name="lucide:lock" class="w-3.5 h-3.5 text-[var(--cardapio-text-muted)]" />
+									<span class="text-sm font-semibold text-[var(--cardapio-text)]">
+										{{ item.quantidade }}x
+									</span>
+								</div>
+								<p class="text-xs text-[var(--cardapio-text-muted)] leading-tight mt-1.5">
+									Item personalizado
+								</p>
 							</div>
 
 							<!-- Preço Total -->

@@ -42,6 +42,14 @@ const finalizarPedido = async (): Promise<void> => {
 const limparCarrinho = () => {
 	carrinhoStore.limpar();
 };
+
+/**
+ * Verifica se o item pode ter quantidade alterada
+ * Bloqueia se tiver adicionais selecionados (evita cobrar adicionais não solicitados)
+ */
+const podeAlterarQuantidade = (item: (typeof carrinhoStore.itens)[0]): boolean => {
+	return !item.adicionais || item.adicionais.length === 0;
+};
 </script>
 
 <template>
@@ -118,7 +126,11 @@ const limparCarrinho = () => {
 
 					<!-- Linha 2: Controles + Preço -->
 					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-1.5 bg-[var(--cardapio-secondary)] rounded-lg p-1">
+						<!-- Controles +/- (se permitido) -->
+						<div
+							v-if="podeAlterarQuantidade(item)"
+							class="flex items-center gap-1.5 bg-[var(--cardapio-secondary)] rounded-lg p-1"
+						>
 							<button
 								type="button"
 								class="size-7 rounded-md flex items-center justify-center bg-[var(--cardapio-background)] text-[var(--cardapio-text)] hover:bg-[var(--cardapio-hover)] transition-all disabled:opacity-40"
@@ -139,6 +151,21 @@ const limparCarrinho = () => {
 							>
 								<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 							</button>
+						</div>
+
+						<!-- Quantidade fixa + texto explicativo (se bloqueado) -->
+						<div v-else class="flex items-start gap-3">
+							<div
+								class="flex items-center gap-2 px-3 py-1.5 bg-[var(--cardapio-secondary)] rounded-lg ring-1 ring-[var(--cardapio-border)]"
+							>
+								<Icon name="lucide:lock" class="w-3.5 h-3.5 text-[var(--cardapio-text-muted)]" />
+								<span class="text-sm font-semibold text-[var(--cardapio-text)]">
+									{{ item.quantidade }}x
+								</span>
+							</div>
+							<p class="text-xs text-[var(--cardapio-text-muted)] leading-tight mt-1.5">
+								Item personalizado
+							</p>
 						</div>
 
 						<span class="text-base font-bold text-[var(--cardapio-primary)]">
