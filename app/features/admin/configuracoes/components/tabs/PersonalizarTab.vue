@@ -32,9 +32,6 @@ const onSubmit = handleSubmit(async (formValues) => {
 		Object.entries(formValues).filter(([_, value]) => value !== undefined && value !== ""),
 	);
 
-	console.log("🔍 Dados do formulário (antes de limpar):", formValues);
-	console.log("✅ Dados limpos (enviando):", dadosLimpos);
-
 	await salvarTema(dadosLimpos);
 });
 
@@ -94,23 +91,23 @@ watch(
 					// 🔥 Cor secundária: só incluir se for customizada (modo avançado)
 					...(temCorSecundariaCustomizada ? { cor_secundaria: newTema.cor_secundaria } : {}),
 
-					// Campos opcionais: só incluir se existirem
-					...(newTema.cor_sucesso ? { cor_sucesso: newTema.cor_sucesso } : {}),
-					...(newTema.cor_erro ? { cor_erro: newTema.cor_erro } : {}),
-					...(newTema.cor_aviso ? { cor_aviso: newTema.cor_aviso } : {}),
+					// 🎨 Cores de status: sempre usar padrão se não definidas
+					cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.value.cor_sucesso,
+					cor_erro: newTema.cor_erro || CORES_PADRAO.value.cor_erro,
+					cor_aviso: newTema.cor_aviso || CORES_PADRAO.value.cor_aviso,
+
+					// 🎨 Gradientes: sempre usar padrão se não definidos
+					gradiente_promo_inicio:
+						newTema.gradiente_promo_inicio || CORES_PADRAO.value.gradiente_promo_inicio,
+					gradiente_promo_fim:
+						newTema.gradiente_promo_fim || CORES_PADRAO.value.gradiente_promo_fim,
+					gradiente_destaque_inicio:
+						newTema.gradiente_destaque_inicio || CORES_PADRAO.value.gradiente_destaque_inicio,
+					gradiente_destaque_fim:
+						newTema.gradiente_destaque_fim || CORES_PADRAO.value.gradiente_destaque_fim,
+
+					// Cor info (opcional, pode não existir)
 					...(newTema.cor_info ? { cor_info: newTema.cor_info } : {}),
-					...(newTema.gradiente_promo_inicio
-						? { gradiente_promo_inicio: newTema.gradiente_promo_inicio }
-						: {}),
-					...(newTema.gradiente_promo_fim
-						? { gradiente_promo_fim: newTema.gradiente_promo_fim }
-						: {}),
-					...(newTema.gradiente_destaque_inicio
-						? { gradiente_destaque_inicio: newTema.gradiente_destaque_inicio }
-						: {}),
-					...(newTema.gradiente_destaque_fim
-						? { gradiente_destaque_fim: newTema.gradiente_destaque_fim }
-						: {}),
 				},
 			});
 			nextTick(() => {
@@ -163,8 +160,8 @@ const toggleModo = () => {
 
 	// Se alternar para modo simples, limpar cor secundária (será gerada automaticamente)
 	if (!modoAvancado.value) {
-		// 🔥 CRÍTICO: Usar null ao invés de undefined para forçar remoção do campo
-		setFieldValue("cor_secundaria", null);
+		// 🔥 CRÍTICO: Usar undefined ao invés de null para remover do formulário
+		setFieldValue("cor_secundaria", undefined);
 	} else {
 		// Se alternar para modo avançado, definir cor padrão
 		setFieldValue("cor_secundaria", CORES_PADRAO.value.cor_secundaria);
