@@ -577,10 +577,27 @@ const handleScroll = (event: Event) => {
 };
 
 /**
- * Toggle expandir grupo
+ * Toggle expandir grupo com scroll automático
  */
 const toggleGrupo = (grupoId: string) => {
-	grupoExpandido.value = grupoExpandido.value === grupoId ? null : grupoId;
+	const estaExpandindo = grupoExpandido.value !== grupoId;
+	grupoExpandido.value = estaExpandindo ? grupoId : null;
+
+	// Se está expandindo, rola o card para o topo após a animação
+	if (estaExpandindo) {
+		nextTick(() => {
+			// Aguarda a animação de expansão (300ms)
+			setTimeout(() => {
+				const cardElement = document.getElementById(`grupo-${grupoId}`);
+				if (cardElement) {
+					cardElement.scrollIntoView({
+						behavior: "smooth",
+						block: "start",
+					});
+				}
+			}, 100);
+		});
+	}
 };
 
 /**
@@ -1012,6 +1029,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 							<div class="space-y-3">
 								<div
 									v-for="grupo in gruposAdicionais"
+									:id="`grupo-${grupo.id}`"
 									:key="grupo.id"
 									class="border-2 rounded-2xl overflow-hidden transition-all duration-200"
 									:class="[

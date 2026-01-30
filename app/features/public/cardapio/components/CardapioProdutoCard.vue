@@ -250,7 +250,7 @@ const temMultiplasVariacoes = computed(() => {
 					<div class="flex flex-wrap gap-0.5 xs:gap-1 mt-0.5 xs:mt-1.5">
 						<!-- Badge de Promoção -->
 						<span
-							v-if="temPromocao"
+							v-if="produto.em_promocao"
 							class="inline-flex items-center gap-1 px-1.5 py-0.5 cardapio-rounded bg-gradient-to-r from-[var(--cardapio-promo-from)] to-[var(--cardapio-promo-to)] text-[var(--cardapio-promo-text)] text-[10px] font-medium shadow-sm"
 						>
 							<Icon name="lucide:flame" class="w-3 h-3" />
