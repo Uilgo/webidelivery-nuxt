@@ -12,6 +12,7 @@ import type {
 } from "../types/cardapio-publico";
 import { useCarrinhoStore } from "~/stores/carrinho";
 import { useProdutosSabores } from "../composables/useProdutosSabores";
+import { useValidarCupom } from "../composables/useValidarCupom";
 import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
@@ -32,6 +33,7 @@ const emit = defineEmits<Emits>();
 
 const carrinhoStore = useCarrinhoStore();
 const { buscarProdutosPorCategoriaPai } = useProdutosSabores();
+const { validarCupom, calcularDesconto } = useValidarCupom();
 
 // Estados
 const variacaoSelecionadaId = ref<string | null>(null);
@@ -45,6 +47,16 @@ const produtosDisponiveis = ref<ProdutoPublico[]>([]);
 const carregandoProdutos = ref(false);
 const gruposAdicionais = ref<GrupoAdicionalPublico[]>([]);
 const grupoExpandido = ref<string | null>(null);
+
+// Estado para progressive disclosure do footer
+const detalhesExpandidos = ref(false);
+
+// Estado para cupom
+const cupomInput = ref("");
+const cupomAplicado = ref<string | null>(null);
+const descontoCupom = ref(0);
+const erroCupom = ref<string | null>(null);
+const aplicandoCupom = ref(false);
 
 const variacaoSelecionada = computed<VariacaoPublica | null>(() => {
 	if (!variacaoSelecionadaId.value || !props.produto) return null;
@@ -68,6 +80,15 @@ watch(
 			quantidadeSabores.value = 2;
 			saboresSelecionados.value = [];
 			grupoExpandido.value = null;
+
+			// Reseta estados do footer
+			detalhesExpandidos.value = false;
+			cupomInput.value = "";
+			cupomAplicado.value = null;
+			descontoCupom.value = 0;
+			erroCupom.value = null;
+			aplicandoCupom.value = false;
+
 			await Promise.all([carregarProdutosSabores(), carregarGruposAdicionais()]);
 		}
 	},
@@ -201,7 +222,112 @@ const totalAdicionais = computed(() => {
 });
 
 const precoUnitario = computed(() => precoVariacao.value + totalAdicionais.value);
-const precoTotal = computed(() => precoUnitario.value * quantidade.value);
+const subtotal = computed(() => precoUnitario.value * quantidade.value);
+const precoTotal = computed(() => Math.max(0, subtotal.value - descontoCupom.value));
+
+/**
+ * Lista detalhada de itens para exibição
+ */
+const itensDetalhados = computed(() => {
+	const itens: Array<{
+		tipo: "produto" | "adicional" | "desconto";
+		nome: string;
+		subtexto?: string;
+		quantidade: number;
+		precoUnitario: number;
+		precoTotal: number;
+	}> = [];
+
+	// Produto base com variação
+	if (props.produto && variacaoSelecionada.value) {
+		itens.push({
+			tipo: "produto",
+			nome: props.produto.nome,
+			subtexto: variacaoSelecionada.value.nome,
+			quantidade: quantidade.value,
+			precoUnitario: precoVariacao.value,
+			precoTotal: precoVariacao.value * quantidade.value,
+		});
+	}
+
+	// Adicionais selecionados
+	for (const grupo of gruposAdicionais.value) {
+		for (const adicional of grupo.adicionais) {
+			const qtd = adicionaisSelecionados.value.get(adicional.id) ?? 0;
+			if (qtd > 0) {
+				itens.push({
+					tipo: "adicional",
+					nome: adicional.nome,
+					quantidade: qtd,
+					precoUnitario: adicional.preco,
+					precoTotal: adicional.preco * qtd,
+				});
+			}
+		}
+	}
+
+	return itens;
+});
+
+/**
+ * Verifica se tem adicionais selecionados
+ */
+const temAdicionais = computed(() => {
+	return itensDetalhados.value.some((item) => item.tipo === "adicional");
+});
+
+/**
+ * Aplica cupom de desconto
+ */
+const aplicarCupom = async (): Promise<void> => {
+	if (!cupomInput.value.trim()) {
+		erroCupom.value = "Digite um código de cupom";
+		return;
+	}
+
+	try {
+		aplicandoCupom.value = true;
+		erroCupom.value = null;
+
+		// Valida o cupom usando a função RPC
+		const resultado = await validarCupom(
+			props.estabelecimentoId,
+			cupomInput.value.trim(),
+			subtotal.value,
+		);
+
+		if (resultado.valido && resultado.tipo) {
+			// Cupom válido - calcula o desconto
+			const valorDesconto = calcularDesconto(
+				resultado.tipo,
+				resultado.valor_desconto,
+				subtotal.value,
+			);
+
+			cupomAplicado.value = cupomInput.value.trim().toUpperCase();
+			descontoCupom.value = valorDesconto;
+			cupomInput.value = "";
+			erroCupom.value = null;
+		} else {
+			// Cupom inválido - mostra o motivo
+			erroCupom.value = resultado.motivo_invalido || "Cupom inválido";
+		}
+	} catch (error) {
+		erroCupom.value = "Erro ao validar cupom. Tente novamente.";
+		console.error("Erro ao aplicar cupom:", error);
+	} finally {
+		aplicandoCupom.value = false;
+	}
+};
+
+/**
+ * Remove cupom aplicado
+ */
+const removerCupom = (): void => {
+	cupomAplicado.value = null;
+	descontoCupom.value = 0;
+	erroCupom.value = null;
+};
 
 const grupoValido = (grupo: GrupoAdicionalPublico): boolean => {
 	const total = grupo.adicionais.reduce(
@@ -290,7 +416,24 @@ const adicionarAoCarrinho = (): void => {
 };
 
 const toggleGrupo = (grupoId: string) => {
-	grupoExpandido.value = grupoExpandido.value === grupoId ? null : grupoId;
+	const estaExpandindo = grupoExpandido.value !== grupoId;
+	grupoExpandido.value = estaExpandindo ? grupoId : null;
+
+	// Se está expandindo, rola o card para o topo após a animação
+	if (estaExpandindo) {
+		nextTick(() => {
+			// Aguarda a animação de expansão (300ms)
+			setTimeout(() => {
+				const cardElement = document.getElementById(`grupo-${grupoId}`);
+				if (cardElement) {
+					cardElement.scrollIntoView({
+						behavior: "smooth",
+						block: "start",
+					});
+				}
+			}, 100);
+		});
+	}
 };
 
 const getGrupoIcon = (nome: string): string => {
@@ -351,6 +494,29 @@ const isGrupoLimiteAtingido = (grupo: GrupoAdicionalPublico): boolean => {
 const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 	return grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0);
 };
+
+/**
+ * Toggle expandir detalhes com scroll automático
+ */
+const toggleDetalhes = () => {
+	const estaExpandindo = !detalhesExpandidos.value;
+	detalhesExpandidos.value = estaExpandindo;
+
+	// Se está expandindo, rola o botão para o topo após a animação
+	if (estaExpandindo) {
+		nextTick(() => {
+			setTimeout(() => {
+				const buttonElement = document.getElementById("detalhes-button");
+				if (buttonElement) {
+					buttonElement.scrollIntoView({
+						behavior: "smooth",
+						block: "start",
+					});
+				}
+			}, 100);
+		});
+	}
+};
 </script>
 
 <template>
@@ -361,7 +527,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 		:close-on-click-outside="true"
 		class="cardapio-theme-bridge"
 	>
-		<div v-if="produto" class="space-y-4 p-4 pb-36">
+		<div v-if="produto" class="space-y-3 px-3 py-3 pb-6">
 			<!-- Header com Nome e Preço -->
 			<div class="text-center pb-2 border-b border-[var(--cardapio-border)]">
 				<h2 class="text-xl font-bold text-[var(--cardapio-text)]">{{ produto.nome }}</h2>
@@ -377,7 +543,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 			<!-- Imagem -->
 			<div
 				v-if="produto.imagem_url"
-				class="relative w-full aspect-video rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-lg"
+				class="relative w-full h-48 rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-lg"
 			>
 				<img
 					:src="produto.imagem_url"
@@ -667,6 +833,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 				<div class="space-y-2">
 					<div
 						v-for="grupo in gruposAdicionais"
+						:id="`grupo-${grupo.id}`"
 						:key="grupo.id"
 						class="border-2 rounded-xl overflow-hidden transition-all duration-200"
 						:class="[
@@ -828,6 +995,196 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 					<Icon name="lucide:info" class="w-3 h-3" />
 					O estabelecimento fará o possível para atender
 				</p>
+			</div>
+
+			<!-- Seção de Cupom -->
+			<div class="space-y-2">
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:ticket" class="w-3.5 h-3.5 text-[var(--cardapio-primary)]" />
+					<h3 class="text-xs font-semibold text-[var(--cardapio-text)]">Cupom de desconto</h3>
+				</div>
+
+				<!-- Input de cupom (quando não tem cupom aplicado) -->
+				<div v-if="!cupomAplicado" class="space-y-2">
+					<div class="flex gap-2">
+						<input
+							v-model="cupomInput"
+							type="text"
+							placeholder="Digite o código"
+							class="flex-1 px-3 py-2.5 text-xs rounded-lg border-2 transition-all bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--cardapio-primary)] focus:outline-none uppercase"
+							:disabled="aplicandoCupom"
+							@input="cupomInput = ($event.target as HTMLInputElement).value.toUpperCase()"
+							@keyup.enter="aplicarCupom"
+						/>
+						<button
+							type="button"
+							class="px-4 py-2.5 text-xs font-semibold rounded-lg transition-all"
+							:class="[
+								aplicandoCupom
+									? 'bg-[var(--cardapio-border)] text-[var(--cardapio-text-muted)] cursor-wait'
+									: 'bg-[var(--cardapio-primary)] text-white hover:opacity-90',
+							]"
+							:disabled="aplicandoCupom || !cupomInput.trim()"
+							@click="aplicarCupom"
+						>
+							<Icon v-if="aplicandoCupom" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+							<span v-else>Aplicar</span>
+						</button>
+					</div>
+
+					<!-- Mensagem de erro -->
+					<p
+						v-if="erroCupom"
+						class="text-[10px] text-[var(--cardapio-danger)] flex items-center gap-1 px-1"
+					>
+						<Icon name="lucide:alert-circle" class="w-3 h-3" />
+						{{ erroCupom }}
+					</p>
+				</div>
+
+				<!-- Cupom aplicado -->
+				<div
+					v-else
+					class="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-[var(--cardapio-success)]/10 to-transparent border-2 border-[var(--cardapio-success)]"
+				>
+					<div class="flex items-center gap-2.5">
+						<div
+							class="w-8 h-8 rounded-full bg-[var(--cardapio-success)] flex items-center justify-center flex-shrink-0"
+						>
+							<Icon name="lucide:check" class="w-4 h-4 text-white" />
+						</div>
+						<div>
+							<p class="text-xs font-semibold text-[var(--cardapio-text)]">
+								{{ cupomAplicado }}
+							</p>
+							<p class="text-xs text-[var(--cardapio-success)] font-bold">
+								{{
+									descontoCupom > 0
+										? `-${formatCurrency(descontoCupom)} de desconto`
+										: "Frete grátis aplicado"
+								}}
+							</p>
+						</div>
+					</div>
+					<button
+						type="button"
+						class="text-xs font-medium text-[var(--cardapio-danger)] hover:underline px-2"
+						@click="removerCupom"
+					>
+						Remover
+					</button>
+				</div>
+			</div>
+
+			<!-- Seção Ver Detalhes (Progressive Disclosure) -->
+			<div v-if="temAdicionais || cupomAplicado" class="space-y-2">
+				<!-- Botão para expandir/colapsar -->
+				<button
+					id="detalhes-button"
+					type="button"
+					class="w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all"
+					:class="[
+						detalhesExpandidos
+							? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/5 to-transparent'
+							: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)] hover:border-[var(--cardapio-primary)]/50',
+					]"
+					@click="toggleDetalhes"
+				>
+					<div class="flex items-center gap-2.5">
+						<div
+							class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+							:class="[
+								detalhesExpandidos
+									? 'bg-[var(--cardapio-primary)] text-white'
+									: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+							]"
+						>
+							<Icon name="lucide:receipt" class="w-4 h-4" />
+						</div>
+						<div class="text-left">
+							<p
+								class="text-xs font-semibold"
+								:class="[
+									detalhesExpandidos
+										? 'text-[var(--cardapio-primary)]'
+										: 'text-[var(--cardapio-text)]',
+								]"
+							>
+								{{ detalhesExpandidos ? "Ocultar detalhes" : "Ver detalhes" }}
+							</p>
+							<p class="text-[10px] text-[var(--cardapio-text-muted)]">Resumo do seu pedido</p>
+						</div>
+					</div>
+					<Icon
+						name="lucide:chevron-down"
+						class="w-4 h-4 text-[var(--cardapio-text-muted)] transition-transform duration-300"
+						:class="{ 'rotate-180': detalhesExpandidos }"
+					/>
+				</button>
+
+				<!-- Detalhes expandidos -->
+				<div
+					v-if="detalhesExpandidos"
+					class="space-y-2 p-3 rounded-lg bg-[var(--cardapio-secondary)]/50 border border-[var(--cardapio-border)] animate-in slide-in-from-top-2 duration-300"
+				>
+					<!-- Lista de itens -->
+					<div
+						v-for="(item, index) in itensDetalhados"
+						:key="index"
+						class="flex items-start justify-between text-xs pb-2 border-b border-[var(--cardapio-border)] last:border-0 last:pb-0"
+					>
+						<div class="flex-1 min-w-0 pr-2">
+							<p class="font-semibold text-[var(--cardapio-text)]">
+								{{ item.nome }}
+								<span
+									v-if="item.quantidade > 1"
+									class="text-[var(--cardapio-text-muted)] font-normal"
+								>
+									({{ item.quantidade }}x)
+								</span>
+							</p>
+							<p v-if="item.subtexto" class="text-[10px] text-[var(--cardapio-text-muted)] mt-0.5">
+								{{ item.subtexto }}
+							</p>
+						</div>
+						<p class="font-bold text-[var(--cardapio-text)] whitespace-nowrap">
+							{{ formatCurrency(item.precoTotal) }}
+						</p>
+					</div>
+
+					<!-- Subtotal (se tiver desconto) -->
+					<div
+						v-if="cupomAplicado && descontoCupom > 0"
+						class="flex items-center justify-between text-xs pt-2 border-t-2 border-[var(--cardapio-border)]"
+					>
+						<p class="font-medium text-[var(--cardapio-text)]">Subtotal</p>
+						<p class="font-bold text-[var(--cardapio-text)]">{{ formatCurrency(subtotal) }}</p>
+					</div>
+
+					<!-- Desconto do cupom -->
+					<div
+						v-if="cupomAplicado && descontoCupom > 0"
+						class="flex items-center justify-between text-xs"
+					>
+						<p class="text-[var(--cardapio-success)] font-medium flex items-center gap-1">
+							<Icon name="lucide:tag" class="w-3.5 h-3.5" />
+							Cupom {{ cupomAplicado }}
+						</p>
+						<p class="font-bold text-[var(--cardapio-success)]">
+							-{{ formatCurrency(descontoCupom) }}
+						</p>
+					</div>
+
+					<!-- Total final -->
+					<div
+						class="flex items-center justify-between text-sm pt-2 border-t-2 border-[var(--cardapio-border)]"
+					>
+						<p class="font-bold text-[var(--cardapio-text)]">Total</p>
+						<p class="font-bold text-base text-[var(--cardapio-primary)]">
+							{{ formatCurrency(precoTotal) }}
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 

@@ -16,6 +16,7 @@ import type {
 } from "../types/cardapio-publico";
 import { useCarrinhoStore } from "~/stores/carrinho";
 import { useProdutosSabores } from "../composables/useProdutosSabores";
+import { useValidarCupom } from "../composables/useValidarCupom";
 import { formatCurrency } from "~/lib/formatters/currency";
 
 interface Props {
@@ -39,6 +40,9 @@ const carrinhoStore = useCarrinhoStore();
 
 // Composable para buscar produtos
 const { buscarProdutosPorCategoriaPai } = useProdutosSabores();
+
+// Composable para validar cupons
+const { validarCupom, calcularDesconto } = useValidarCupom();
 
 // Estado local
 const variacaoSelecionadaId = ref<string | null>(null);
@@ -425,26 +429,28 @@ const aplicarCupom = async (): Promise<void> => {
 		aplicandoCupom.value = true;
 		erroCupom.value = null;
 
-		// TODO: Integrar com API real de cupons
-		// Simulação de validação
-		await new Promise((resolve) => setTimeout(resolve, 800));
+		// Valida o cupom usando a função RPC
+		const resultado = await validarCupom(
+			props.estabelecimentoId,
+			cupomInput.value.trim(),
+			subtotal.value,
+		);
 
-		const cupomUpper = cupomInput.value.trim().toUpperCase();
+		if (resultado.valido && resultado.tipo) {
+			// Cupom válido - calcula o desconto
+			const valorDesconto = calcularDesconto(
+				resultado.tipo,
+				resultado.valor_desconto,
+				subtotal.value,
+			);
 
-		// Simulação de cupons válidos
-		const cuponsValidos: Record<string, number> = {
-			PRIMEIRACOMPRA: 5.0,
-			DESCONTO10: subtotal.value * 0.1,
-			FRETEGRATIS: 0, // Será implementado no checkout
-		};
-
-		if (cuponsValidos[cupomUpper] !== undefined) {
-			cupomAplicado.value = cupomUpper;
-			descontoCupom.value = cuponsValidos[cupomUpper] ?? 0;
+			cupomAplicado.value = cupomInput.value.trim().toUpperCase();
+			descontoCupom.value = valorDesconto;
 			cupomInput.value = "";
 			erroCupom.value = null;
 		} else {
-			erroCupom.value = "Cupom inválido ou expirado";
+			// Cupom inválido - mostra o motivo
+			erroCupom.value = resultado.motivo_invalido || "Cupom inválido";
 		}
 	} catch (error) {
 		erroCupom.value = "Erro ao validar cupom. Tente novamente.";
@@ -670,6 +676,29 @@ const isGrupoLimiteAtingido = (grupo: GrupoAdicionalPublico): boolean => {
 const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 	return grupo.adicionais.reduce((acc, a) => acc + getQuantidadeAdicional(a.id), 0);
 };
+
+/**
+ * Toggle expandir detalhes com scroll automático
+ */
+const toggleDetalhes = (): void => {
+	const estaExpandindo = !detalhesExpandidos.value;
+	detalhesExpandidos.value = estaExpandindo;
+
+	// Se está expandindo, rola o botão para o topo após a animação
+	if (estaExpandindo) {
+		nextTick(() => {
+			setTimeout(() => {
+				const buttonElement = document.getElementById("detalhes-button");
+				if (buttonElement) {
+					buttonElement.scrollIntoView({
+						behavior: "smooth",
+						block: "start",
+					});
+				}
+			}, 100);
+		});
+	}
+};
 </script>
 
 <template>
@@ -699,11 +728,11 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 			<div class="relative h-full flex flex-col">
 				<!-- Conteúdo Scrollável -->
 				<div class="flex-1 overflow-y-auto" @scroll="handleScroll">
-					<div class="space-y-6 p-4">
+					<div class="space-y-4 px-3 py-3">
 						<!-- Seção da Imagem -->
 						<div
 							v-if="produto.imagem_url"
-							class="relative w-full aspect-video rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-lg"
+							class="relative w-full h-48 rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-lg"
 						>
 							<img
 								:src="produto.imagem_url"
@@ -1248,8 +1277,9 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 										v-model="cupomInput"
 										type="text"
 										placeholder="Digite o código"
-										class="flex-1 px-4 py-3 text-sm rounded-xl border-2 transition-all bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--cardapio-primary)] focus:outline-none"
+										class="flex-1 px-4 py-3 text-sm rounded-xl border-2 transition-all bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--cardapio-primary)] focus:outline-none uppercase"
 										:disabled="aplicandoCupom"
+										@input="cupomInput = ($event.target as HTMLInputElement).value.toUpperCase()"
 										@keyup.enter="aplicarCupom"
 									/>
 									<button
@@ -1298,7 +1328,11 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 											{{ cupomAplicado }}
 										</p>
 										<p class="text-sm text-[var(--cardapio-success)] font-bold">
-											-{{ formatCurrency(descontoCupom) }} de desconto
+											{{
+												descontoCupom > 0
+													? `-${formatCurrency(descontoCupom)} de desconto`
+													: "Frete grátis aplicado"
+											}}
 										</p>
 									</div>
 								</div>
@@ -1316,6 +1350,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 						<div v-if="temAdicionais || cupomAplicado" class="space-y-3">
 							<!-- Botão para expandir/colapsar -->
 							<button
+								id="detalhes-button"
 								type="button"
 								class="w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all"
 								:class="[
@@ -1323,7 +1358,7 @@ const getTotalSelecionadoGrupo = (grupo: GrupoAdicionalPublico): number => {
 										? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/5 to-transparent'
 										: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)] hover:border-[var(--cardapio-primary)]/50',
 								]"
-								@click="detalhesExpandidos = !detalhesExpandidos"
+								@click="toggleDetalhes"
 							>
 								<div class="flex items-center gap-3">
 									<div
