@@ -7,6 +7,11 @@
  * Permite scroll natural na área de conteúdo sem problemas de UX.
  */
 
+// Desabilitar herança automática de atributos (class será aplicado manualmente)
+defineOptions({
+	inheritAttrs: false,
+});
+
 interface Props {
 	/** Controla a visibilidade do drawer */
 	modelValue: boolean;
@@ -43,6 +48,9 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
+
+// Aceitar atributos extras (como class)
+const attrs = useAttrs();
 
 // IDs únicos para acessibilidade
 const titleId = useId();
@@ -93,7 +101,10 @@ const drawerClasses = computed(() => {
 		"sm:max-w-none", // Remove limitação em telas maiores
 	];
 
-	return [...baseClasses, sizeClasses[props.size], ...responsiveClasses].join(" ");
+	// Adicionar classe customizada se fornecida via attrs
+	const customClass = attrs.class ? [attrs.class as string] : [];
+
+	return [...baseClasses, sizeClasses[props.size], ...responsiveClasses, ...customClass].join(" ");
 });
 
 // Classes computadas para o header

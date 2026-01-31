@@ -178,26 +178,16 @@ const categoriaPai = computed<CategoriaPublica | null>(() => {
 	// Busca a categoria do produto
 	const categoriaAtual = props.categorias.find((c) => c.id === props.produto!.categoria_id);
 	if (!categoriaAtual) {
-		console.log("❌ Categoria do produto não encontrada");
 		return null;
 	}
-
-	console.log(
-		"📂 Categoria do produto:",
-		categoriaAtual.nome,
-		"categoria_pai_id:",
-		categoriaAtual.categoria_pai_id,
-	);
 
 	// Se tem categoria_pai_id, busca a categoria pai
 	if (categoriaAtual.categoria_pai_id) {
 		const pai = props.categorias.find((c) => c.id === categoriaAtual.categoria_pai_id);
-		console.log("📁 Categoria pai encontrada:", pai?.nome);
 		return pai ?? null;
 	}
 
 	// Se não tem pai, ela mesma é a categoria pai (categoria raiz)
-	console.log("📁 Categoria raiz (sem pai):", categoriaAtual.nome);
 	return categoriaAtual;
 });
 
@@ -238,12 +228,6 @@ const carregarProdutosSabores = async () => {
 		);
 
 		produtosDisponiveis.value = produtos;
-
-		console.log("✅ Produtos carregados:", {
-			categoriaPai: categoriaPai.value.nome,
-			subcategorias: subcategoriasIds.value.length,
-			totalProdutos: produtos.length,
-		});
 	} catch (err) {
 		console.error("Erro ao carregar produtos:", err);
 		produtosDisponiveis.value = [];
@@ -316,8 +300,6 @@ const carregarGruposAdicionais = async () => {
 					};
 				})
 				.filter((g): g is NonNullable<typeof g> => g !== null && g.adicionais.length > 0);
-
-			console.log("✅ Grupos de adicionais carregados:", gruposAdicionais.value.length);
 		} else {
 			gruposAdicionais.value = [];
 		}

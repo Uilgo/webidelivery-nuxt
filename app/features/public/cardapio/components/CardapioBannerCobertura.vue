@@ -16,8 +16,18 @@ const props = defineProps<Props>();
 
 /**
  * Extrair configurações de cobertura
+ * ✅ CORRIGIDO: Validar se config_geral existe antes de acessar
  */
 const configCobertura = computed(() => {
+	// Validar se estabelecimento e config_geral existem
+	if (!props.estabelecimento?.config_geral) {
+		return {
+			cidades: [],
+			tipoTaxa: "taxa_unica",
+			taxasPorLocalizacao: [],
+		};
+	}
+
 	const configGeral = props.estabelecimento.config_geral as Record<string, unknown>;
 
 	const cidades = (configGeral.cidades_atendidas as string[]) || [];
@@ -43,10 +53,13 @@ const configCobertura = computed(() => {
 const mensagemCobertura = computed(() => {
 	const { cidades, bairros, tipoTaxa } = configCobertura.value;
 
+	// Validar se bairros existe (TypeScript safety)
+	const bairrosAtivos = bairros || [];
+
 	if (!cidades.length) return null;
 
 	// 1 Cidade sem bairros específicos
-	if (cidades.length === 1 && (tipoTaxa !== "taxa_localizacao" || !bairros.length)) {
+	if (cidades.length === 1 && (tipoTaxa !== "taxa_localizacao" || !bairrosAtivos.length)) {
 		return {
 			principal: `📍 Entregamos em toda ${cidades[0]}`,
 			detalhes: null,
@@ -54,20 +67,20 @@ const mensagemCobertura = computed(() => {
 	}
 
 	// 1 Cidade com bairros específicos
-	if (cidades.length === 1 && tipoTaxa === "taxa_localizacao" && bairros.length > 0) {
-		const bairrosDaCidade = bairros
+	if (cidades.length === 1 && tipoTaxa === "taxa_localizacao" && bairrosAtivos.length > 0) {
+		const bairrosDaCidade = bairrosAtivos
 			.filter((b) => b.cidade === cidades[0])
 			.map((b) => b.nome)
 			.slice(0, 5);
 
 		return {
 			principal: `📍 Entregamos em ${cidades[0]}`,
-			detalhes: `Bairros: ${bairrosDaCidade.join(", ")}${bairros.length > 5 ? ` e mais ${bairros.length - 5}` : ""}`,
+			detalhes: `Bairros: ${bairrosDaCidade.join(", ")}${bairrosAtivos.length > 5 ? ` e mais ${bairrosAtivos.length - 5}` : ""}`,
 		};
 	}
 
 	// Múltiplas cidades sem bairros específicos
-	if (cidades.length > 1 && (tipoTaxa !== "taxa_localizacao" || !bairros.length)) {
+	if (cidades.length > 1 && (tipoTaxa !== "taxa_localizacao" || !bairrosAtivos.length)) {
 		const cidadesFormatadas =
 			cidades.length === 2
 				? cidades.join(" e ")
@@ -80,18 +93,18 @@ const mensagemCobertura = computed(() => {
 	}
 
 	// Múltiplas cidades com bairros específicos
-	if (cidades.length > 1 && tipoTaxa === "taxa_localizacao" && bairros.length > 0) {
+	if (cidades.length > 1 && tipoTaxa === "taxa_localizacao" && bairrosAtivos.length > 0) {
 		// Agrupar bairros por cidade
 		const bairrosPorCidade = cidades
 			.map((cidade) => {
-				const bairrosDaCidade = bairros
+				const bairrosDaCidade = bairrosAtivos
 					.filter((b) => b.cidade === cidade)
 					.map((b) => b.nome)
 					.slice(0, 3);
 
 				if (bairrosDaCidade.length === 0) return null;
 
-				const totalBairros = bairros.filter((b) => b.cidade === cidade).length;
+				const totalBairros = bairrosAtivos.filter((b) => b.cidade === cidade).length;
 				const maisInfo = totalBairros > 3 ? ` e mais ${totalBairros - 3}` : "";
 
 				return `• ${cidade}: ${bairrosDaCidade.join(", ")}${maisInfo}`;
