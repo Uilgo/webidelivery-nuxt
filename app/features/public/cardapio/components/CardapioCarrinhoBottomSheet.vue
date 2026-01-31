@@ -81,8 +81,8 @@ const podeAlterarQuantidade = (item: (typeof carrinhoStore.itens)[0]): boolean =
 			<p class="text-sm text-[var(--cardapio-text-muted)]">Adicione produtos para começar</p>
 		</div>
 
-		<!-- Lista de Itens (mais espaço) -->
-		<div v-else class="px-2 pb-2 space-y-2.5 max-h-[60vh] overflow-y-auto">
+		<!-- Lista de Itens (scroll natural) -->
+		<div v-else class="p-3 space-y-2.5">
 			<TransitionGroup name="list">
 				<div
 					v-for="item in carrinhoStore.itens"
@@ -244,8 +244,8 @@ const podeAlterarQuantidade = (item: (typeof carrinhoStore.itens)[0]): boolean =
 						:disabled="!estaAberto"
 						@click="finalizarPedido"
 					>
-						<Icon name="lucide:check-circle" class="w-4 h-4" />
-						{{ estaAberto ? "Finalizar" : "Fechado" }}
+						<Icon name="lucide:shopping-cart" class="w-4 h-4" />
+						{{ estaAberto ? "Finalizar Pedido" : "Fechado" }}
 					</button>
 
 					<button

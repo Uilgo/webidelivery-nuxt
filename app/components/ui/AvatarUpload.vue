@@ -89,14 +89,17 @@ const compressImage = async (file: File): Promise<string> => {
 };
 
 /**
- * Baixa imagem de URL e comprime
+ * Baixa imagem de URL através do proxy e comprime
  */
 const compressFromUrl = async (url: string): Promise<string> => {
 	try {
-		const response = await fetch(url);
+		// Usa o proxy do servidor para contornar CORS
+		const proxyUrl = `/api/proxy/image?url=${encodeURIComponent(url)}`;
+		const response = await fetch(proxyUrl);
 
 		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			const errorText = await response.text();
+			throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
 		}
 
 		const blob = await response.blob();
@@ -338,7 +341,7 @@ onMounted(() => {
 
 				<!-- Especificações -->
 				<div class="space-y-1 text-xs text-[var(--text-muted)]">
-					<p>PNG, JPG ou WebP</p>
+					<p>PNG, JPG, WebP ou SVG</p>
 					<p>Otimizado: {{ maxSize }}x{{ maxSize }}px</p>
 					<p>Máximo: {{ maxSizeKB }}KB</p>
 				</div>

@@ -56,6 +56,7 @@ const imageSize = ref<number | null>(null);
 const imageDimensions = ref<{ width: number; height: number } | null>(null);
 const showSafeZone = ref(true);
 const tempImageSrc = ref<string>("");
+const imageLoaded = ref(false); // Novo: controla se a imagem foi carregada no cropper
 
 // Tabs para escolher modo de inserção
 const activeTab = ref<"upload" | "url">("upload");
@@ -167,7 +168,7 @@ const handleFileSelect = async (event: Event): Promise<void> => {
 };
 
 /**
- * Baixa imagem de URL e abre o crop
+ * Baixa imagem de URL através do proxy e abre o crop
  */
 const loadImageFromUrl = async (): Promise<void> => {
 	if (!tempUrl.value) return;
@@ -175,24 +176,51 @@ const loadImageFromUrl = async (): Promise<void> => {
 	isProcessing.value = true;
 
 	try {
-		const response = await fetch(tempUrl.value);
+		// Usa o proxy do servidor para contornar CORS
+		const proxyUrl = `/api/proxy/fetch?url=${encodeURIComponent(tempUrl.value)}`;
 
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
+		// Usa XMLHttpRequest para evitar interceptores do Nuxt/fetch
+		const blob = await new Promise<Blob>((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.open("GET", proxyUrl, true);
+			xhr.responseType = "blob";
 
-		const blob = await response.blob();
+			xhr.onload = () => {
+				if (xhr.status === 200) {
+					resolve(xhr.response as Blob);
+				} else {
+					reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+				}
+			};
+
+			xhr.onerror = () => reject(new Error("Erro na requisição"));
+			xhr.send();
+		});
 
 		// Verifica se é realmente uma imagem
 		if (!blob.type.startsWith("image/")) {
 			throw new Error("O arquivo baixado não é uma imagem válida");
 		}
 
-		// Cria URL temporária e abre o crop
+		// Verifica se o blob não está vazio
+		if (blob.size === 0 || blob.size < 100) {
+			throw new Error(`Imagem muito pequena ou vazia (${blob.size} bytes)`);
+		}
+
+		// Cria URL temporária
 		const url = URL.createObjectURL(blob);
+
+		// Define a imagem e aguarda um tick antes de abrir o modal
 		tempImageSrc.value = url;
+
+		// Aguarda o próximo tick para garantir que o DOM foi atualizado
+		await nextTick();
+
+		// Abre o modal
 		showCropModal.value = true;
-		tempUrl.value = ""; // Limpa o input
+
+		// Limpa o input
+		tempUrl.value = "";
 	} catch (error) {
 		console.error("Erro ao baixar imagem:", error);
 		alert(
@@ -259,6 +287,7 @@ const applyCrop = async (): Promise<void> => {
 
 const cancelCrop = (): void => {
 	showCropModal.value = false;
+	imageLoaded.value = false;
 	URL.revokeObjectURL(tempImageSrc.value);
 	tempImageSrc.value = "";
 };
@@ -423,7 +452,7 @@ onMounted(() => {
 				<div class="space-y-1.5 text-xs">
 					<div class="flex items-center gap-2 text-[var(--text-muted)]">
 						<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />
-						<span>Formatos: PNG, JPG, WebP</span>
+						<span>Formatos: PNG, JPG, WebP, SVG</span>
 					</div>
 					<div class="flex items-center gap-2 text-[var(--text-muted)]">
 						<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />

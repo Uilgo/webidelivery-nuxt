@@ -402,7 +402,7 @@ const handleCancel = (): void => {
 				<UiSelect
 					:model-value="values.texto_posicao || 'centro'"
 					:options="posicaoTextoOptions"
-					@update:model-value="setFieldValue('texto_posicao', $event as any)"
+					@update:model-value="(value) => setFieldValue('texto_posicao', value as TipoPosicaoTexto)"
 				/>
 			</UiFormField>
 		</div>

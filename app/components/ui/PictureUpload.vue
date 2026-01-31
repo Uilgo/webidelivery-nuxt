@@ -92,14 +92,17 @@ const compressImage = async (file: File): Promise<string> => {
 };
 
 /**
- * Baixa imagem de URL e comprime
+ * Baixa imagem de URL através do proxy e comprime
  */
 const compressFromUrl = async (url: string): Promise<string> => {
 	try {
-		const response = await fetch(url);
+		// Usa o proxy do servidor para contornar CORS
+		const proxyUrl = `/api/proxy/image?url=${encodeURIComponent(url)}`;
+		const response = await fetch(proxyUrl);
 
 		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			const errorText = await response.text();
+			throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
 		}
 
 		const blob = await response.blob();
