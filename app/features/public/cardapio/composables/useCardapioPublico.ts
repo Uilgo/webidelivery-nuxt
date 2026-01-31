@@ -74,6 +74,7 @@ export const useCardapioPublico = (slug: string) => {
 				tempo_entrega_max: (configGeral?.tempo_entrega_max as number) ?? 40,
 				entrega_gratis_acima: (configGeral?.valor_minimo_pedido as number) ?? null,
 				aberto: estabelecimentoData.aberto,
+				config_geral: configGeral, // ✅ Adicionar config_geral completo
 				config_tema: configTema,
 			};
 

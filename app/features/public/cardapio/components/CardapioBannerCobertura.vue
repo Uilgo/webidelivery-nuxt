@@ -124,18 +124,18 @@ const mensagemCobertura = computed(() => {
 <template>
 	<div
 		v-if="mensagemCobertura"
-		class="mb-3 sm:mb-4 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl"
+		class="mb-2 sm:mb-3 px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
 	>
-		<div class="text-center">
-			<p class="text-sm sm:text-base font-bold text-blue-700 dark:text-blue-300">
+		<div class="flex items-center justify-center gap-2 text-center">
+			<p class="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300">
 				{{ mensagemCobertura.principal }}
 			</p>
-			<p
+			<span
 				v-if="mensagemCobertura.detalhes"
-				class="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-1 whitespace-pre-line"
+				class="text-xs text-blue-600 dark:text-blue-400 opacity-90"
 			>
-				{{ mensagemCobertura.detalhes }}
-			</p>
+				• {{ mensagemCobertura.detalhes }}
+			</span>
 		</div>
 	</div>
 </template>
