@@ -90,29 +90,24 @@ const handleConfirmar = () => {
 
 <template>
 	<div class="space-y-6">
-		<div>
-			<h3 class="text-lg font-bold text-[var(--text-primary)] mb-2">📝 Resumo do Pedido</h3>
-			<p class="text-sm text-[var(--text-muted)]">
-				Revise as informações antes de confirmar seu pedido.
-			</p>
-		</div>
-
 		<!-- Dados do Cliente -->
-		<div class="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)]">
+		<div
+			class="p-4 rounded-lg bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)]"
+		>
 			<div class="flex items-center justify-between mb-3">
-				<h4 class="font-bold text-[var(--text-primary)] flex items-center gap-2">
+				<h4 class="font-bold text-[var(--cardapio-text)] flex items-center gap-2">
 					<Icon name="lucide:user" class="w-4 h-4" />
 					Seus Dados
 				</h4>
 				<button
 					type="button"
 					@click="emit('editarEtapa', 1)"
-					class="text-sm text-primary hover:underline"
+					class="text-sm text-[var(--cardapio-primary)] hover:underline"
 				>
 					Editar
 				</button>
 			</div>
-			<div class="space-y-1 text-sm text-[var(--text-muted)]">
+			<div class="space-y-1 text-sm text-[var(--cardapio-text-muted)]">
 				<p><strong>Nome:</strong> {{ dados.cliente?.nome || "Não informado" }}</p>
 				<p><strong>Telefone:</strong> {{ dados.cliente?.telefone || "Não informado" }}</p>
 				<p v-if="dados.cliente?.email"><strong>E-mail:</strong> {{ dados.cliente.email }}</p>
@@ -121,21 +116,23 @@ const handleConfirmar = () => {
 		</div>
 
 		<!-- Tipo de Entrega -->
-		<div class="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)]">
+		<div
+			class="p-4 rounded-lg bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)]"
+		>
 			<div class="flex items-center justify-between mb-3">
-				<h4 class="font-bold text-[var(--text-primary)] flex items-center gap-2">
+				<h4 class="font-bold text-[var(--cardapio-text)] flex items-center gap-2">
 					<Icon name="lucide:truck" class="w-4 h-4" />
 					Entrega
 				</h4>
 				<button
 					type="button"
 					@click="emit('editarEtapa', 2)"
-					class="text-sm text-primary hover:underline"
+					class="text-sm text-[var(--cardapio-primary)] hover:underline"
 				>
 					Editar
 				</button>
 			</div>
-			<div class="space-y-1 text-sm text-[var(--text-muted)]">
+			<div class="space-y-1 text-sm text-[var(--cardapio-text-muted)]">
 				<p><strong>Tipo:</strong> {{ formatarTipoEntrega(dados.tipo_entrega) }}</p>
 				<div v-if="dados.tipo_entrega === 'delivery' && dados.endereco" class="mt-2">
 					<p>
@@ -154,21 +151,23 @@ const handleConfirmar = () => {
 		</div>
 
 		<!-- Forma de Pagamento -->
-		<div class="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)]">
+		<div
+			class="p-4 rounded-lg bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)]"
+		>
 			<div class="flex items-center justify-between mb-3">
-				<h4 class="font-bold text-[var(--text-primary)] flex items-center gap-2">
+				<h4 class="font-bold text-[var(--cardapio-text)] flex items-center gap-2">
 					<Icon name="lucide:credit-card" class="w-4 h-4" />
 					Pagamento
 				</h4>
 				<button
 					type="button"
 					@click="emit('editarEtapa', 3)"
-					class="text-sm text-primary hover:underline"
+					class="text-sm text-[var(--cardapio-primary)] hover:underline"
 				>
 					Editar
 				</button>
 			</div>
-			<div class="space-y-1 text-sm text-[var(--text-muted)]">
+			<div class="space-y-1 text-sm text-[var(--cardapio-text-muted)]">
 				<p>
 					<strong>Forma:</strong>
 					{{ formatarFormaPagamento(dados.pagamento?.forma_pagamento) }}
@@ -182,29 +181,29 @@ const handleConfirmar = () => {
 		<!-- Itens do Carrinho -->
 		<div
 			v-if="montado"
-			class="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)]"
+			class="p-4 rounded-lg bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)]"
 		>
-			<h4 class="font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+			<h4 class="font-bold text-[var(--cardapio-text)] mb-3 flex items-center gap-2">
 				<Icon name="lucide:shopping-bag" class="w-4 h-4" />
 				Itens do Pedido ({{ carrinho.quantidadeTotal }})
 			</h4>
 			<div class="space-y-3">
 				<div v-for="item in carrinho.itens" :key="item.id" class="flex justify-between text-sm">
 					<div class="flex-1">
-						<p class="font-medium text-[var(--text-primary)]">
+						<p class="font-medium text-[var(--cardapio-text)]">
 							{{ item.quantidade }}x {{ item.nome }}
 						</p>
-						<p v-if="item.variacao" class="text-xs text-[var(--text-muted)]">
+						<p v-if="item.variacao" class="text-xs text-[var(--cardapio-text-muted)]">
 							{{ item.variacao.nome }}
 						</p>
-						<p v-if="item.adicionais.length" class="text-xs text-[var(--text-muted)]">
+						<p v-if="item.adicionais.length" class="text-xs text-[var(--cardapio-text-muted)]">
 							+ {{ item.adicionais.map((a) => a.nome).join(", ") }}
 						</p>
-						<p v-if="item.observacao" class="text-xs text-[var(--text-muted)] italic">
+						<p v-if="item.observacao" class="text-xs text-[var(--cardapio-text-muted)] italic">
 							Obs: {{ item.observacao }}
 						</p>
 					</div>
-					<p class="font-bold text-[var(--text-primary)]">R$ {{ item.preco_total.toFixed(2) }}</p>
+					<p class="font-bold text-[var(--cardapio-text)]">R$ {{ item.preco_total.toFixed(2) }}</p>
 				</div>
 			</div>
 		</div>
@@ -212,18 +211,18 @@ const handleConfirmar = () => {
 		<!-- Totais -->
 		<div
 			v-if="montado"
-			class="p-4 rounded-lg bg-[var(--bg-muted)] border border-[var(--border-color)]"
+			class="p-4 rounded-lg bg-[var(--cardapio-muted)] border border-[var(--cardapio-border)]"
 		>
 			<div class="space-y-2 text-sm">
 				<div class="flex justify-between">
-					<span class="text-[var(--text-muted)]">Subtotal</span>
-					<span class="font-medium text-[var(--text-primary)]">
+					<span class="text-[var(--cardapio-text-muted)]">Subtotal</span>
+					<span class="font-medium text-[var(--cardapio-text)]">
 						R$ {{ carrinho.subtotal.toFixed(2) }}
 					</span>
 				</div>
 				<div class="flex justify-between">
-					<span class="text-[var(--text-muted)]">Taxa de entrega</span>
-					<span class="font-medium text-[var(--text-primary)]">
+					<span class="text-[var(--cardapio-text-muted)]">Taxa de entrega</span>
+					<span class="font-medium text-[var(--cardapio-text)]">
 						R$ 0,00
 						<span class="text-xs text-yellow-600">(a implementar)</span>
 					</span>
@@ -232,24 +231,26 @@ const handleConfirmar = () => {
 					<span>Desconto</span>
 					<span class="font-medium">- R$ {{ carrinho.desconto.toFixed(2) }}</span>
 				</div>
-				<div class="pt-2 border-t border-[var(--border-color)] flex justify-between">
-					<span class="font-bold text-[var(--text-primary)]">Total</span>
-					<span class="font-bold text-lg text-primary"> R$ {{ calcularTotal.toFixed(2) }} </span>
+				<div class="pt-2 border-t border-[var(--cardapio-border)] flex justify-between">
+					<span class="font-bold text-[var(--cardapio-text)]">Total</span>
+					<span class="font-bold text-lg text-[var(--cardapio-primary)]">
+						R$ {{ calcularTotal.toFixed(2) }}
+					</span>
 				</div>
 			</div>
 		</div>
 
 		<!-- Observações -->
 		<div>
-			<label for="observacoes" class="block text-sm font-medium text-[var(--text-primary)] mb-2">
-				Observações <span class="text-xs text-[var(--text-muted)]">(opcional)</span>
+			<label for="observacoes" class="block text-sm font-medium text-[var(--cardapio-text)] mb-2">
+				Observações <span class="text-xs text-[var(--cardapio-text-muted)]">(opcional)</span>
 			</label>
-			<textarea
+			<UiTextarea
 				id="observacoes"
 				v-model="observacoes"
-				rows="3"
+				:rows="3"
 				placeholder="Alguma observação sobre seu pedido?"
-				class="w-full px-4 py-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+				class="resize-none"
 			/>
 		</div>
 
@@ -262,23 +263,27 @@ const handleConfirmar = () => {
 
 		<!-- Botões -->
 		<div class="flex gap-4">
-			<button
+			<UiButton
 				type="button"
-				@click="emit('voltar')"
+				variant="ghost"
+				size="lg"
 				:disabled="loading"
-				class="flex-1 py-3 px-6 rounded-lg font-bold text-[var(--text-primary)] bg-[var(--bg-muted)] hover:bg-[var(--bg-muted)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+				class="flex-1 font-bold text-[var(--cardapio-text-muted)] border border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)] hover:text-[var(--cardapio-primary)] hover:bg-transparent"
+				@click="emit('voltar')"
 			>
 				Voltar
-			</button>
-			<button
+			</UiButton>
+			<UiButton
 				type="button"
-				@click="handleConfirmar"
+				variant="solid"
+				size="lg"
 				:disabled="loading"
-				class="flex-1 py-3 px-6 rounded-lg font-bold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+				class="flex-1 font-bold bg-[var(--cardapio-primary)] text-white shadow-[var(--cardapio-button-shadow)] hover:shadow-[var(--cardapio-button-shadow-hover)] hover:bg-[var(--cardapio-primary)]"
+				@click="handleConfirmar"
 			>
-				<Icon v-if="loading" name="lucide:loader-2" class="w-5 h-5 animate-spin" />
+				<Icon v-if="loading" name="lucide:loader-2" class="w-5 h-5 animate-spin mr-2" />
 				<span>{{ loading ? "Confirmando..." : "Confirmar Pedido" }}</span>
-			</button>
+			</UiButton>
 		</div>
 	</div>
 </template>

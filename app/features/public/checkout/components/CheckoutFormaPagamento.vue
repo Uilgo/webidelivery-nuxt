@@ -106,10 +106,6 @@ const handleSubmit = () => {
 
 <template>
 	<div class="space-y-6">
-		<div>
-			<h3 class="text-lg font-bold text-[var(--text-primary)] mb-2">💳 Como você vai pagar?</h3>
-		</div>
-
 		<form @submit.prevent="handleSubmit" class="space-y-6">
 			<!-- Opções de pagamento -->
 			<div class="space-y-3">
@@ -118,38 +114,50 @@ const handleSubmit = () => {
 					:key="opcao.valor"
 					type="button"
 					@click="formaSelecionada = opcao.valor"
-					class="w-full p-4 rounded-lg border-2 transition-all text-left flex items-center gap-4"
+					class="group w-full p-4 rounded-xl border-2 transition-all duration-200 text-left flex items-center gap-4"
 					:class="{
-						'border-primary bg-primary/5': formaSelecionada === opcao.valor,
-						'border-[var(--border-color)] hover:border-primary/50':
+						'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5 shadow-md shadow-[var(--cardapio-primary)]/5':
+							formaSelecionada === opcao.valor,
+						'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 hover:bg-[var(--cardapio-muted)]':
 							formaSelecionada !== opcao.valor,
 					}"
 				>
 					<div
-						class="size-12 rounded-full flex items-center justify-center"
+						class="size-12 rounded-full flex items-center justify-center transition-colors"
 						:class="{
-							'bg-primary text-white': formaSelecionada === opcao.valor,
-							'bg-[var(--bg-muted)] text-primary': formaSelecionada !== opcao.valor,
+							'bg-[var(--cardapio-primary)] text-white': formaSelecionada === opcao.valor,
+							'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)]':
+								formaSelecionada !== opcao.valor,
 						}"
 					>
 						<Icon :name="opcao.icone" class="w-6 h-6" />
 					</div>
 					<div class="flex-1">
-						<p class="font-bold text-[var(--text-primary)]">{{ opcao.titulo }}</p>
-						<p class="text-sm text-[var(--text-muted)]">{{ opcao.descricao }}</p>
+						<p class="font-bold text-[var(--cardapio-text)] mb-0.5">{{ opcao.titulo }}</p>
+						<p class="text-sm text-[var(--cardapio-text-muted)]">{{ opcao.descricao }}</p>
 					</div>
-					<Icon
-						v-if="formaSelecionada === opcao.valor"
-						name="lucide:check-circle"
-						class="w-6 h-6 text-primary"
-					/>
+					<div
+						class="relative flex items-center justify-center w-6 h-6 rounded-full border-2 transition-colors"
+						:class="
+							formaSelecionada === opcao.valor
+								? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]'
+								: 'border-[var(--cardapio-border)]'
+						"
+					>
+						<Icon
+							v-if="formaSelecionada === opcao.valor"
+							name="lucide:check"
+							class="w-4 h-4 text-white"
+						/>
+					</div>
 				</button>
 			</div>
 
 			<!-- Campo de troco (apenas para dinheiro) -->
 			<div v-if="formaSelecionada === 'dinheiro'" class="space-y-2">
-				<label for="troco" class="block text-sm font-medium text-[var(--text-primary)]">
-					Troco para quanto? <span class="text-xs text-[var(--text-muted)]">(opcional)</span>
+				<label for="troco" class="block text-sm font-medium text-[var(--cardapio-text)]">
+					Troco para quanto?
+					<span class="text-xs text-[var(--cardapio-text-muted)]">(opcional)</span>
 				</label>
 				<UiCurrencyInput
 					id="troco"
@@ -181,20 +189,25 @@ const handleSubmit = () => {
 
 			<!-- Botões -->
 			<div class="flex gap-4">
-				<button
+				<UiButton
 					type="button"
+					variant="ghost"
+					size="lg"
+					class="flex-1 font-bold text-[var(--cardapio-text-muted)] border border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)] hover:text-[var(--cardapio-primary)] hover:bg-transparent"
 					@click="emit('voltar')"
-					class="flex-1 py-3 px-6 rounded-lg font-bold text-[var(--text-primary)] bg-[var(--bg-muted)] hover:bg-[var(--bg-muted)]/80 transition-colors"
 				>
 					Voltar
-				</button>
-				<button
+				</UiButton>
+				<UiButton
 					type="submit"
 					:disabled="!formValido"
-					class="flex-1 py-3 px-6 rounded-lg font-bold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					variant="solid"
+					size="lg"
+					class="flex-1 font-bold bg-[var(--cardapio-primary)] text-white shadow-[var(--cardapio-button-shadow)] hover:shadow-[var(--cardapio-button-shadow-hover)] hover:bg-[var(--cardapio-primary)]"
 				>
 					Continuar
-				</button>
+					<Icon name="lucide:arrow-right" class="w-5 h-5 ml-2" />
+				</UiButton>
 			</div>
 		</form>
 	</div>

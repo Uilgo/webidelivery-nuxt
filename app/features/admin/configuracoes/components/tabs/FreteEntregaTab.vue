@@ -28,6 +28,10 @@ const { values, setFieldValue, resetForm } = useForm({
 const hasUnsavedChanges = ref(false);
 const isInitializing = ref(true); // Flag para evitar detecção de mudanças durante inicialização
 
+// Estados para gerenciamento de cidades
+const novaCidade = ref("");
+const cidadesAtendidas = ref<string[]>([]);
+
 // Validar se modalidade pode ser salva
 const canSaveModality = (modality: TipoTaxaEntrega): boolean => {
 	switch (modality) {
@@ -35,8 +39,6 @@ const canSaveModality = (modality: TipoTaxaEntrega): boolean => {
 			return true; // Sempre pode
 		case "taxa_unica":
 			return (values.taxa_entrega || 0) > 0; // Precisa ter taxa
-		case "taxa_distancia":
-			return (values.taxas_por_distancia || []).filter((t) => t.status === "ativado").length > 0; // Precisa ter regras ativas
 		case "taxa_localizacao":
 			return (values.taxas_por_localizacao || []).filter((t) => t.status === "ativado").length > 0; // Precisa ter bairros ativos
 		default:
@@ -47,6 +49,11 @@ const canSaveModality = (modality: TipoTaxaEntrega): boolean => {
 // Salvar configurações manualmente
 const salvarManual = async () => {
 	if (!configuracoes.value) return;
+
+	// Validar cidades atendidas (obrigatório)
+	if (!cidadesAtendidas.value.length) {
+		return;
+	}
 
 	// Validar modalidade atual
 	const modalityValid = canSaveModality(values.tipo_taxa_entrega as TipoTaxaEntrega);
@@ -65,12 +72,12 @@ const salvarManual = async () => {
 	await salvarConfiguracoes({
 		tipo_taxa_entrega: values.tipo_taxa_entrega,
 		taxa_entrega: values.taxa_entrega,
+		cidades_atendidas: cidadesAtendidas.value,
 		tempo_preparo_min: values.tempo_preparo_min,
 		tempo_preparo_max: values.tempo_preparo_max,
 		valor_minimo_pedido: values.valor_minimo_pedido,
-		raio_entrega_km: values.raio_entrega_km,
-		taxas_por_distancia: values.taxas_por_distancia,
 		taxas_por_localizacao: values.taxas_por_localizacao,
+		taxa_padrao_outros_bairros: values.taxa_padrao_outros_bairros,
 	});
 
 	hasUnsavedChanges.value = false;
@@ -84,9 +91,9 @@ watch(
 		() => values.tempo_preparo_min,
 		() => values.tempo_preparo_max,
 		() => values.valor_minimo_pedido,
-		() => values.raio_entrega_km,
-		() => values.taxas_por_distancia,
 		() => values.taxas_por_localizacao,
+		() => values.taxa_padrao_outros_bairros,
+		() => cidadesAtendidas.value,
 	],
 	() => {
 		if (!isInitializing.value) {
@@ -101,16 +108,19 @@ watch(
 	configuracoes,
 	(newConfig) => {
 		if (newConfig) {
+			// Atualizar cidades atendidas
+			cidadesAtendidas.value = newConfig.cidades_atendidas || [];
+
 			resetForm({
 				values: {
 					taxa_entrega: newConfig.taxa_entrega,
 					tipo_taxa_entrega: newConfig.tipo_taxa_entrega || "taxa_unica",
-					taxas_por_distancia: newConfig.taxas_por_distancia || [],
+					cidades_atendidas: newConfig.cidades_atendidas || [],
 					taxas_por_localizacao: newConfig.taxas_por_localizacao || [],
+					taxa_padrao_outros_bairros: newConfig.taxa_padrao_outros_bairros || 0,
 					tempo_preparo_min: newConfig.tempo_preparo_min,
 					tempo_preparo_max: newConfig.tempo_preparo_max,
 					valor_minimo_pedido: newConfig.valor_minimo_pedido,
-					raio_entrega_km: newConfig.raio_entrega_km,
 				},
 			});
 
@@ -124,61 +134,54 @@ watch(
 	{ immediate: true },
 );
 
-// Opções de modalidade
+// Opções de modalidade (SEM taxa_distancia)
 const tiposTaxaEntrega = [
 	{ value: "sem_taxa", label: "Sem Taxa", icon: "lucide:circle-slash" },
 	{ value: "taxa_unica", label: "Taxa Única", icon: "lucide:dollar-sign" },
-	{ value: "taxa_distancia", label: "Taxa por Distância", icon: "lucide:map-pin" },
 	{ value: "taxa_localizacao", label: "Taxa por Bairro", icon: "lucide:navigation-2" },
 ] as const;
 
 // Estado local para adições
 const novaRegra = ref({
-	distancia: { distancia_km: 0, taxa_valor: 0, tempo_min: 30, tempo_max: 60 },
-	localizacao: { nome: "", taxa_valor: 0, tempo_min: 30, tempo_max: 60 },
+	localizacao: { nome: "", cidade: "", taxa_valor: 0, tempo_min: 30, tempo_max: 60 },
 });
 
 const gerarId = () => Math.random().toString(36).substring(2, 11);
 
-// Ações de Distância (apenas atualiza estado local)
-const adicionarTaxaDistancia = () => {
-	const novas = [
-		...(values.taxas_por_distancia || []),
-		{ id: gerarId(), ...novaRegra.value.distancia, status: "ativado" as const },
-	];
-	setFieldValue("taxas_por_distancia", novas);
-	novaRegra.value.distancia = { distancia_km: 0, taxa_valor: 0, tempo_min: 30, tempo_max: 60 };
+// Ações de Cidades
+const adicionarCidade = () => {
+	const cidade = novaCidade.value.trim();
+	if (!cidade) return;
+	if (cidadesAtendidas.value.includes(cidade)) {
+		return; // Cidade já existe
+	}
+	cidadesAtendidas.value.push(cidade);
+	setFieldValue("cidades_atendidas", cidadesAtendidas.value);
+	novaCidade.value = "";
 	hasUnsavedChanges.value = true;
 };
 
-const removerTaxaDistancia = (id: string) => {
-	const novas = (values.taxas_por_distancia || []).filter((t) => t.id !== id);
-	setFieldValue("taxas_por_distancia", novas);
-	hasUnsavedChanges.value = true;
-};
-
-const toggleStatusDistancia = (id: string) => {
-	const novas = (values.taxas_por_distancia || []).map((t) =>
-		t.id === id
-			? {
-					...t,
-					status: (t.status === "ativado" ? "desativado" : "ativado") as "ativado" | "desativado",
-				}
-			: t,
-	);
-	setFieldValue("taxas_por_distancia", novas);
+const removerCidade = (cidade: string) => {
+	cidadesAtendidas.value = cidadesAtendidas.value.filter((c) => c !== cidade);
+	setFieldValue("cidades_atendidas", cidadesAtendidas.value);
 	hasUnsavedChanges.value = true;
 };
 
 // Ações de Localização (apenas atualiza estado local)
 const adicionarTaxaLocalizacao = () => {
-	if (!novaRegra.value.localizacao.nome) return;
+	if (!novaRegra.value.localizacao.nome || !novaRegra.value.localizacao.cidade) return;
 	const novas = [
 		...(values.taxas_por_localizacao || []),
 		{ id: gerarId(), ...novaRegra.value.localizacao, status: "ativado" as const },
 	];
 	setFieldValue("taxas_por_localizacao", novas);
-	novaRegra.value.localizacao = { nome: "", taxa_valor: 0, tempo_min: 30, tempo_max: 60 };
+	novaRegra.value.localizacao = {
+		nome: "",
+		cidade: "",
+		taxa_valor: 0,
+		tempo_min: 30,
+		tempo_max: 60,
+	};
 	hasUnsavedChanges.value = true;
 };
 
@@ -212,11 +215,6 @@ const modalityStatus = computed(() => {
 				return {
 					status: "warning",
 					message: "Configure o valor da taxa para salvar",
-				};
-			case "taxa_distancia":
-				return {
-					status: "warning",
-					message: "Adicione pelo menos uma regra de distância ativa",
 				};
 			case "taxa_localizacao":
 				return {
@@ -277,45 +275,12 @@ const tipoTaxaLabel = computed(
 								}}</span>
 							</div>
 							<div
-								v-if="
-									values.tipo_taxa_entrega === 'sem_taxa' ||
-									values.tipo_taxa_entrega === 'taxa_unica'
-								"
 								class="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700/50"
 							>
-								<p class="text-[10px] uppercase font-bold text-gray-500 mb-1">Raio Máximo</p>
-								<span class="text-sm font-bold text-gray-900 dark:text-white">{{
-									values.tipo_taxa_entrega === "sem_taxa" && (values.raio_entrega_km || 0) === 0
-										? "Ilimitado"
-										: values.tipo_taxa_entrega === "sem_taxa"
-											? `${values.raio_entrega_km || 0} km`
-											: (values.raio_entrega_km || 0) === 0
-												? "Ilimitado"
-												: `${values.raio_entrega_km || 0} km`
-								}}</span>
-							</div>
-							<div
-								v-else-if="values.tipo_taxa_entrega === 'taxa_distancia'"
-								class="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700/50"
-							>
-								<p class="text-[10px] uppercase font-bold text-gray-500 mb-1">Faixas</p>
+								<p class="text-[10px] uppercase font-bold text-gray-500 mb-1">Cidades</p>
 								<span class="text-sm font-bold text-gray-900 dark:text-white">
-									{{
-										values.taxas_por_distancia?.filter((d) => d.status === "ativado").length || 0
-									}}
-									ativas
-								</span>
-							</div>
-							<div
-								v-else-if="values.tipo_taxa_entrega === 'taxa_localizacao'"
-								class="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700/50"
-							>
-								<p class="text-[10px] uppercase font-bold text-gray-500 mb-1">Bairros</p>
-								<span class="text-sm font-bold text-gray-900 dark:text-white">
-									{{
-										values.taxas_por_localizacao?.filter((l) => l.status === "ativado").length || 0
-									}}
-									ativos
+									{{ cidadesAtendidas.length }}
+									{{ cidadesAtendidas.length === 1 ? "cidade" : "cidades" }}
 								</span>
 							</div>
 						</div>
@@ -350,132 +315,91 @@ const tipoTaxaLabel = computed(
 						</div>
 
 						<!-- Lista de Taxas Configuradas -->
-						<div
-							v-if="
-								values.tipo_taxa_entrega === 'taxa_localizacao' ||
-								values.tipo_taxa_entrega === 'taxa_distancia'
-							"
-							class="space-y-4"
-						>
+						<div v-if="values.tipo_taxa_entrega === 'taxa_localizacao'" class="space-y-4">
 							<!-- Header com ícone e contador -->
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
-									<Icon
-										:name="
-											values.tipo_taxa_entrega === 'taxa_localizacao'
-												? 'lucide:map-pin'
-												: 'lucide:route'
-										"
-										class="w-3 h-3 text-primary-500"
-									/>
+									<Icon name="lucide:map-pin" class="w-3 h-3 text-primary-500" />
 									<h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-										{{
-											values.tipo_taxa_entrega === "taxa_localizacao"
-												? "Bairros Ativos"
-												: "Faixas de Distância"
-										}}
+										Bairros Ativos
 									</h4>
 								</div>
 								<span
 									class="text-[9px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full"
 								>
 									{{
-										values.tipo_taxa_entrega === "taxa_localizacao"
-											? values.taxas_por_localizacao?.filter((l) => l.status === "ativado")
-													.length || 0
-											: values.taxas_por_distancia?.filter((d) => d.status === "ativado").length ||
-												0
+										values.taxas_por_localizacao?.filter((l) => l.status === "ativado").length || 0
 									}}
 								</span>
 							</div>
 
-							<!-- Lista de taxas -->
-							<div class="space-y-1">
-								<template v-if="values.tipo_taxa_entrega === 'taxa_localizacao'">
+							<!-- Lista de taxas agrupadas por cidade -->
+							<div class="space-y-3">
+								<template v-for="cidade in cidadesAtendidas" :key="cidade">
 									<div
-										v-for="loc in values.taxas_por_localizacao
-											?.filter((l) => l.status === 'ativado')
-											.slice(0, 4)"
-										:key="loc.id"
-										class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-700/30"
+										v-if="
+											values.taxas_por_localizacao?.some(
+												(l) => l.cidade === cidade && l.status === 'ativado',
+											)
+										"
+										class="space-y-1"
 									>
-										<div class="flex items-center gap-2">
-											<div class="w-2 h-2 bg-green-500 rounded-full"></div>
-											<span
-												class="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize"
-												>{{ loc.nome }}</span
-											>
+										<!-- Nome da cidade -->
+										<p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider px-2">
+											{{ cidade }}
+										</p>
+										<!-- Bairros da cidade -->
+										<div
+											v-for="loc in values.taxas_por_localizacao
+												?.filter((l) => l.cidade === cidade && l.status === 'ativado')
+												.slice(0, 3)"
+											:key="loc.id"
+											class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-700/30"
+										>
+											<div class="flex items-center gap-2">
+												<div class="w-2 h-2 bg-green-500 rounded-full"></div>
+												<span
+													class="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize"
+													>{{ loc.nome }}</span
+												>
+											</div>
+											<span class="text-xs font-bold text-primary-600 dark:text-primary-400">{{
+												formatCurrency(loc.taxa_valor)
+											}}</span>
 										</div>
-										<span class="text-xs font-bold text-primary-600 dark:text-primary-400">{{
-											formatCurrency(loc.taxa_valor)
-										}}</span>
+										<!-- Indicador de mais itens -->
+										<div
+											v-if="
+												values.taxas_por_localizacao?.filter(
+													(l) => l.cidade === cidade && l.status === 'ativado',
+												).length > 3
+											"
+											class="flex items-center justify-center py-1 text-center"
+										>
+											<span class="text-[10px] text-gray-400 font-medium">
+												+{{
+													values.taxas_por_localizacao?.filter(
+														(l) => l.cidade === cidade && l.status === "ativado",
+													).length - 3
+												}}
+												mais
+											</span>
+										</div>
 									</div>
 								</template>
-								<template v-else>
-									<div
-										v-for="dist in values.taxas_por_distancia
-											?.filter((d) => d.status === 'ativado')
-											.slice(0, 4)"
-										:key="dist.id"
-										class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-700/30"
-									>
-										<div class="flex items-center gap-2">
-											<div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-											<span class="text-xs font-medium text-gray-700 dark:text-gray-300"
-												>Até {{ dist.distancia_km }}km</span
-											>
-										</div>
-										<span class="text-xs font-bold text-primary-600 dark:text-primary-400">{{
-											formatCurrency(dist.taxa_valor)
-										}}</span>
-									</div>
-								</template>
-
-								<!-- Indicador de mais itens -->
-								<div
-									v-if="
-										(values.tipo_taxa_entrega === 'taxa_localizacao' &&
-											(values.taxas_por_localizacao?.filter((l) => l.status === 'ativado').length ||
-												0) > 4) ||
-										(values.tipo_taxa_entrega === 'taxa_distancia' &&
-											(values.taxas_por_distancia?.filter((d) => d.status === 'ativado').length ||
-												0) > 4)
-									"
-									class="flex items-center justify-center py-2 text-center"
-								>
-									<span class="text-[10px] text-gray-400 font-medium">
-										+{{
-											values.tipo_taxa_entrega === "taxa_localizacao"
-												? (values.taxas_por_localizacao?.filter((l) => l.status === "ativado")
-														.length || 0) - 4
-												: (values.taxas_por_distancia?.filter((d) => d.status === "ativado")
-														.length || 0) - 4
-										}}
-										mais configuradas
-									</span>
-								</div>
 
 								<!-- Estado vazio -->
 								<div
 									v-if="
-										(values.tipo_taxa_entrega === 'taxa_localizacao' &&
-											(values.taxas_por_localizacao?.filter((l) => l.status === 'ativado').length ||
-												0) === 0) ||
-										(values.tipo_taxa_entrega === 'taxa_distancia' &&
-											(values.taxas_por_distancia?.filter((d) => d.status === 'ativado').length ||
-												0) === 0)
+										values.tipo_taxa_entrega === 'taxa_localizacao' &&
+										(values.taxas_por_localizacao?.filter((l) => l.status === 'ativado').length ||
+											0) === 0
 									"
 									class="flex items-center justify-center py-4 text-center"
 								>
 									<div class="flex flex-col items-center gap-1">
 										<Icon name="lucide:plus-circle" class="w-4 h-4 text-gray-300" />
-										<span class="text-[10px] text-gray-400">
-											{{
-												values.tipo_taxa_entrega === "taxa_localizacao"
-													? "Nenhum bairro configurado"
-													: "Nenhuma faixa configurada"
-											}}
-										</span>
+										<span class="text-[10px] text-gray-400">Nenhum bairro configurado</span>
 									</div>
 								</div>
 							</div>
@@ -528,6 +452,80 @@ const tipoTaxaLabel = computed(
 					</template>
 
 					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-8">
+						<!-- Área de Cobertura (SEMPRE VISÍVEL) -->
+						<div class="space-y-4">
+							<div
+								class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700"
+							>
+								<Icon
+									name="lucide:map-pin"
+									class="w-5 h-5 text-primary-600 dark:text-primary-400"
+								/>
+								<h4
+									class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest"
+								>
+									Área de Cobertura
+								</h4>
+							</div>
+
+							<!-- Alerta se não tem cidades -->
+							<div
+								v-if="!cidadesAtendidas.length"
+								class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+							>
+								<div class="flex items-center gap-2">
+									<Icon name="lucide:alert-triangle" class="w-4 h-4 text-amber-600" />
+									<span class="text-sm font-medium text-amber-800 dark:text-amber-200">
+										Adicione pelo menos 1 cidade para ativar o sistema de entregas
+									</span>
+								</div>
+							</div>
+
+							<!-- Input para adicionar cidade -->
+							<div class="flex gap-2">
+								<UiInput
+									v-model="novaCidade"
+									placeholder="Digite o nome da cidade"
+									class="flex-1"
+									@keyup.enter="adicionarCidade"
+								/>
+								<UiButton
+									type="button"
+									variant="solid"
+									class="bg-primary text-white"
+									@click="adicionarCidade"
+								>
+									<Icon name="lucide:plus" class="w-4 h-4 mr-2" />
+									Adicionar
+								</UiButton>
+							</div>
+
+							<p class="text-xs text-gray-500">💡 Adicione as cidades onde você faz entregas</p>
+
+							<!-- Lista de cidades -->
+							<div v-if="cidadesAtendidas.length" class="space-y-2">
+								<div
+									v-for="cidade in cidadesAtendidas"
+									:key="cidade"
+									class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-100 dark:border-gray-700/50"
+								>
+									<div class="flex items-center gap-2">
+										<Icon name="lucide:map-pin" class="w-4 h-4 text-primary-500" />
+										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{
+											cidade
+										}}</span>
+									</div>
+									<button
+										type="button"
+										class="text-gray-400 hover:text-red-500 transition-colors"
+										@click="removerCidade(cidade)"
+									>
+										<Icon name="lucide:trash-2" class="w-4 h-4" />
+									</button>
+								</div>
+							</div>
+						</div>
+
 						<!-- Modalidade -->
 						<div class="space-y-4">
 							<label class="text-xs font-bold text-gray-700 dark:text-gray-300"
@@ -621,67 +619,6 @@ const tipoTaxaLabel = computed(
 											</div>
 										</div>
 									</UiFormField>
-									<UiFormField label="Raio Máximo (km)">
-										<UiInput
-											:model-value="values.raio_entrega_km"
-											type="number"
-											placeholder="5"
-											@update:model-value="(v) => setFieldValue('raio_entrega_km', Number(v))"
-										/>
-										<div class="mt-2 space-y-1">
-											<p class="text-xs text-gray-500 leading-relaxed">
-												Distância máxima de entrega a partir do seu estabelecimento.
-												<span class="font-medium text-gray-600"
-													>Deixe em zero para entrega ilimitada.</span
-												>
-											</p>
-											<div
-												v-if="(values.raio_entrega_km || 0) === 0"
-												class="flex items-center gap-2 text-xs text-green-600"
-											>
-												<div class="flex items-center">
-													<div
-														class="w-8 h-4 bg-green-500 rounded-full flex items-center justify-end px-0.5"
-													>
-														<div class="w-3 h-3 bg-white rounded-full shadow-sm"></div>
-													</div>
-												</div>
-												<span class="font-medium"
-													>Entrega ilimitada - sem restrição de distância</span
-												>
-											</div>
-											<div
-												v-else-if="(values.raio_entrega_km || 0) > 10"
-												class="flex items-center gap-2 text-xs text-amber-600"
-											>
-												<div class="flex items-center">
-													<div
-														class="w-8 h-4 bg-amber-500 rounded-full flex items-center justify-start px-0.5"
-													>
-														<div class="w-3 h-3 bg-white rounded-full shadow-sm"></div>
-													</div>
-												</div>
-												<span class="font-medium"
-													>Raios muito grandes podem afetar o tempo de entrega</span
-												>
-											</div>
-											<div
-												v-else-if="(values.raio_entrega_km || 0) > 0"
-												class="flex items-center gap-2 text-xs text-blue-600"
-											>
-												<div class="flex items-center">
-													<div
-														class="w-8 h-4 bg-blue-500 rounded-full flex items-center justify-end px-0.5"
-													>
-														<div class="w-3 h-3 bg-white rounded-full shadow-sm"></div>
-													</div>
-												</div>
-												<span class="font-medium"
-													>Raio definido: {{ values.raio_entrega_km }}km de alcance</span
-												>
-											</div>
-										</div>
-									</UiFormField>
 								</div>
 
 								<!-- Botão Salvar -->
@@ -749,203 +686,9 @@ const tipoTaxaLabel = computed(
 										</div>
 									</div>
 								</UiFormField>
-								<UiFormField label="Raio Máximo (km)">
-									<UiInput
-										:model-value="values.raio_entrega_km"
-										type="number"
-										placeholder="5"
-										@update:model-value="(v) => setFieldValue('raio_entrega_km', Number(v))"
-									/>
-									<div class="mt-2 space-y-1">
-										<p class="text-xs text-gray-500 leading-relaxed">
-											Distância máxima de entrega.
-											<span class="font-medium text-gray-600"
-												>Deixe em zero para entrega ilimitada.</span
-											>
-										</p>
-										<div
-											v-if="(values.raio_entrega_km || 0) === 0"
-											class="flex items-center gap-1 text-xs text-green-600"
-										>
-											<Icon name="lucide:infinity" class="w-3 h-3" />
-											<span class="font-medium">Entrega ilimitada</span>
-										</div>
-										<div
-											v-else-if="(values.raio_entrega_km || 0) > 10"
-											class="flex items-center gap-1 text-xs text-amber-600"
-										>
-											<Icon name="lucide:alert-triangle" class="w-3 h-3" />
-											<span class="font-medium">Raio muito grande</span>
-										</div>
-										<div
-											v-else-if="(values.raio_entrega_km || 0) > 0"
-											class="flex items-center gap-1 text-xs text-blue-600"
-										>
-											<Icon name="lucide:map-pin" class="w-3 h-3" />
-											<span class="font-medium">{{ values.raio_entrega_km }}km de alcance</span>
-										</div>
-									</div>
-								</UiFormField>
 
 								<!-- Botão Salvar -->
 								<div class="md:col-span-3 flex justify-end">
-									<UiButton
-										:disabled="!canSave || saving"
-										:loading="saving"
-										variant="solid"
-										class="bg-primary text-white"
-										@click="salvarManual"
-									>
-										<Icon v-if="!saving" name="lucide:save" class="w-4 h-4 mr-2" />
-										{{ saving ? "Salvando..." : "Salvar Configurações" }}
-									</UiButton>
-								</div>
-							</div>
-
-							<!-- TAXA POR DISTÂNCIA -->
-							<div v-else-if="values.tipo_taxa_entrega === 'taxa_distancia'" class="space-y-6">
-								<!-- Alerta se não tem regras -->
-								<div
-									v-if="
-										!canSaveModality('taxa_distancia') &&
-										(!values.taxas_por_distancia ||
-											values.taxas_por_distancia.filter((t) => t.status === 'ativado').length === 0)
-									"
-									class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
-								>
-									<div class="flex items-center gap-2">
-										<Icon name="lucide:alert-triangle" class="w-4 h-4 text-amber-600" />
-										<span class="text-sm font-medium text-amber-800 dark:text-amber-200">
-											Adicione pelo menos uma regra de distância ativa para ativar esta modalidade
-										</span>
-									</div>
-								</div>
-
-								<!-- Configurações básicas -->
-								<div class="grid grid-cols-1 gap-6">
-									<UiFormField label="Pedido Mínimo (R$)">
-										<UiCurrencyInput
-											:model-value="values.valor_minimo_pedido"
-											placeholder="0,00"
-											@update:model-value="(v) => setFieldValue('valor_minimo_pedido', v)"
-										/>
-										<div class="mt-2 space-y-1">
-											<p class="text-xs text-gray-500 leading-relaxed">
-												<span class="font-medium text-gray-600"
-													>Deixe em zero se não quiser exigir valor mínimo.</span
-												>
-											</p>
-											<div
-												v-if="(values.valor_minimo_pedido || 0) === 0"
-												class="flex items-center gap-1 text-xs text-green-600"
-											>
-												<Icon name="lucide:check-circle-2" class="w-3 h-3" />
-												<span class="font-medium">Sem valor mínimo</span>
-											</div>
-										</div>
-									</UiFormField>
-								</div>
-
-								<div class="grid grid-cols-12 gap-3 items-end">
-									<div class="col-span-2">
-										<UiFormField label="Até (km)">
-											<UiInput
-												v-model="novaRegra.distancia.distancia_km"
-												type="number"
-												@update:model-value="(v) => (novaRegra.distancia.distancia_km = Number(v))"
-											/>
-										</UiFormField>
-									</div>
-									<div class="col-span-2">
-										<UiFormField label="Taxa (R$)">
-											<UiCurrencyInput
-												:model-value="novaRegra.distancia.taxa_valor"
-												placeholder="5,00"
-												@update:model-value="(v) => (novaRegra.distancia.taxa_valor = v)"
-											/>
-										</UiFormField>
-									</div>
-									<div class="col-span-3">
-										<UiFormField label="Tempo Mínimo">
-											<UiInput
-												v-model="novaRegra.distancia.tempo_min"
-												type="number"
-												@update:model-value="(v) => (novaRegra.distancia.tempo_min = Number(v))"
-											/>
-										</UiFormField>
-									</div>
-									<div class="col-span-3">
-										<UiFormField label="Tempo Máximo">
-											<UiInput
-												v-model="novaRegra.distancia.tempo_max"
-												type="number"
-												@update:model-value="(v) => (novaRegra.distancia.tempo_max = Number(v))"
-											/>
-										</UiFormField>
-									</div>
-									<div class="col-span-2 flex justify-end">
-										<UiButton
-											variant="solid"
-											class="h-10 w-10 rounded-lg bg-gray-900 dark:bg-primary text-white flex items-center justify-center"
-											@click="adicionarTaxaDistancia"
-										>
-											<Icon name="lucide:plus" class="w-4 h-4" />
-										</UiButton>
-									</div>
-								</div>
-
-								<div class="border rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-									<table class="w-full text-left text-xs">
-										<thead
-											class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 font-bold uppercase tracking-widest text-[10px]"
-										>
-											<tr>
-												<th class="px-4 py-2">Km</th>
-												<th class="px-4 py-2">Taxa</th>
-												<th class="px-4 py-2 text-center">Tempo</th>
-												<th class="px-4 py-2 text-center">Status</th>
-												<th class="px-4 py-2 text-right"></th>
-											</tr>
-										</thead>
-										<tbody class="divide-y">
-											<tr v-for="t in values.taxas_por_distancia" :key="t.id">
-												<td class="px-4 py-3 font-bold">Até {{ t.distancia_km }}km</td>
-												<td class="px-4 py-3 font-bold text-primary-600">
-													{{ formatCurrency(t.taxa_valor) }}
-												</td>
-												<td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">
-													{{ t.tempo_min }}-{{ t.tempo_max }}min
-												</td>
-												<td class="px-4 py-3 text-center">
-													<button
-														type="button"
-														:class="[
-															'px-2 py-0.5 rounded font-bold uppercase text-[9px]',
-															t.status === 'ativado'
-																? 'bg-green-100 text-green-600'
-																: 'bg-red-100 text-red-600',
-														]"
-														@click="toggleStatusDistancia(t.id)"
-													>
-														{{ t.status === "ativado" ? "On" : "Off" }}
-													</button>
-												</td>
-												<td class="px-4 py-3 text-right">
-													<button
-														type="button"
-														class="text-gray-400 hover:text-red-500"
-														@click="removerTaxaDistancia(t.id)"
-													>
-														<Icon name="lucide:trash-2" class="w-4 h-4" />
-													</button>
-												</td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
-
-								<!-- Botão Salvar -->
-								<div class="flex justify-end">
 									<UiButton
 										:disabled="!canSave || saving"
 										:loading="saving"
@@ -980,7 +723,7 @@ const tipoTaxaLabel = computed(
 								</div>
 
 								<!-- Configuração básica -->
-								<div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<UiFormField label="Pedido Mínimo (R$)">
 										<UiCurrencyInput
 											:model-value="values.valor_minimo_pedido"
@@ -1003,10 +746,41 @@ const tipoTaxaLabel = computed(
 											</div>
 										</div>
 									</UiFormField>
+
+									<UiFormField label="Taxa Padrão (Outros Bairros)">
+										<UiCurrencyInput
+											:model-value="values.taxa_padrao_outros_bairros"
+											placeholder="0,00"
+											@update:model-value="(v) => setFieldValue('taxa_padrao_outros_bairros', v)"
+										/>
+										<div class="mt-2 space-y-1">
+											<p class="text-xs text-gray-500 leading-relaxed">
+												Taxa aplicada para bairros não cadastrados na lista.
+												<span class="font-medium text-gray-600"
+													>Deixe em zero para bloquear entregas fora da lista.</span
+												>
+											</p>
+										</div>
+									</UiFormField>
 								</div>
 
 								<div class="grid grid-cols-12 gap-3 items-end">
-									<div class="col-span-4">
+									<div class="col-span-3">
+										<UiFormField label="Cidade">
+											<UiSelectMenu
+												v-model="novaRegra.localizacao.cidade"
+												:options="
+													cidadesAtendidas.map((c) => ({
+														value: c,
+														label: c,
+													}))
+												"
+												placeholder="Selecione"
+												:disabled="!cidadesAtendidas.length"
+											/>
+										</UiFormField>
+									</div>
+									<div class="col-span-3">
 										<UiFormField label="Bairro / Região">
 											<UiInput v-model="novaRegra.localizacao.nome" placeholder="Ex: Centro" />
 										</UiFormField>
@@ -1025,15 +799,16 @@ const tipoTaxaLabel = computed(
 											<UiInput v-model="novaRegra.localizacao.tempo_min" type="number" />
 										</UiFormField>
 									</div>
-									<div class="col-span-2">
+									<div class="col-span-1">
 										<UiFormField label="Tempo Máximo">
 											<UiInput v-model="novaRegra.localizacao.tempo_max" type="number" />
 										</UiFormField>
 									</div>
-									<div class="col-span-2 flex justify-end">
+									<div class="col-span-1 flex justify-end">
 										<UiButton
 											variant="solid"
 											class="h-10 w-10 rounded-lg bg-gray-900 dark:bg-primary text-white flex items-center justify-center"
+											:disabled="!novaRegra.localizacao.cidade || !novaRegra.localizacao.nome"
 											@click="adicionarTaxaLocalizacao"
 										>
 											<Icon name="lucide:plus" class="w-4 h-4" />
@@ -1047,7 +822,8 @@ const tipoTaxaLabel = computed(
 											class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 font-bold uppercase tracking-widest text-[10px]"
 										>
 											<tr>
-												<th class="px-4 py-2">Área</th>
+												<th class="px-4 py-2">Bairro / Região</th>
+												<th class="px-4 py-2">Cidade</th>
 												<th class="px-4 py-2">Taxa</th>
 												<th class="px-4 py-2 text-center">Tempo</th>
 												<th class="px-4 py-2 text-center">Status</th>
@@ -1058,6 +834,9 @@ const tipoTaxaLabel = computed(
 											<tr v-for="t in values.taxas_por_localizacao" :key="t.id">
 												<td class="px-4 py-3 font-bold uppercase truncate max-w-[150px]">
 													{{ t.nome }}
+												</td>
+												<td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+													{{ t.cidade }}
 												</td>
 												<td class="px-4 py-3 font-bold text-primary-600">
 													{{ formatCurrency(t.taxa_valor) }}

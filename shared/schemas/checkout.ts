@@ -35,15 +35,20 @@ export const formaPagamentoSchema = z.enum(["dinheiro", "pix", "credito", "debit
 const telefoneSchema = z
 	.string()
 	.min(1, VALIDATION_MESSAGES.PHONE_REQUIRED)
-	.regex(VALIDATION_PATTERNS.PHONE, VALIDATION_MESSAGES.PHONE_LENGTH)
-	.transform((tel) => tel.replace(/\D/g, ""));
+	.transform((tel) => tel.replace(/\D/g, "")) // Remove formatação ANTES de validar
+	.refine((tel) => VALIDATION_PATTERNS.PHONE.test(tel), {
+		message: VALIDATION_MESSAGES.PHONE_LENGTH,
+	});
 
 /**
  * Schema para CPF (opcional - para nota fiscal)
  */
 const cpfSchema = z
 	.string()
-	.regex(VALIDATION_PATTERNS.CPF, VALIDATION_MESSAGES.CPF_LENGTH)
+	.transform((cpf) => cpf.replace(/\D/g, "")) // Remove formatação ANTES de validar
+	.refine((cpf) => cpf === "" || VALIDATION_PATTERNS.CPF.test(cpf), {
+		message: VALIDATION_MESSAGES.CPF_LENGTH,
+	})
 	.optional()
 	.or(z.literal(""));
 

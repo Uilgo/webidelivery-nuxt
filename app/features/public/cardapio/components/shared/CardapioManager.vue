@@ -16,6 +16,7 @@ import type { ProdutoPublico } from "~/features/public/cardapio/types/cardapio-p
 // Imports explícitos dos componentes
 import CardapioSkeleton from "~/features/public/cardapio/components/CardapioSkeleton.vue";
 import CardapioHeader from "~/features/public/cardapio/components/CardapioHeader.vue";
+import CardapioBannerCobertura from "~/features/public/cardapio/components/CardapioBannerCobertura.vue";
 import CardapioBanners from "~/features/public/cardapio/components/CardapioBanners.vue";
 import CardapioCategorias from "~/features/public/cardapio/components/CardapioCategorias.vue";
 import CardapioBusca from "~/features/public/cardapio/components/CardapioBusca.vue";
@@ -221,6 +222,9 @@ const handleLoadMore = async () => {
 						<div class="mb-2 sm:mb-3">
 							<CardapioHeader :estabelecimento="estabelecimento" />
 						</div>
+
+						<!-- Banner de Cobertura -->
+						<CardapioBannerCobertura :estabelecimento="estabelecimento" />
 
 						<!-- Banners Promocionais -->
 						<CardapioBanners />

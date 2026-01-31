@@ -126,6 +126,9 @@ export const onboardingEnderecoSchema = z.object({
 		.max(200, "Referência deve ter no máximo 200 caracteres")
 		.optional()
 		.or(z.literal("")),
+	cidades_atendidas: z
+		.array(z.string().min(1, "Nome da cidade é obrigatório"))
+		.min(1, "Adicione pelo menos 1 cidade atendida"),
 });
 
 // ========================================
@@ -308,7 +311,6 @@ export const configGeralSchema = z.object({
 		.int("Tempo máximo deve ser inteiro")
 		.positive("Tempo máximo deve ser positivo"),
 	valor_minimo_pedido: z.number().nonnegative("Valor mínimo deve ser não negativo"),
-	raio_entrega_km: z.number().nonnegative("Raio de entrega deve ser não negativo"),
 });
 
 // ========================================

@@ -200,11 +200,6 @@ export const TEMPO_PREPARO_MAX_PADRAO = 60;
  */
 export const VALOR_MINIMO_PEDIDO_PADRAO = 0;
 
-/**
- * Raio de entrega padrão (em km)
- */
-export const RAIO_ENTREGA_PADRAO = 5;
-
 // ========================================
 // LIMITES E VALIDAÇÕES
 // ========================================
@@ -233,11 +228,6 @@ export const DESCRICAO_MAX_LENGTH = 500;
  * Tamanho máximo do WhatsApp (com DDI)
  */
 export const WHATSAPP_LENGTH = 13;
-
-/**
- * Raio máximo de entrega (em km)
- */
-export const RAIO_ENTREGA_MAX = 50;
 
 /**
  * Tempo máximo de preparo (em minutos)

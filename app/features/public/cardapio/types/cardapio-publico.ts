@@ -68,7 +68,6 @@ export interface ConfiguracoesEstabelecimento {
 	tempo_entrega_max?: number;
 	valor_minimo_pedido?: number;
 	taxa_entrega?: number;
-	raio_entrega_km?: number;
 	aceita_retirada?: boolean;
 	aceita_delivery?: boolean;
 }

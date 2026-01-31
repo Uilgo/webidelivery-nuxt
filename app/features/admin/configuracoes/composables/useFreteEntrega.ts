@@ -8,7 +8,6 @@
 
 import type {
 	TipoTaxaEntrega,
-	TaxaDistancia,
 	TaxaLocalizacao,
 	ConfigGeral as ConfiguracoesGerais,
 } from "#shared/types/estabelecimentos";
@@ -18,12 +17,12 @@ import { useToast } from "~/composables/ui/useToast";
 export interface ConfigFreteEntrega {
 	taxa_entrega: number;
 	tipo_taxa_entrega: TipoTaxaEntrega;
-	taxas_por_distancia: TaxaDistancia[];
+	cidades_atendidas: string[]; // Cidades onde o estabelecimento faz entregas
 	taxas_por_localizacao: TaxaLocalizacao[];
+	taxa_padrao_outros_bairros?: number; // Taxa para bairros não cadastrados
 	tempo_preparo_min: number;
 	tempo_preparo_max: number;
 	valor_minimo_pedido: number;
-	raio_entrega_km: number;
 }
 
 export interface UseFreteEntregaReturn {
@@ -71,12 +70,12 @@ export const useFreteEntrega = (): UseFreteEntregaReturn => {
 			configuracoes.value = {
 				taxa_entrega: configGeral?.taxa_entrega || 0,
 				tipo_taxa_entrega: configGeral?.tipo_taxa_entrega || "taxa_unica",
-				taxas_por_distancia: (configGeral?.taxas_por_distancia || []) as TaxaDistancia[],
+				cidades_atendidas: configGeral?.cidades_atendidas || [],
 				taxas_por_localizacao: (configGeral?.taxas_por_localizacao || []) as TaxaLocalizacao[],
+				taxa_padrao_outros_bairros: configGeral?.taxa_padrao_outros_bairros || 0,
 				tempo_preparo_min: configGeral?.tempo_preparo_min || 30,
 				tempo_preparo_max: configGeral?.tempo_preparo_max || 60,
 				valor_minimo_pedido: configGeral?.valor_minimo_pedido || 0,
-				raio_entrega_km: configGeral?.raio_entrega_km ?? 0,
 			};
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Erro ao buscar configurações de frete";

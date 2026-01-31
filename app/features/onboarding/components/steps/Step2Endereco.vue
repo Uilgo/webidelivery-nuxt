@@ -34,6 +34,7 @@ const emit = defineEmits<Emits>();
  */
 const isLoadingCep = ref(false);
 const cepError = ref<string | null>(null);
+const novaCidade = ref("");
 
 /**
  * Computed para v-model
@@ -112,6 +113,41 @@ const estados = [
 		label: ESTADOS_LABELS[uf] || uf,
 	})),
 ];
+
+/**
+ * Gerenciamento de cidades atendidas
+ */
+const adicionarCidade = () => {
+	const cidade = novaCidade.value.trim();
+	if (!cidade) return;
+
+	// Inicializar array se não existir
+	if (!formData.value.cidades_atendidas) {
+		formData.value = { ...formData.value, cidades_atendidas: [] };
+	}
+
+	// Verificar se cidade já existe
+	if (formData.value.cidades_atendidas.includes(cidade)) {
+		return;
+	}
+
+	// Adicionar cidade
+	formData.value = {
+		...formData.value,
+		cidades_atendidas: [...formData.value.cidades_atendidas, cidade],
+	};
+
+	novaCidade.value = "";
+};
+
+const removerCidade = (cidade: string) => {
+	if (!formData.value.cidades_atendidas) return;
+
+	formData.value = {
+		...formData.value,
+		cidades_atendidas: formData.value.cidades_atendidas.filter((c) => c !== cidade),
+	};
+};
 </script>
 
 <template>
@@ -205,6 +241,72 @@ const estados = [
 				:disabled="isLoadingCep"
 			/>
 		</UiFormField>
+
+		<!-- Linha 5: Cidades Atendidas (NOVO) -->
+		<div class="space-y-3">
+			<div class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+				<Icon name="lucide:map-pin" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+				<h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">
+					Cidades Atendidas
+					<span class="text-red-500">*</span>
+				</h4>
+			</div>
+
+			<!-- Alerta se não tem cidades -->
+			<div
+				v-if="!formData.cidades_atendidas || formData.cidades_atendidas.length === 0"
+				class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+			>
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:alert-triangle" class="w-4 h-4 text-amber-600" />
+					<span class="text-sm font-medium text-amber-800 dark:text-amber-200">
+						Adicione pelo menos 1 cidade onde você faz entregas
+					</span>
+				</div>
+			</div>
+
+			<!-- Input para adicionar cidade -->
+			<div class="flex gap-2">
+				<UiInput
+					v-model="novaCidade"
+					placeholder="Digite o nome da cidade"
+					class="flex-1"
+					@keyup.enter="adicionarCidade"
+				/>
+				<UiButton
+					type="button"
+					variant="solid"
+					class="bg-primary text-white"
+					@click="adicionarCidade"
+				>
+					<Icon name="lucide:plus" class="w-4 h-4 mr-2" />
+					Adicionar
+				</UiButton>
+			</div>
+
+			<p class="text-xs text-gray-500">💡 Informe as cidades onde você realiza entregas</p>
+
+			<!-- Lista de cidades -->
+			<div v-if="formData.cidades_atendidas && formData.cidades_atendidas.length" class="space-y-2">
+				<div
+					v-for="cidade in formData.cidades_atendidas"
+					:key="cidade"
+					class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-100 dark:border-gray-700/50"
+				>
+					<div class="flex items-center gap-2">
+						<Icon name="lucide:map-pin" class="w-4 h-4 text-primary-500" />
+						<span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ cidade }}</span>
+					</div>
+					<button
+						type="button"
+						class="text-gray-400 hover:text-red-500 transition-colors"
+						@click="removerCidade(cidade)"
+					>
+						<Icon name="lucide:trash-2" class="w-4 h-4" />
+					</button>
+				</div>
+			</div>
+		</div>
 
 		<!-- Dica compacta -->
 		<div

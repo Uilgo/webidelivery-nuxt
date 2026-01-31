@@ -79,13 +79,6 @@ const formatarCPF = (event: Event) => {
 
 <template>
 	<div class="space-y-6">
-		<div>
-			<h3 class="text-lg font-bold text-[var(--text-primary)] mb-2">📋 Seus Dados</h3>
-			<p class="text-sm text-[var(--text-muted)]">
-				Precisamos dessas informações para entrar em contato sobre seu pedido.
-			</p>
-		</div>
-
 		<form @submit.prevent="handleSubmit" class="space-y-4">
 			<!-- Nome -->
 			<div>
@@ -139,11 +132,11 @@ const formatarCPF = (event: Event) => {
 				type="submit"
 				:disabled="!formValido"
 				variant="solid"
-				color="primary"
 				size="lg"
-				class="w-full"
+				class="w-full font-bold bg-[var(--cardapio-primary)] text-white shadow-[var(--cardapio-button-shadow)] hover:shadow-[var(--cardapio-button-shadow-hover)] hover:bg-[var(--cardapio-primary)]"
 			>
 				Continuar
+				<Icon name="lucide:arrow-right" class="w-5 h-5 ml-2" />
 			</UiButton>
 		</form>
 	</div>
