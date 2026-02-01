@@ -227,7 +227,7 @@ const handleLoadMore = async () => {
 						<CardapioBannerCobertura :estabelecimento="estabelecimento" />
 
 						<!-- Banners Promocionais -->
-						<CardapioBanners />
+						<CardapioBanners v-if="estabelecimento" :estabelecimento-id="estabelecimento.id" />
 
 						<!-- Menu de Categorias (Sticky) -->
 						<CardapioCategorias

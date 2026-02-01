@@ -12,35 +12,88 @@
  * - Navegação por setas (desktop) e indicadores (todos os dispositivos)
  */
 
-// Banners mockados
-const banners = [
-	{
-		id: "1",
-		titulo: "Pizza Grande + Refrigerante",
-		descricao: "Compre uma pizza grande e ganhe 1L de refrigerante",
-		imagem_url: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=300&fit=crop",
-		cor_fundo: "#FF6B6B",
-		tipo_conteudo: "imagem" as const, // apenas imagem
-		link_url: "https://www.ifood.com.br/promocoes", // link externo
-	},
-	{
-		id: "2",
-		titulo: "Combo Família",
-		descricao: "2 Pizzas grandes + 2L de refrigerante por apenas R$ 89,90",
-		cor_fundo: "#4ECDC4",
-		tipo_conteudo: "texto" as const, // apenas texto
-		link_url: "https://wa.me/5511999999999?text=Quero%20saber%20mais%20sobre%20o%20combo", // link externo WhatsApp
-	},
-	{
-		id: "3",
-		titulo: "Terça-feira é dia de Promoção",
-		descricao: "Todas as pizzas com 30% de desconto",
-		imagem_url: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=300&fit=crop",
-		cor_fundo: "#FFD93D",
-		tipo_conteudo: "imagem" as const, // apenas imagem
-		// sem link_url - banner apenas visual
-	},
-];
+interface Props {
+	estabelecimentoId: string;
+}
+
+const props = defineProps<Props>();
+
+// ========================================
+// COMPOSABLES
+// ========================================
+
+const supabase = useSupabaseClient();
+
+// ========================================
+// ESTADO
+// ========================================
+
+/**
+ * Interface do banner para o cardápio público
+ */
+interface BannerPublico {
+	id: string;
+	titulo: string;
+	descricao: string | null;
+	imagem_url: string | null;
+	cor_fundo: string;
+	cor_texto: string;
+	tipo_conteudo: "imagem" | "texto";
+	link_url: string | null;
+	ordem: number;
+}
+
+const banners = ref<BannerPublico[]>([]);
+const loading = ref(true);
+
+// ========================================
+// BUSCAR BANNERS DO BANCO
+// ========================================
+
+/**
+ * Busca banners ativos do estabelecimento
+ */
+const fetchBanners = async (): Promise<void> => {
+	try {
+		loading.value = true;
+
+		const { data, error } = await supabase
+			.from("banners")
+			.select(
+				"id, titulo, descricao, imagem_url, cor_fundo, cor_texto, tipo_conteudo, link_url, ordem",
+			)
+			.eq("estabelecimento_id", props.estabelecimentoId)
+			.eq("ativo", true)
+			.eq("tipo", "carrossel")
+			.order("ordem", { ascending: true });
+
+		if (error) {
+			console.error("❌ Erro ao buscar banners:", error);
+			return;
+		}
+
+		banners.value = (data || []).map((banner) => ({
+			id: banner.id,
+			titulo: banner.titulo,
+			descricao: banner.descricao,
+			imagem_url: banner.imagem_url,
+			cor_fundo: banner.cor_fundo || "#3b82f6",
+			cor_texto: banner.cor_texto || "#ffffff",
+			tipo_conteudo: banner.tipo_conteudo as "imagem" | "texto",
+			link_url: banner.link_url,
+			ordem: banner.ordem,
+		}));
+	} catch (err) {
+		console.error("❌ Erro ao buscar banners:", err);
+	} finally {
+		loading.value = false;
+	}
+};
+
+// Buscar banners ao montar o componente
+onMounted(() => {
+	fetchBanners();
+});
 
 // Estado do carrossel
 const bannerAtivo = ref(0);
@@ -50,7 +103,7 @@ const carrosselRef = ref<HTMLElement | null>(null);
  * Vai para o próximo banner
  */
 const proximoBanner = (): void => {
-	bannerAtivo.value = (bannerAtivo.value + 1) % banners.length;
+	bannerAtivo.value = (bannerAtivo.value + 1) % banners.value.length;
 	rolarParaBanner(bannerAtivo.value);
 };
 
@@ -58,7 +111,7 @@ const proximoBanner = (): void => {
  * Vai para o banner anterior
  */
 const bannerAnterior = (): void => {
-	bannerAtivo.value = (bannerAtivo.value - 1 + banners.length) % banners.length;
+	bannerAtivo.value = (bannerAtivo.value - 1 + banners.value.length) % banners.value.length;
 	rolarParaBanner(bannerAtivo.value);
 };
 
@@ -93,7 +146,7 @@ const isExternalLink = (url: string): boolean => {
 /**
  * Handler para clique no banner
  */
-const handleBannerClick = (banner: (typeof banners)[0]): void => {
+const handleBannerClick = (banner: BannerPublico): void => {
 	// Se não tem link, não faz nada
 	if (!banner.link_url) return;
 
@@ -106,7 +159,7 @@ const handleBannerClick = (banner: (typeof banners)[0]): void => {
 /**
  * Verifica se o banner é clicável
  */
-const isBannerClickable = (banner: (typeof banners)[0]): boolean => {
+const isBannerClickable = (banner: BannerPublico): boolean => {
 	return !!banner.link_url;
 };
 
@@ -115,7 +168,10 @@ let intervalo: NodeJS.Timeout | null = null;
 
 onMounted(() => {
 	intervalo = setInterval(() => {
-		proximoBanner();
+		// Só avança se houver banners
+		if (banners.value.length > 0) {
+			proximoBanner();
+		}
 	}, 5000);
 });
 
@@ -127,7 +183,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="bg-[var(--cardapio-background)]">
+	<!-- Só renderiza se houver banners -->
+	<div v-if="!loading && banners.length > 0" class="bg-[var(--cardapio-background)]">
 		<div class="w-full">
 			<!-- Carrossel -->
 			<div class="relative rounded-xl overflow-hidden shadow-md">
@@ -140,7 +197,7 @@ onUnmounted(() => {
 					<!-- Banner Container (clicável se tiver link) -->
 					<component
 						:is="isBannerClickable(banner) ? 'button' : 'div'"
-						v-for="(banner, index) in banners"
+						v-for="banner in banners"
 						:key="banner.id"
 						class="min-w-full snap-start relative h-36 sm:h-40 md:h-44 lg:h-48 flex items-center justify-center overflow-hidden transition-all duration-200 group"
 						:class="{
@@ -159,11 +216,12 @@ onUnmounted(() => {
 						></div>
 
 						<!-- Imagem de fundo -->
-						<div
+						<img
 							v-if="banner.imagem_url && banner.tipo_conteudo === 'imagem'"
-							class="absolute inset-0 bg-cover bg-center"
-							:style="{ backgroundImage: `url(${banner.imagem_url})` }"
-						></div>
+							:src="banner.imagem_url"
+							:alt="banner.titulo"
+							class="absolute inset-0 w-full h-full object-fill"
+						/>
 
 						<!-- Conteúdo de texto (apenas para tipo "texto") -->
 						<div

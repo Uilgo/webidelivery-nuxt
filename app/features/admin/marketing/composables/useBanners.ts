@@ -297,7 +297,8 @@ export const useBanners = (): UseBannersReturn => {
 				throw supabaseError;
 			}
 
-			// Recarregar lista de banners
+			// Invalidar cache e recarregar lista de banners
+			cacheLoaded.value = false;
 			await fetchBanners();
 
 			toast.success({ title: "Banner criado com sucesso!" });

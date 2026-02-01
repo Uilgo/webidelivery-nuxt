@@ -1,12 +1,10 @@
 <script setup lang="ts">
 /**
  * 📌 BannerImageUpload
- * Componente com editor de crop para banners 16:9
+ * Componente com editor de crop para banners 3:1
  */
 
 import imageCompression from "browser-image-compression";
-import { Cropper } from "vue-advanced-cropper";
-import "vue-advanced-cropper/dist/style.css";
 
 interface Props {
 	modelValue: string;
@@ -25,11 +23,9 @@ const emit = defineEmits<{
 	"update:modelValue": [value: string];
 }>();
 
-// Constantes - Proporção 16:9 (padrão universal)
-const MIN_WIDTH = 1280;
-const MIN_HEIGHT = 720; // 16:9
-const RECOMMENDED_WIDTH = 1920;
-const RECOMMENDED_HEIGHT = 1080; // 16:9
+// Constantes - Proporção 3:1 (ideal para banners)
+const RECOMMENDED_WIDTH = 2400;
+const RECOMMENDED_HEIGHT = 800; // 3:1
 const MAX_SIZE_KB = 300;
 const SAFE_ZONE_PERCENT = 70;
 
@@ -47,16 +43,12 @@ type Breakpoint = (typeof BREAKPOINTS)[number];
 
 // Estado
 const fileInputRef = ref<HTMLInputElement | null>(null);
-const cropperRef = ref<InstanceType<typeof Cropper> | null>(null);
 const isProcessing = ref(false);
-const showCropModal = ref(false);
 const showPreviewModal = ref(false);
 const selectedBreakpoint = ref<Breakpoint>(BREAKPOINTS[6]);
 const imageSize = ref<number | null>(null);
 const imageDimensions = ref<{ width: number; height: number } | null>(null);
 const showSafeZone = ref(true);
-const tempImageSrc = ref<string>("");
-const imageLoaded = ref(false); // Novo: controla se a imagem foi carregada no cropper
 
 // Tabs para escolher modo de inserção
 const activeTab = ref<"upload" | "url">("upload");
@@ -122,6 +114,86 @@ const canvasToBase64 = (canvas: HTMLCanvasElement): Promise<string> => {
 	});
 };
 
+/**
+ * Processa e redimensiona automaticamente a imagem para 3:1
+ */
+const processAndCompressImage = async (file: File): Promise<void> => {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		const url = URL.createObjectURL(file);
+
+		img.onload = async () => {
+			try {
+				// Cria canvas com proporção 3:1 (2400x800)
+				const targetCanvas = document.createElement("canvas");
+				targetCanvas.width = RECOMMENDED_WIDTH;
+				targetCanvas.height = RECOMMENDED_HEIGHT;
+
+				const ctx = targetCanvas.getContext("2d");
+				if (!ctx) {
+					throw new Error("Erro ao criar contexto do canvas");
+				}
+
+				// Preenche com fundo transparente
+				ctx.clearRect(0, 0, RECOMMENDED_WIDTH, RECOMMENDED_HEIGHT);
+
+				// Calcula dimensões para caber toda a imagem (contain)
+				const imgRatio = img.width / img.height;
+				const targetRatio = RECOMMENDED_WIDTH / RECOMMENDED_HEIGHT;
+
+				let drawWidth, drawHeight, offsetX, offsetY;
+
+				if (imgRatio > targetRatio) {
+					// Imagem mais larga - ajusta pela largura
+					drawWidth = RECOMMENDED_WIDTH;
+					drawHeight = img.height * (RECOMMENDED_WIDTH / img.width);
+					offsetX = 0;
+					offsetY = (RECOMMENDED_HEIGHT - drawHeight) / 2;
+				} else {
+					// Imagem mais alta - ajusta pela altura
+					drawHeight = RECOMMENDED_HEIGHT;
+					drawWidth = img.width * (RECOMMENDED_HEIGHT / img.height);
+					offsetX = (RECOMMENDED_WIDTH - drawWidth) / 2;
+					offsetY = 0;
+				}
+
+				// Desenha a imagem centralizada (contain - mostra tudo)
+				ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+				// Armazena dimensões finais
+				imageDimensions.value = { width: RECOMMENDED_WIDTH, height: RECOMMENDED_HEIGHT };
+
+				// Converte canvas para base64
+				const base64 = await canvasToBase64(targetCanvas);
+
+				// Comprime
+				const blob = await fetch(base64).then((r) => r.blob());
+				const compressedFile = new File([blob], "banner.webp", { type: "image/webp" });
+
+				const compressed = await compressImage(compressedFile);
+				imageSize.value = calculateBase64Size(compressed);
+
+				// Emite valor
+				emit("update:modelValue", compressed);
+
+				// Limpa
+				URL.revokeObjectURL(url);
+				resolve();
+			} catch (error) {
+				URL.revokeObjectURL(url);
+				reject(error);
+			}
+		};
+
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			reject(new Error("Erro ao carregar imagem"));
+		};
+
+		img.src = url;
+	});
+};
+
 const compressImage = async (file: File): Promise<string> => {
 	const options = {
 		maxSizeMB: MAX_SIZE_KB / 1024,
@@ -153,22 +225,23 @@ const handleFileSelect = async (event: Event): Promise<void> => {
 
 	if (!file) return;
 
+	isProcessing.value = true;
+
 	try {
-		const url = URL.createObjectURL(file);
-		tempImageSrc.value = url;
-		showCropModal.value = true;
+		await processAndCompressImage(file);
 	} catch (error) {
-		console.error("Erro ao carregar imagem:", error);
+		console.error("Erro ao processar imagem:", error);
 		alert(
-			`Erro ao carregar imagem: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+			`Erro ao processar imagem: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
 		);
 	} finally {
 		input.value = "";
+		isProcessing.value = false;
 	}
 };
 
 /**
- * Baixa imagem de URL através do proxy e abre o crop
+ * Baixa imagem de URL através do proxy e processa automaticamente
  */
 const loadImageFromUrl = async (): Promise<void> => {
 	if (!tempUrl.value) return;
@@ -176,6 +249,23 @@ const loadImageFromUrl = async (): Promise<void> => {
 	isProcessing.value = true;
 
 	try {
+		// Valida se não é um data URI (base64)
+		if (tempUrl.value.startsWith("data:")) {
+			throw new Error(
+				"Data URIs não são suportados. Por favor, use uma URL HTTP/HTTPS normal ou faça upload do arquivo.",
+			);
+		}
+
+		// Valida se é uma URL HTTP/HTTPS válida
+		try {
+			const url = new URL(tempUrl.value);
+			if (!["http:", "https:"].includes(url.protocol)) {
+				throw new Error("Apenas URLs HTTP e HTTPS são permitidas");
+			}
+		} catch {
+			throw new Error("URL inválida. Use o formato: https://exemplo.com/imagem.jpg");
+		}
+
 		// Usa o proxy do servidor para contornar CORS
 		const proxyUrl = `/api/proxy/fetch?url=${encodeURIComponent(tempUrl.value)}`;
 
@@ -207,17 +297,9 @@ const loadImageFromUrl = async (): Promise<void> => {
 			throw new Error(`Imagem muito pequena ou vazia (${blob.size} bytes)`);
 		}
 
-		// Cria URL temporária
-		const url = URL.createObjectURL(blob);
-
-		// Define a imagem e aguarda um tick antes de abrir o modal
-		tempImageSrc.value = url;
-
-		// Aguarda o próximo tick para garantir que o DOM foi atualizado
-		await nextTick();
-
-		// Abre o modal
-		showCropModal.value = true;
+		// Converte blob para File e processa
+		const file = new File([blob], "banner.jpg", { type: blob.type });
+		await processAndCompressImage(file);
 
 		// Limpa o input
 		tempUrl.value = "";
@@ -229,67 +311,6 @@ const loadImageFromUrl = async (): Promise<void> => {
 	} finally {
 		isProcessing.value = false;
 	}
-};
-
-const applyCrop = async (): Promise<void> => {
-	if (!cropperRef.value) return;
-
-	isProcessing.value = true;
-
-	try {
-		const { canvas } = cropperRef.value.getResult();
-
-		if (!canvas) {
-			throw new Error("Erro ao processar crop");
-		}
-
-		// Cria um novo canvas com o tamanho ideal (1920x1080)
-		const targetCanvas = document.createElement("canvas");
-		targetCanvas.width = RECOMMENDED_WIDTH;
-		targetCanvas.height = RECOMMENDED_HEIGHT;
-
-		const ctx = targetCanvas.getContext("2d");
-		if (!ctx) {
-			throw new Error("Erro ao criar contexto do canvas");
-		}
-
-		// Desenha a imagem cropada redimensionada para o tamanho ideal
-		ctx.drawImage(canvas, 0, 0, RECOMMENDED_WIDTH, RECOMMENDED_HEIGHT);
-
-		// Armazena dimensões finais
-		imageDimensions.value = { width: RECOMMENDED_WIDTH, height: RECOMMENDED_HEIGHT };
-
-		// Converte canvas para base64
-		const base64 = await canvasToBase64(targetCanvas);
-
-		// Comprime
-		const blob = await fetch(base64).then((r) => r.blob());
-		const file = new File([blob], "banner.webp", { type: "image/webp" });
-
-		const compressed = await compressImage(file);
-		imageSize.value = calculateBase64Size(compressed);
-
-		// Emite valor
-		emit("update:modelValue", compressed);
-
-		showCropModal.value = false;
-		URL.revokeObjectURL(tempImageSrc.value);
-		tempImageSrc.value = "";
-	} catch (error) {
-		console.error("Erro ao processar crop:", error);
-		alert(
-			`Erro ao processar imagem: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-		);
-	} finally {
-		isProcessing.value = false;
-	}
-};
-
-const cancelCrop = (): void => {
-	showCropModal.value = false;
-	imageLoaded.value = false;
-	URL.revokeObjectURL(tempImageSrc.value);
-	tempImageSrc.value = "";
 };
 
 const handleRemove = (): void => {
@@ -335,6 +356,37 @@ onMounted(() => {
 			{{ label }}
 		</label>
 
+		<!-- CARD DE ALERTA CRUCIAL - SEMPRE VISÍVEL -->
+		<UiCard variant="outlined" class="bg-[var(--info-light)] border-[var(--info)]">
+			<div class="flex gap-3">
+				<Icon name="lucide:info" class="size-6 text-[var(--info)] flex-shrink-0 mt-0.5" />
+				<div class="space-y-2">
+					<p class="text-sm font-bold text-[var(--text-primary)]">
+						📐 Crie sua imagem em proporção 3:1 (largura 3x maior que altura)
+					</p>
+					<div class="space-y-1 text-xs text-[var(--text-secondary)]">
+						<p class="font-semibold">Resolução recomendada: 2400 x 800 pixels</p>
+						<p>
+							Use Canva, Photoshop ou Figma para criar o banner dentro de uma área 3:1. A imagem
+							completa será sempre exibida (sem cortes).
+						</p>
+						<div class="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--info)]/30">
+							<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />
+							<span class="font-medium">Outras resoluções válidas (3:1):</span>
+						</div>
+						<ul class="list-disc list-inside ml-4 space-y-0.5">
+							<li>1800 x 600 px</li>
+							<li>1500 x 500 px</li>
+							<li>1200 x 400 px (mínimo)</li>
+						</ul>
+						<p class="text-[var(--warning)] font-medium mt-2 pt-2 border-t border-[var(--info)]/30">
+							⚠️ Imagens com outras proporções terão espaços vazios nas laterais
+						</p>
+					</div>
+				</div>
+			</div>
+		</UiCard>
+
 		<!-- Tabs para escolher modo de inserção -->
 		<UiTabs v-model="activeTab" :tabs="tabs" size="sm" />
 
@@ -342,7 +394,7 @@ onMounted(() => {
 		<div class="flex flex-col sm:flex-row items-start gap-4">
 			<!-- Preview Container -->
 			<div class="flex flex-col items-center gap-2 flex-shrink-0">
-				<!-- Preview da imagem (16:9 - padrão universal) -->
+				<!-- Preview da imagem (3:1 - ideal para banners) -->
 				<div class="relative">
 					<div
 						:class="[
@@ -407,7 +459,7 @@ onMounted(() => {
 
 				<!-- Info abaixo do preview -->
 				<div class="text-center space-y-0.5">
-					<p class="text-xs text-[var(--text-muted)]">Proporção 16:9</p>
+					<p class="text-xs text-[var(--text-muted)]">Proporção 3:1</p>
 					<p v-if="imageDimensions" class="text-xs font-medium text-[var(--text-secondary)]">
 						{{ imageDimensions.width }}x{{ imageDimensions.height }}px
 					</p>
@@ -456,21 +508,27 @@ onMounted(() => {
 					</div>
 					<div class="flex items-center gap-2 text-[var(--text-muted)]">
 						<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />
-						<span>Recomendado: {{ RECOMMENDED_WIDTH }}x{{ RECOMMENDED_HEIGHT }}px</span>
+						<span>Tamanho máximo: 300KB (otimização automática)</span>
 					</div>
 					<div class="flex items-center gap-2 text-[var(--text-muted)]">
 						<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />
-						<span>Mínimo após crop: {{ MIN_WIDTH }}x{{ MIN_HEIGHT }}px</span>
+						<span>Conversão automática para WebP</span>
 					</div>
 					<div class="flex items-center gap-2 text-[var(--text-muted)]">
 						<Icon name="lucide:check-circle-2" class="size-3.5 text-success-600" />
-						<span>Proporção: 16:9 (padrão universal)</span>
+						<span>Imagem completa sempre visível (sem cortes)</span>
 					</div>
 					<div
-						class="flex items-center gap-2 text-[var(--info)] mt-2 pt-2 border-t border-[var(--border-muted)]"
+						class="flex items-start gap-2 text-[var(--success)] mt-2 pt-2 border-t border-[var(--border-muted)]"
 					>
-						<Icon name="lucide:info" class="size-3.5 flex-shrink-0" />
-						<span>Banner exibido como faixa horizontal no cardápio</span>
+						<Icon name="lucide:sparkles" class="size-3.5 flex-shrink-0 mt-0.5" />
+						<div>
+							<p class="font-medium">
+								O sistema usa
+								<code class="px-1 py-0.5 bg-gray-200 rounded text-[10px]">contain</code>
+								para garantir que toda a imagem seja exibida sem cortes
+							</p>
+						</div>
 					</div>
 				</div>
 
@@ -520,115 +578,6 @@ onMounted(() => {
 			<Icon name="lucide:alert-circle" class="size-3.5" />
 			{{ error }}
 		</p>
-
-		<!-- Modal de Crop (z-index 110 - maior que drawer 100) -->
-		<Teleport v-if="isMounted && showCropModal" to="body">
-			<Transition
-				name="modal-overlay"
-				enter-active-class="transition-opacity duration-200 ease-out"
-				enter-from-class="opacity-0"
-				enter-to-class="opacity-100"
-				leave-active-class="transition-opacity duration-150 ease-in"
-				leave-from-class="opacity-100"
-				leave-to-class="opacity-0"
-			>
-				<div
-					v-if="showCropModal"
-					class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm"
-					@click="cancelCrop"
-				></div>
-			</Transition>
-
-			<Transition
-				name="modal-content"
-				enter-active-class="transition-all duration-200 ease-out"
-				enter-from-class="opacity-0 scale-95"
-				enter-to-class="opacity-100 scale-100"
-				leave-active-class="transition-all duration-150 ease-in"
-				leave-from-class="opacity-100 scale-100"
-				leave-to-class="opacity-0 scale-95"
-			>
-				<div
-					v-if="showCropModal"
-					class="fixed z-[110] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-xl max-h-[85vh] w-full mx-4 max-w-lg overflow-hidden flex flex-col"
-					role="dialog"
-					aria-modal="true"
-					@click.stop
-				>
-					<!-- Header -->
-					<div class="px-6 py-4 border-b border-[var(--border-muted)] flex-shrink-0">
-						<div class="flex items-center justify-between">
-							<h2 class="text-heading-4 text-[var(--text-primary)]">Ajustar Imagem (16:9)</h2>
-							<button
-								type="button"
-								class="ml-4 p-2 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-200 focus-ring flex items-center justify-center"
-								@click="cancelCrop"
-							>
-								<Icon name="lucide:x" class="w-5 h-5" />
-							</button>
-						</div>
-					</div>
-
-					<!-- Content -->
-					<div class="px-6 py-4 flex-1 overflow-y-auto custom-scrollbar">
-						<div class="space-y-4">
-							<!-- Info -->
-							<UiCard variant="outlined" class="bg-[var(--info-light)] border-[var(--info)]">
-								<div class="flex gap-3">
-									<Icon name="lucide:info" class="size-5 text-[var(--info)] flex-shrink-0 mt-0.5" />
-									<div class="space-y-1">
-										<p class="text-sm font-medium text-[var(--text-primary)]">
-											Ajuste a área do banner
-										</p>
-										<p class="text-xs text-[var(--text-secondary)]">
-											Selecione a área que deseja exibir no banner. A proporção 16:9 (padrão
-											universal) será mantida automaticamente.
-										</p>
-									</div>
-								</div>
-							</UiCard>
-
-							<!-- Cropper -->
-							<div
-								class="border-2 border-[var(--border-default)] rounded-lg overflow-hidden bg-[var(--bg-surface)]"
-							>
-								<Cropper
-									ref="cropperRef"
-									:src="tempImageSrc"
-									:stencil-props="{
-										aspectRatio: 16 / 9,
-										movable: true,
-										resizable: true,
-									}"
-									:resize-image="{
-										adjustStencil: false,
-									}"
-									:default-size="{
-										width: 400,
-										height: 225,
-									}"
-									class="h-[280px]"
-								/>
-							</div>
-						</div>
-					</div>
-
-					<!-- Footer -->
-					<div
-						class="px-6 py-4 border-t border-[var(--border-muted)] flex-shrink-0 bg-[var(--bg-surface)] rounded-b-lg"
-					>
-						<div class="flex gap-3 justify-end">
-							<UiButton variant="outline" :disabled="isProcessing" @click="cancelCrop">
-								Cancelar
-							</UiButton>
-							<UiButton variant="solid" :loading="isProcessing" @click="applyCrop">
-								Aplicar Crop
-							</UiButton>
-						</div>
-					</div>
-				</div>
-			</Transition>
-		</Teleport>
 
 		<!-- Modal de Preview -->
 		<UiModal

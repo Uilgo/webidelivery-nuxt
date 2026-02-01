@@ -418,11 +418,12 @@ const handleCancel = (): void => {
 					:style="{ backgroundColor: previewBackgroundColor }"
 				>
 					<!-- Imagem de fundo (apenas para tipo "imagem") -->
-					<div
+					<img
 						v-if="values.imagem_url && values.tipo_conteudo === 'imagem'"
-						class="absolute inset-0 bg-cover bg-center"
-						:style="{ backgroundImage: `url(${values.imagem_url})` }"
-					></div>
+						:src="values.imagem_url"
+						:alt="values.titulo || 'Preview do banner'"
+						class="absolute inset-0 w-full h-full object-fill"
+					/>
 
 					<!-- Overlay de texto para banners com imagem (se tiver título/descrição) -->
 					<div
