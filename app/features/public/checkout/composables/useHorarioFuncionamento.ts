@@ -43,7 +43,7 @@ export const useHorarioFuncionamento = (): UseHorarioFuncionamentoReturn => {
 		if (!estabelecimento?.config_geral) return 30;
 
 		const configGeral = estabelecimento.config_geral as Record<string, unknown>;
-		return (configGeral.tempo_preparo_min as number) || 30;
+		return (configGeral.tempo_entrega_min as number) || 30;
 	});
 
 	const tempoPreparoMax = computed(() => {
@@ -51,7 +51,7 @@ export const useHorarioFuncionamento = (): UseHorarioFuncionamentoReturn => {
 		if (!estabelecimento?.config_geral) return 45;
 
 		const configGeral = estabelecimento.config_geral as Record<string, unknown>;
-		return (configGeral.tempo_preparo_max as number) || 45;
+		return (configGeral.tempo_entrega_max as number) || 45;
 	});
 
 	/**

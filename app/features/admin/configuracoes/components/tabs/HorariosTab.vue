@@ -22,6 +22,9 @@ const { horarios, excecoes, loading, saving, salvarHorarios } = useHorariosFunci
 // Estado do drawer de exceções
 const drawerExcecoesAberto = ref(false);
 
+// Ref para o DayEditor
+const dayEditorRef = ref<InstanceType<typeof DayEditor> | null>(null);
+
 // Estado do editor
 const editorState = ref({
 	diaSelecionado: "segunda_feira",
@@ -133,6 +136,13 @@ const selecionarDiaHandler = (dia: string) => {
 
 const abrirDrawerExcecoes = (): void => {
 	drawerExcecoesAberto.value = true;
+};
+
+const handleSalvarClick = (): void => {
+	if (dayEditorRef.value) {
+		// @ts-ignore - chamar método interno do componente
+		dayEditorRef.value.salvar();
+	}
 };
 
 const formatarDataExcecao = (dataStr: string) => {
@@ -349,9 +359,10 @@ const temDiaAberto = computed(() => estatisticas.value.diasAbertos > 0);
 					</template>
 
 					<!-- Conteúdo com scroll -->
-					<div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+					<div class="flex-1 min-h-0 overflow-y-auto p-6">
 						<div v-if="horarioSelecionado">
 							<DayEditor
+								ref="dayEditorRef"
 								:horario="horarioSelecionado"
 								:visible="true"
 								:loading="saving"
@@ -359,6 +370,23 @@ const temDiaAberto = computed(() => estatisticas.value.diasAbertos > 0);
 							/>
 						</div>
 					</div>
+
+					<!-- Footer com botão de salvar -->
+					<template #footer>
+						<div class="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+							<UiButton
+								variant="solid"
+								color="primary"
+								size="md"
+								:loading="saving"
+								:disabled="saving || !horarioSelecionado"
+								@click="handleSalvarClick"
+							>
+								<Icon name="lucide:save" class="w-4 h-4 mr-2" />
+								{{ saving ? "Salvando..." : "Salvar Horário" }}
+							</UiButton>
+						</div>
+					</template>
 				</UiCard>
 			</div>
 		</div>

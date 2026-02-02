@@ -24,6 +24,8 @@ export type Cargo =
 
 export type EstabelecimentoStatus = "rascunho" | "ativo" | "inativo" | "suspenso";
 
+export type ModoFuncionamento = "automatico" | "manual";
+
 export type LogAcao =
 	| "criar"
 	| "atualizar"
@@ -44,6 +46,8 @@ export const CARGOS = [
 ] as const;
 
 export const ESTABELECIMENTO_STATUS = ["rascunho", "ativo", "inativo", "suspenso"] as const;
+
+export const MODO_FUNCIONAMENTO = ["automatico", "manual"] as const;
 
 export const LOG_ACOES = [
 	"criar",

@@ -49,7 +49,7 @@ export const useCardapioPublico = (slug: string) => {
 			const { data: estabelecimentoData, error: estabelecimentoError } = await supabase
 				.from("estabelecimentos")
 				.select(
-					"id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, config_geral, config_tema",
+					"id, nome, slug, logo_url, capa_url, descricao, whatsapp, aberto, modo_funcionamento, config_geral, config_tema",
 				)
 				.eq("slug", slug)
 				.eq("status", "ativo")
@@ -74,7 +74,9 @@ export const useCardapioPublico = (slug: string) => {
 				tempo_entrega_max: (configGeral?.tempo_entrega_max as number) ?? 40,
 				entrega_gratis_acima: (configGeral?.valor_minimo_pedido as number) ?? null,
 				aberto: estabelecimentoData.aberto,
-				config_geral: configGeral, // ✅ Adicionar config_geral completo
+				modo_funcionamento:
+					(estabelecimentoData.modo_funcionamento as "automatico" | "manual") ?? "automatico",
+				config_geral: configGeral,
 				config_tema: configTema,
 			};
 

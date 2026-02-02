@@ -20,8 +20,8 @@ export interface ConfigFreteEntrega {
 	cidades_atendidas: string[]; // Cidades onde o estabelecimento faz entregas
 	taxas_por_localizacao: TaxaLocalizacao[];
 	taxa_padrao_outros_bairros?: number; // Taxa para bairros não cadastrados
-	tempo_preparo_min: number;
-	tempo_preparo_max: number;
+	tempo_entrega_min: number;
+	tempo_entrega_max: number;
 	valor_minimo_pedido: number;
 }
 
@@ -73,8 +73,8 @@ export const useFreteEntrega = (): UseFreteEntregaReturn => {
 				cidades_atendidas: configGeral?.cidades_atendidas || [],
 				taxas_por_localizacao: (configGeral?.taxas_por_localizacao || []) as TaxaLocalizacao[],
 				taxa_padrao_outros_bairros: configGeral?.taxa_padrao_outros_bairros || 0,
-				tempo_preparo_min: configGeral?.tempo_preparo_min || 30,
-				tempo_preparo_max: configGeral?.tempo_preparo_max || 60,
+				tempo_entrega_min: configGeral?.tempo_entrega_min || 30,
+				tempo_entrega_max: configGeral?.tempo_entrega_max || 60,
 				valor_minimo_pedido: configGeral?.valor_minimo_pedido || 0,
 			};
 		} catch (err) {

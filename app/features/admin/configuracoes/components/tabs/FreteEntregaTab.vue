@@ -62,9 +62,9 @@ const salvarManual = async () => {
 	// Validações gerais mais flexíveis
 	const isValid =
 		(values.taxa_entrega || 0) >= 0 &&
-		(values.tempo_preparo_min || 0) > 0 &&
-		(values.tempo_preparo_max || 0) > 0 &&
-		(values.tempo_preparo_max || 0) >= (values.tempo_preparo_min || 0) &&
+		(values.tempo_entrega_min || 0) > 0 &&
+		(values.tempo_entrega_max || 0) > 0 &&
+		(values.tempo_entrega_max || 0) >= (values.tempo_entrega_min || 0) &&
 		(values.valor_minimo_pedido || 0) >= 0;
 
 	if (!isValid) return;
@@ -73,8 +73,8 @@ const salvarManual = async () => {
 		tipo_taxa_entrega: values.tipo_taxa_entrega,
 		taxa_entrega: values.taxa_entrega,
 		cidades_atendidas: cidadesAtendidas.value,
-		tempo_preparo_min: values.tempo_preparo_min,
-		tempo_preparo_max: values.tempo_preparo_max,
+		tempo_entrega_min: values.tempo_entrega_min,
+		tempo_entrega_max: values.tempo_entrega_max,
 		valor_minimo_pedido: values.valor_minimo_pedido,
 		taxas_por_localizacao: values.taxas_por_localizacao,
 		taxa_padrao_outros_bairros: values.taxa_padrao_outros_bairros,
@@ -88,8 +88,8 @@ watch(
 	[
 		() => values.tipo_taxa_entrega,
 		() => values.taxa_entrega,
-		() => values.tempo_preparo_min,
-		() => values.tempo_preparo_max,
+		() => values.tempo_entrega_min,
+		() => values.tempo_entrega_max,
 		() => values.valor_minimo_pedido,
 		() => values.taxas_por_localizacao,
 		() => values.taxa_padrao_outros_bairros,
@@ -118,8 +118,8 @@ watch(
 					cidades_atendidas: newConfig.cidades_atendidas || [],
 					taxas_por_localizacao: newConfig.taxas_por_localizacao || [],
 					taxa_padrao_outros_bairros: newConfig.taxa_padrao_outros_bairros || 0,
-					tempo_preparo_min: newConfig.tempo_preparo_min,
-					tempo_preparo_max: newConfig.tempo_preparo_max,
+					tempo_entrega_min: newConfig.tempo_entrega_min,
+					tempo_entrega_max: newConfig.tempo_entrega_max,
 					valor_minimo_pedido: newConfig.valor_minimo_pedido,
 				},
 			});
@@ -143,8 +143,29 @@ const tiposTaxaEntrega = [
 
 // Estado local para adições
 const novaRegra = ref({
-	localizacao: { nome: "", cidade: "", taxa_valor: 0, tempo_min: 30, tempo_max: 60 },
+	localizacao: {
+		nome: "",
+		cidade: "",
+		taxa_valor: 0,
+		tempo_min: 30,
+		tempo_max: 60,
+	},
 });
+
+// Watch para atualizar tempo_min e tempo_max com valores globais
+watch(
+	[() => values.tempo_entrega_min, () => values.tempo_entrega_max],
+	([min, max]) => {
+		// Atualizar apenas se os campos estão vazios (valores padrão)
+		if (novaRegra.value.localizacao.tempo_min === 30 && min) {
+			novaRegra.value.localizacao.tempo_min = min;
+		}
+		if (novaRegra.value.localizacao.tempo_max === 60 && max) {
+			novaRegra.value.localizacao.tempo_max = max;
+		}
+	},
+	{ immediate: true },
+);
 
 const gerarId = () => Math.random().toString(36).substring(2, 11);
 
@@ -172,15 +193,24 @@ const adicionarTaxaLocalizacao = () => {
 	if (!novaRegra.value.localizacao.nome || !novaRegra.value.localizacao.cidade) return;
 	const novas = [
 		...(values.taxas_por_localizacao || []),
-		{ id: gerarId(), ...novaRegra.value.localizacao, status: "ativado" as const },
+		{
+			id: gerarId(),
+			nome: novaRegra.value.localizacao.nome,
+			cidade: novaRegra.value.localizacao.cidade,
+			taxa_valor: novaRegra.value.localizacao.taxa_valor,
+			tempo_min: novaRegra.value.localizacao.tempo_min,
+			tempo_max: novaRegra.value.localizacao.tempo_max,
+			status: "ativado" as const,
+		},
 	];
 	setFieldValue("taxas_por_localizacao", novas);
+	// Resetar com valores globais atuais
 	novaRegra.value.localizacao = {
 		nome: "",
 		cidade: "",
 		taxa_valor: 0,
-		tempo_min: 30,
-		tempo_max: 60,
+		tempo_min: values.tempo_entrega_min || 30,
+		tempo_max: values.tempo_entrega_max || 60,
 	};
 	hasUnsavedChanges.value = true;
 };
@@ -300,7 +330,7 @@ const tipoTaxaLabel = computed(
 							>
 								<span class="text-xs text-gray-500">Tempo Estimado</span>
 								<span class="text-xs font-bold"
-									>{{ values.tempo_preparo_min }}-{{ values.tempo_preparo_max }} min</span
+									>{{ values.tempo_entrega_min }}-{{ values.tempo_entrega_max }} min</span
 								>
 							</div>
 							<div
@@ -526,6 +556,66 @@ const tipoTaxaLabel = computed(
 							</div>
 						</div>
 
+						<!-- Parâmetros Gerais (SEMPRE VISÍVEL) -->
+						<div class="space-y-4">
+							<div
+								class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700"
+							>
+								<Icon name="lucide:clock" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+								<h4
+									class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest"
+								>
+									Parâmetros Gerais
+								</h4>
+							</div>
+
+							<!-- Card Info - Tempo de Entrega Padrão -->
+							<div
+								class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+							>
+								<div class="flex items-start gap-3">
+									<Icon name="lucide:info" class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+									<div class="flex-1">
+										<h5 class="text-sm font-bold text-blue-900 dark:text-blue-200 mb-1">
+											Tempo de Entrega Padrão
+										</h5>
+										<p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+											Este é o tempo exibido para todos os clientes no cardápio. Considere o tempo
+											de preparo + deslocamento. No modo "Taxa por Bairro", você pode personalizar
+											por região.
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- Inputs de Tempo Global -->
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<UiFormField label="Tempo Mínimo (minutos)" required>
+									<UiInput
+										:model-value="values.tempo_entrega_min"
+										type="number"
+										placeholder="30"
+										min="10"
+										max="180"
+										@update:model-value="(v) => setFieldValue('tempo_entrega_min', Number(v))"
+									/>
+									<p class="text-xs text-gray-500 mt-1">Tempo mínimo de entrega</p>
+								</UiFormField>
+
+								<UiFormField label="Tempo Máximo (minutos)" required>
+									<UiInput
+										:model-value="values.tempo_entrega_max"
+										type="number"
+										placeholder="60"
+										min="10"
+										max="180"
+										@update:model-value="(v) => setFieldValue('tempo_entrega_max', Number(v))"
+									/>
+									<p class="text-xs text-gray-500 mt-1">Tempo máximo de entrega</p>
+								</UiFormField>
+							</div>
+						</div>
+
 						<!-- Modalidade -->
 						<div class="space-y-4">
 							<label class="text-xs font-bold text-gray-700 dark:text-gray-300"
@@ -704,6 +794,31 @@ const tipoTaxaLabel = computed(
 
 							<!-- TAXA POR LOCALIZAÇÃO -->
 							<div v-else-if="values.tipo_taxa_entrega === 'taxa_localizacao'" class="space-y-6">
+								<!-- Card Info - Tempo Personalizado por Bairro -->
+								<div
+									class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+								>
+									<div class="flex items-start gap-3">
+										<Icon
+											name="lucide:lightbulb"
+											class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
+										/>
+										<div class="flex-1">
+											<h5 class="text-sm font-bold text-amber-900 dark:text-amber-200 mb-1">
+												Tempo Personalizado por Bairro
+											</h5>
+											<p class="text-xs text-amber-700 dark:text-amber-300 leading-relaxed mb-2">
+												Defina tempos específicos para cada região. Clientes verão automaticamente o
+												tempo correto baseado no bairro deles. O tempo padrão é usado quando não há
+												configuração específica.
+											</p>
+											<p class="text-xs text-amber-600 dark:text-amber-400 font-medium">
+												💡 Dica: Bairros próximos = menos tempo | Bairros distantes = mais tempo
+											</p>
+										</div>
+									</div>
+								</div>
+
 								<!-- Alerta se não tem bairros -->
 								<div
 									v-if="
@@ -796,12 +911,24 @@ const tipoTaxaLabel = computed(
 									</div>
 									<div class="col-span-2">
 										<UiFormField label="Tempo Mínimo">
-											<UiInput v-model="novaRegra.localizacao.tempo_min" type="number" />
+											<UiInput
+												:model-value="novaRegra.localizacao.tempo_min"
+												type="number"
+												min="10"
+												max="180"
+												@update:model-value="(v) => (novaRegra.localizacao.tempo_min = Number(v))"
+											/>
 										</UiFormField>
 									</div>
 									<div class="col-span-1">
 										<UiFormField label="Tempo Máximo">
-											<UiInput v-model="novaRegra.localizacao.tempo_max" type="number" />
+											<UiInput
+												:model-value="novaRegra.localizacao.tempo_max"
+												type="number"
+												min="10"
+												max="180"
+												@update:model-value="(v) => (novaRegra.localizacao.tempo_max = Number(v))"
+											/>
 										</UiFormField>
 									</div>
 									<div class="col-span-1 flex justify-end">

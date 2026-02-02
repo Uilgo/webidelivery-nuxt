@@ -83,8 +83,6 @@ export interface ProdutoMetadata {
 	};
 	/** Tags de classificação */
 	readonly tags?: readonly string[]; // ex: ['vegetariano', 'sem_gluten', 'picante', 'vegano']
-	/** Tempo de preparo em minutos */
-	readonly tempo_preparo_min?: number;
 	/** Quantidade de pessoas que serve */
 	readonly serve_pessoas?: number;
 	/** Lista de alergenos */

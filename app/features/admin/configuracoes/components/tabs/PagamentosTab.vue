@@ -7,7 +7,7 @@
  */
 
 import { toTypedSchema } from "@vee-validate/zod";
-import { useForm } from "vee-validate";
+import { useForm, Field } from "vee-validate";
 import { pagamentosSchema } from "#shared/schemas/configuracoes";
 import { usePagamentos } from "../../composables/usePagamentos";
 
@@ -409,12 +409,14 @@ const percentualAtivacao = computed(() => {
 									</UiFormField>
 
 									<UiFormField label="Chave PIX" required :error="errors.chave_pix">
-										<UiInput
-											v-model="values.chave_pix"
-											:placeholder="tipoChaveSelecionado.placeholder"
-											size="md"
-											@blur="() => setFieldValue('chave_pix', values.chave_pix)"
-										/>
+										<Field v-slot="{ field }" name="chave_pix">
+											<UiInput
+												:model-value="String(field.value || '')"
+												:placeholder="tipoChaveSelecionado.placeholder"
+												size="md"
+												@update:model-value="(value) => setFieldValue('chave_pix', String(value))"
+											/>
+										</Field>
 									</UiFormField>
 								</div>
 							</div>

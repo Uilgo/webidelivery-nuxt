@@ -117,24 +117,11 @@ export const useHorariosFuncionamento = (): UseHorariosFuncionamentoReturn => {
 				throw rpcError;
 			}
 
-			// Atualizar store local usando função mutadora
-			if (estabelecimentoStore.estabelecimento) {
-				estabelecimentoStore.$patch((state) => {
-					if (state.estabelecimento) {
-						const configGeral = (state.estabelecimento.config_geral || {}) as Record<
-							string,
-							unknown
-						>;
-						state.estabelecimento.config_geral = {
-							...configGeral,
-							horario_funcionamento: horariosAtualizados,
-						};
-					}
-				});
+			// Recarregar estabelecimento do banco para garantir sincronização
+			const estabelecimentoId = estabelecimentoStore.id;
+			if (estabelecimentoId) {
+				await estabelecimentoStore.fetchEstabelecimento(estabelecimentoId);
 			}
-
-			// Atualizar dados locais
-			horarios.value = horariosAtualizados;
 
 			success({
 				title: "Horários atualizados",
@@ -301,7 +288,7 @@ export const useHorariosFuncionamento = (): UseHorariosFuncionamentoReturn => {
 		() => {
 			buscarHorarios();
 		},
-		{ immediate: true },
+		{ immediate: true, deep: true },
 	);
 
 	return {

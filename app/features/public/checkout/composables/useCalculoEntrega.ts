@@ -88,8 +88,8 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 			cidades_atendidas: (configGeral.cidades_atendidas as string[]) || [],
 			taxas_por_localizacao: (configGeral.taxas_por_localizacao || []) as TaxaLocalizacao[],
 			taxa_padrao_outros_bairros: (configGeral.taxa_padrao_outros_bairros as number) || 0,
-			tempo_preparo_min: (configGeral.tempo_preparo_min as number) || 30,
-			tempo_preparo_max: (configGeral.tempo_preparo_max as number) || 60,
+			tempo_entrega_min: (configGeral.tempo_entrega_min as number) || 30,
+			tempo_entrega_max: (configGeral.tempo_entrega_max as number) || 60,
 			valor_minimo_pedido: (configGeral.valor_minimo_pedido as number) || 0,
 		};
 	});
@@ -265,8 +265,8 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 					if (resultado === "taxa_padrao") {
 						// Aplicar taxa padrão
 						return {
-							tempoMin: config.tempo_preparo_min,
-							tempoMax: config.tempo_preparo_max,
+							tempoMin: config.tempo_entrega_min,
+							tempoMax: config.tempo_entrega_max,
 							taxa: config.taxa_padrao_outros_bairros || 0,
 							disponivel: true,
 							cidadeValida: true,
@@ -384,8 +384,8 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 		if (resultado === "taxa_padrao") {
 			// Aplicar taxa padrão
 			return {
-				tempoMin: config.tempo_preparo_min,
-				tempoMax: config.tempo_preparo_max,
+				tempoMin: config.tempo_entrega_min,
+				tempoMax: config.tempo_entrega_max,
 				taxa: config.taxa_padrao_outros_bairros || 0,
 				disponivel: true,
 				cidadeValida: true,

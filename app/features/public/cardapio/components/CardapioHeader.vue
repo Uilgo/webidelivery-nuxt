@@ -8,7 +8,9 @@
  */
 
 import type { Estabelecimento } from "../types/cardapio-publico";
+import type { HorarioFuncionamento } from "#shared/types/estabelecimentos";
 import { useSobreDrawer } from "../composables/useSobreDrawer";
+import { useStatusEstabelecimento } from "~/composables/core/useStatusEstabelecimento";
 import CardapioSobreBottomSheet from "./CardapioSobreBottomSheet.vue";
 
 interface Props {
@@ -17,8 +19,18 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Status aberto/fechado vem direto do banco
-const estaAberto = computed(() => props.estabelecimento.aberto);
+/**
+ * Extrair dados necessários para o composable de status
+ * O banco já armazena no formato correto: HorarioFuncionamento[]
+ */
+const modoFuncionamento = computed(() => props.estabelecimento.modo_funcionamento || "automatico");
+const horarios = computed(() => {
+	const configGeral = props.estabelecimento.config_geral;
+	return (configGeral?.horarios as HorarioFuncionamento[]) || [];
+});
+
+// Usar composable para calcular status real baseado em horários
+const { estaAberto } = useStatusEstabelecimento(modoFuncionamento, horarios);
 
 // Usar composable para gerenciar modal/bottom sheet
 const { modalAberto, bottomSheetAberto, abrir: abrirSobre } = useSobreDrawer();
@@ -182,7 +194,7 @@ const abrirWhatsApp = (): void => {
 
 								<!-- Tempo de Entrega (oculto no mobile) -->
 								<div
-									class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm"
+									class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 cardapio-rounded text-xs sm:text-sm md:text-base font-semibold bg-white/20 text-white backdrop-blur-sm shadow-lg"
 								>
 									<Icon name="lucide:clock" class="w-3.5 h-3.5" />
 									{{ tempoEntrega }}

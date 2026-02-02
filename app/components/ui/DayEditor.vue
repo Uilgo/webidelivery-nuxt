@@ -23,6 +23,8 @@ interface Emits {
 	"update:horario": [horario: HorarioFuncionamento];
 	/** Emitido quando o editor deve ser fechado */
 	close: [];
+	/** Emitido quando o usuário clica em salvar */
+	save: [horario: HorarioFuncionamento];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -357,6 +359,14 @@ const emitirMudanca = (): void => {
 };
 
 /**
+ * Salvar horário (disparado pelo botão)
+ */
+const salvar = (): void => {
+	if (!validacao.value.valido) return;
+	emit("save", localHorario.value);
+};
+
+/**
  * Nome do dia formatado
  */
 const nomeDia = computed(() => {
@@ -372,6 +382,11 @@ const resumoHorarios = computed(() => {
 	if (periodos.length === 0) return "Nenhum período configurado";
 
 	return periodos.map((p) => `${p.horario_abertura} às ${p.horario_fechamento}`).join(", ");
+});
+
+// Expor função salvar para componente pai
+defineExpose({
+	salvar,
 });
 </script>
 

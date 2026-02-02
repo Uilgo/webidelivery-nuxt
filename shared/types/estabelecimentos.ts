@@ -5,7 +5,7 @@
  * incluindo configurações, endereços e dados operacionais.
  */
 
-import type { UUID, TimestampTz, Json, EstabelecimentoStatus } from "./database";
+import type { UUID, TimestampTz, Json, EstabelecimentoStatus, ModoFuncionamento } from "./database";
 
 // ========================================
 // TABELA ESTABELECIMENTOS
@@ -20,6 +20,7 @@ export interface Estabelecimento {
 	readonly descricao: string | null;
 	readonly status: EstabelecimentoStatus;
 	readonly aberto: boolean;
+	readonly modo_funcionamento: ModoFuncionamento;
 	readonly onboarding: boolean;
 	readonly logo_url: string | null;
 	readonly logo_url_dark: string | null;
@@ -63,8 +64,8 @@ export interface ConfigGeral {
 	readonly cidades_atendidas: string[]; // Obrigatório, mínimo 1
 	readonly taxas_por_localizacao?: TaxaLocalizacao[];
 	readonly taxa_padrao_outros_bairros?: number; // Taxa para bairros não cadastrados
-	readonly tempo_preparo_min: number;
-	readonly tempo_preparo_max: number;
+	readonly tempo_entrega_min: number;
+	readonly tempo_entrega_max: number;
 	readonly valor_minimo_pedido: number;
 	readonly horario_funcionamento: HorarioFuncionamento[];
 	readonly excecoes_horario?: HorarioExcecao[];

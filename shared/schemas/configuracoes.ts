@@ -131,14 +131,14 @@ export const freteEntregaSchema = z.object({
 		)
 		.optional(),
 	taxa_padrao_outros_bairros: z.number().min(0, "Taxa padrão não pode ser negativa").optional(),
-	tempo_preparo_min: z
+	tempo_entrega_min: z
 		.number()
-		.min(10, "Tempo mínimo deve ser pelo menos 10 minutos")
-		.max(180, "Tempo mínimo não pode exceder 180 minutos"),
-	tempo_preparo_max: z
+		.min(10, "Tempo mínimo de entrega deve ser pelo menos 10 minutos")
+		.max(180, "Tempo mínimo de entrega não pode exceder 180 minutos"),
+	tempo_entrega_max: z
 		.number()
-		.min(10, "Tempo máximo deve ser pelo menos 10 minutos")
-		.max(180, "Tempo máximo não pode exceder 180 minutos"),
+		.min(10, "Tempo máximo de entrega deve ser pelo menos 10 minutos")
+		.max(180, "Tempo máximo de entrega não pode exceder 180 minutos"),
 	valor_minimo_pedido: z.number().min(0, "Valor mínimo não pode ser negativo"),
 });
 

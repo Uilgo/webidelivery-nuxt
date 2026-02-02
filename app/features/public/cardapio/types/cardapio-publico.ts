@@ -36,7 +36,18 @@ export interface Estabelecimento {
 	tempo_entrega_max: number;
 	entrega_gratis_acima: number | null;
 	aberto: boolean;
-	config_geral?: Record<string, unknown> | null; // ✅ Adicionar config_geral
+	modo_funcionamento?: "automatico" | "manual";
+	config_geral?: {
+		horarios?: Array<{
+			dia_semana: string; // "domingo" | "segunda" | ... (DiaSemana)
+			aberto: boolean;
+			periodos: Array<{
+				horario_abertura: string;
+				horario_fechamento: string;
+			}>;
+		}>;
+		[key: string]: unknown;
+	} | null;
 	config_tema?: Record<string, unknown> | null;
 }
 

@@ -302,14 +302,14 @@ export const onboardingPagamentosSchema = z
  */
 export const configGeralSchema = z.object({
 	taxa_entrega: z.number().nonnegative("Taxa de entrega deve ser não negativa"),
-	tempo_preparo_min: z
+	tempo_entrega_min: z
 		.number()
-		.int("Tempo mínimo deve ser inteiro")
-		.positive("Tempo mínimo deve ser positivo"),
-	tempo_preparo_max: z
+		.int("Tempo mínimo de entrega deve ser inteiro")
+		.positive("Tempo mínimo de entrega deve ser positivo"),
+	tempo_entrega_max: z
 		.number()
-		.int("Tempo máximo deve ser inteiro")
-		.positive("Tempo máximo deve ser positivo"),
+		.int("Tempo máximo de entrega deve ser inteiro")
+		.positive("Tempo máximo de entrega deve ser positivo"),
 	valor_minimo_pedido: z.number().nonnegative("Valor mínimo deve ser não negativo"),
 });
 

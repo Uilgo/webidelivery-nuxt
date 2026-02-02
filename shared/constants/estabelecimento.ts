@@ -186,14 +186,14 @@ export const TOTAL_ETAPAS_ONBOARDING = 5;
 export const TAXA_ENTREGA_PADRAO = 0;
 
 /**
- * Tempo de preparo mínimo padrão (em minutos)
+ * Tempo de entrega mínimo padrão (em minutos)
  */
-export const TEMPO_PREPARO_MIN_PADRAO = 30;
+export const TEMPO_ENTREGA_MIN_PADRAO = 30;
 
 /**
- * Tempo de preparo máximo padrão (em minutos)
+ * Tempo de entrega máximo padrão (em minutos)
  */
-export const TEMPO_PREPARO_MAX_PADRAO = 60;
+export const TEMPO_ENTREGA_MAX_PADRAO = 60;
 
 /**
  * Valor mínimo de pedido padrão
@@ -230,9 +230,9 @@ export const DESCRICAO_MAX_LENGTH = 500;
 export const WHATSAPP_LENGTH = 13;
 
 /**
- * Tempo máximo de preparo (em minutos)
+ * Tempo máximo de entrega (em minutos)
  */
-export const TEMPO_PREPARO_MAX = 240;
+export const TEMPO_ENTREGA_MAX = 240;
 
 /**
  * Máximo de períodos de funcionamento por dia
