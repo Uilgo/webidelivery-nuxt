@@ -10,10 +10,16 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { useForm } from "vee-validate";
 import { dadosEmpresaSchema } from "#shared/schemas/configuracoes";
 import { useDadosEmpresa } from "../../composables/useDadosEmpresa";
+import { formatWhatsApp, parsePhone } from "~/lib/formatters/phone";
+import { isValidWhatsApp } from "~/lib/validators/phone";
+import { formatSlug } from "~/lib/formatters/slug";
+import { useToast } from "~/composables/ui/useToast";
+import type { DadosEmpresa } from "../../types/configuracoes";
 import LogoUploadTabs from "../shared/LogoUploadTabs.vue";
 
 // Composable de dados da empresa
 const { dados, loading, saving, salvarDados, slugValidation, validarSlug } = useDadosEmpresa();
+const { success } = useToast();
 
 // Schema de validação
 const validationSchema = toTypedSchema(dadosEmpresaSchema);
@@ -28,12 +34,113 @@ const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
 const slugInput = ref("");
 let slugTimeout: NodeJS.Timeout | null = null;
 
+/**
+ * Handler para mudança do slug - COM FORMATAÇÃO AUTOMÁTICA
+ */
+const handleSlugChange = (value: string | number): void => {
+	const rawValue = String(value);
+
+	// Usar o formatter oficial do projeto
+	const formattedSlug = formatSlug(rawValue);
+
+	// Atualizar slugInput e campo do formulário
+	slugInput.value = formattedSlug;
+	setFieldValue("slug", formattedSlug);
+
+	// Debounce para validação
+	if (slugTimeout) clearTimeout(slugTimeout);
+	slugTimeout = setTimeout(async () => {
+		if (formattedSlug && formattedSlug.length >= 3) {
+			await validarSlug(formattedSlug);
+		}
+	}, 500);
+};
+
+/**
+ * Handler para mudança do WhatsApp - COM MÁSCARA E VALIDAÇÃO
+ */
+const handleWhatsAppChange = (value: string | number): void => {
+	const rawValue = String(value);
+
+	// Extrair apenas números
+	const onlyNumbers = rawValue.replace(/\D/g, "");
+
+	// Limitar a 13 dígitos (DDI 55 + DDD 2 + Número 9)
+	const limitedDigits = onlyNumbers.slice(0, 13);
+
+	// Se começar com 55, usar como está; senão, adicionar DDI
+	const withDDI = limitedDigits.startsWith("55") ? limitedDigits : "55" + limitedDigits;
+
+	// Formatar e atualizar
+	const formatted = formatWhatsApp(withDDI);
+	setFieldValue("whatsapp", formatted);
+};
+
+/**
+ * Referência para o input do WhatsApp
+ */
+const whatsappInputRef = ref<HTMLInputElement>();
+
+/**
+ * Handler para interceptar input direto no DOM
+ */
+const handleWhatsAppInput = (event: Event): void => {
+	const target = event.target as HTMLInputElement;
+	const currentValue = target.value;
+
+	// Verificar se está tentando exceder o limite
+	const onlyNumbers = currentValue.replace(/\D/g, "");
+	if (onlyNumbers.length > 13) {
+		event.preventDefault();
+		event.stopPropagation();
+		target.value = values.whatsapp || "";
+		return;
+	}
+
+	// Processar normalmente
+	handleWhatsAppChange(currentValue);
+};
+
+/**
+ * Maxlength dinâmico baseado no formato
+ */
+const whatsappMaxLength = computed((): number => {
+	// +55 (XX) XXXXX-XXXX = 19 caracteres máximo
+	return 19;
+});
+
+/**
+ * Validar WhatsApp
+ */
+const isWhatsAppValid = computed((): boolean => {
+	const whatsapp = values.whatsapp;
+	if (!whatsapp) return true; // Opcional, então vazio é válido
+	const phoneNumbers = parsePhone(whatsapp);
+	return isValidWhatsApp(phoneNumbers);
+});
+
+// Armazenar valores iniciais para comparação
+const valoresIniciais = ref<DadosEmpresa | null>(null);
+
 // Watch para atualizar valores quando dados carregarem
 watch(
 	dados,
 	(newDados) => {
 		if (newDados) {
-			// Resetar formulário com novos valores
+			// Formatar WhatsApp antes de setar
+			const whatsappFormatado = newDados.whatsapp ? formatWhatsApp(newDados.whatsapp) : "";
+
+			// Armazenar valores iniciais para comparação posterior
+			valoresIniciais.value = {
+				nome: newDados.nome,
+				slug: newDados.slug,
+				descricao: newDados.descricao || "",
+				logo_url: newDados.logo_url || "",
+				logo_url_dark: newDados.logo_url_dark || "",
+				whatsapp: whatsappFormatado,
+			};
+
+			// Resetar formulário com valores formatados
 			resetForm({
 				values: {
 					nome: newDados.nome,
@@ -41,9 +148,10 @@ watch(
 					descricao: newDados.descricao || "",
 					logo_url: newDados.logo_url || "",
 					logo_url_dark: newDados.logo_url_dark || "",
-					whatsapp: newDados.whatsapp || "",
+					whatsapp: whatsappFormatado,
 				},
 			});
+
 			// Atualizar slugInput também
 			slugInput.value = newDados.slug;
 		}
@@ -51,21 +159,56 @@ watch(
 	{ immediate: true },
 );
 
-watch(slugInput, (newSlug) => {
-	setFieldValue("slug", newSlug);
-
-	// Debounce manual
-	if (slugTimeout) clearTimeout(slugTimeout);
-	slugTimeout = setTimeout(async () => {
-		if (newSlug && newSlug.length >= 3) {
-			await validarSlug(newSlug);
-		}
-	}, 500);
-});
-
-// Submeter formulário
+// Submeter formulário - SALVAR APENAS CAMPOS MODIFICADOS
 const onSubmit = handleSubmit(async (formValues) => {
-	await salvarDados(formValues);
+	if (!valoresIniciais.value) return;
+
+	// Comparar valores atuais com iniciais e enviar apenas os modificados
+	const camposModificados: Partial<DadosEmpresa> = {};
+
+	// Verificar cada campo individualmente
+	if (formValues.nome !== valoresIniciais.value.nome) {
+		camposModificados.nome = formValues.nome;
+	}
+
+	if (formValues.slug !== valoresIniciais.value.slug) {
+		camposModificados.slug = formValues.slug;
+	}
+
+	if (formValues.descricao !== valoresIniciais.value.descricao) {
+		camposModificados.descricao = formValues.descricao || undefined;
+	}
+
+	if (formValues.logo_url !== valoresIniciais.value.logo_url) {
+		camposModificados.logo_url = formValues.logo_url || undefined;
+	}
+
+	if (formValues.logo_url_dark !== valoresIniciais.value.logo_url_dark) {
+		camposModificados.logo_url_dark = formValues.logo_url_dark || undefined;
+	}
+
+	if (formValues.whatsapp !== valoresIniciais.value.whatsapp) {
+		// Salvar apenas números (sem formatação)
+		const whatsappNumeros = parsePhone(formValues.whatsapp || "");
+		camposModificados.whatsapp = whatsappNumeros || undefined;
+	}
+
+	// Se nenhum campo foi modificado, não fazer nada
+	if (Object.keys(camposModificados).length === 0) {
+		success({
+			title: "Nenhuma alteração",
+			description: "Não há alterações para salvar",
+		});
+		return;
+	}
+
+	// Salvar apenas os campos modificados
+	const sucesso = await salvarDados(camposModificados);
+
+	// Se salvou com sucesso, atualizar valores iniciais
+	if (sucesso && valoresIniciais.value) {
+		Object.assign(valoresIniciais.value, formValues);
+	}
 });
 
 // Mensagem de aviso ao alterar slug
@@ -115,10 +258,10 @@ const showSlugWarning = computed(() => {
 								<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Identidade</h3>
 							</div>
 
-							<!-- Grid 3 colunas: Nome (2 cols) + WhatsApp (1 col) -->
-							<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-								<!-- Nome do Estabelecimento (70% - 2 colunas) -->
-								<div class="lg:col-span-2">
+							<!-- Grid: Nome (flex-1) + WhatsApp (auto) -->
+							<div class="flex flex-col lg:flex-row gap-4">
+								<!-- Nome do Estabelecimento (ocupa espaço disponível) -->
+								<div class="flex-1">
 									<UiFormField name="nome" label="Nome do Estabelecimento" required>
 										<UiInput
 											v-model="values.nome"
@@ -130,16 +273,39 @@ const showSlugWarning = computed(() => {
 									</UiFormField>
 								</div>
 
-								<!-- WhatsApp (30% - 1 coluna) -->
-								<div class="lg:col-span-1">
+								<!-- WhatsApp (largura fixa/compacta) -->
+								<div class="w-full lg:w-auto">
 									<UiFormField name="whatsapp" label="WhatsApp">
 										<UiInput
-											v-model="values.whatsapp"
+											ref="whatsappInputRef"
+											:model-value="values.whatsapp"
 											placeholder="(11) 99999-9999"
-											:error="!!errors.whatsapp"
-											@blur="() => setFieldValue('whatsapp', values.whatsapp)"
-										/>
+											:maxlength="whatsappMaxLength"
+											:error="!!(errors.whatsapp || (values.whatsapp && !isWhatsAppValid))"
+											class="[&_input]:!flex-none [&_input]:!w-[172px] lg:w-auto"
+											@input="handleWhatsAppInput"
+											@update:model-value="handleWhatsAppChange"
+										>
+											<template #iconLeft>
+												<Icon name="logos:whatsapp-icon" class="w-4 h-4 shrink-0" />
+											</template>
+											<template #iconRight>
+												<Icon
+													v-if="values.whatsapp && isWhatsAppValid"
+													name="lucide:check-circle"
+													class="w-4 h-4 text-green-500 shrink-0"
+												/>
+												<Icon
+													v-else-if="values.whatsapp && !isWhatsAppValid"
+													name="lucide:x-circle"
+													class="w-4 h-4 text-red-500 shrink-0"
+												/>
+											</template>
+										</UiInput>
 										<template v-if="errors.whatsapp" #error>{{ errors.whatsapp }}</template>
+										<template v-else-if="values.whatsapp && !isWhatsAppValid" #error>
+											Formato inválido. Use: (11) 99999-9999
+										</template>
 									</UiFormField>
 								</div>
 							</div>
@@ -154,26 +320,36 @@ const showSlugWarning = computed(() => {
 											webidelivery.com.br/
 										</span>
 										<UiInput
-											v-model="slugInput"
+											:model-value="slugInput"
 											placeholder="bella-napoli"
 											:error="!!errors.slug"
+											:disabled="slugValidation.isChecking"
 											class="flex-1 max-w-md"
-										/>
+											@update:model-value="handleSlugChange"
+										>
+											<template #iconRight>
+												<Icon
+													v-if="slugValidation.isChecking"
+													name="lucide:loader-2"
+													class="w-4 h-4 animate-spin text-primary-600 dark:text-primary-400"
+												/>
+												<Icon
+													v-else-if="slugValidation.available"
+													name="lucide:check-circle-2"
+													class="w-4 h-4 text-green-500"
+												/>
+												<Icon
+													v-else-if="slugValidation.message && !slugValidation.available"
+													name="lucide:alert-circle"
+													class="w-4 h-4 text-red-500"
+												/>
+											</template>
+										</UiInput>
 									</div>
 
 									<!-- Validação de Slug em Tempo Real -->
-									<div v-if="slugValidation.isChecking" class="flex items-center gap-2 text-sm">
-										<Icon
-											name="lucide:loader-2"
-											class="w-4 h-4 animate-spin text-primary-600 dark:text-primary-400"
-										/>
-										<span class="text-gray-600 dark:text-gray-400"
-											>Verificando disponibilidade...</span
-										>
-									</div>
-
 									<div
-										v-else-if="slugValidation.message"
+										v-if="slugValidation.message"
 										class="flex items-center gap-2 text-sm"
 										:class="
 											slugValidation.available
