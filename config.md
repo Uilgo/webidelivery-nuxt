@@ -1,322 +1,172 @@
-# 🎉 IMPLEMENTAÇÃO CONCLUÍDA - Sistema de Salvamento Inteligente
+📋 PLANEJAMENTO: Sistema Dinâmico de Divisão de Sabores
+🎯 Objetivo
+Permitir que o admin configure se um produto pode ser dividido em múltiplos sabores e quantas divisões são permitidas (2, 3 ou 4 sabores).
 
-**Status**: ✅ **100% COMPLETO**  
-**Data**: 02/02/2026  
-**Tabs Implementadas**: 5/5
+📊 1. ALTERAÇÕES NO BANCO DE DADOS
+Tabela: produtos
 
----
+Adicionar novos campos:
 
-## 📊 STATUS ATUAL - TODAS AS TABS IMPLEMENTADAS
+ALTER TABLE produtos ADD COLUMN permite_divisao_sabores BOOLEAN DEFAULT false;
+ALTER TABLE produtos ADD COLUMN max_sabores_divisao INTEGER DEFAULT 2 CHECK (max_sabores_divisao IN (2, 3, 4));
+Campos:
 
-### ✅ **DadosEmpresaTab** (CONCLUÍDO)
+permite_divisao_sabores (boolean) - Se o produto permite divisão
+max_sabores_divisao (integer) - Quantidade máxima de sabores (2, 3 ou 4)
+📝 2. ALTERAÇÕES NOS SCHEMAS
+Arquivo:
+produto.ts
 
-**Arquivo**: `app/features/admin/configuracoes/components/tabs/DadosEmpresaTab.vue`
+Adicionar nos schemas createProdutoSchema e updateProdutoSchema:
 
-- ✅ Armazena `valoresIniciais` para comparação
-- ✅ Computed `hasChanges` implementado
-- ✅ Compara campo por campo no `onSubmit`
-- ✅ Envia apenas campos modificados para o backend
-- ✅ Exibe toast "Nenhuma alteração" se nada mudou
-- ✅ Botão desabilitado quando `!hasChanges || saving`
+permite_divisao_sabores: z.boolean().default(false),
+max_sabores_divisao: z.number().int().min(2).max(4).default(2),
+Com validação:
 
-### ✅ **PagamentosTab** (CONCLUÍDO)
+.refine((data) => {
+// Se permite divisão, max_sabores deve estar entre 2-4
+if (data.permite_divisao_sabores) {
+return data.max_sabores_divisao >= 2 && data.max_sabores_divisao <= 4;
+}
+return true;
+}, {
+message: "Quantidade de sabores deve ser 2, 3 ou 4",
+path: ["max_sabores_divisao"],
+})
+🎨 3. ALTERAÇÕES NO FORMULÁRIO DE PRODUTO (Admin)
+Arquivo:
+ProdutoForm.vue
 
-**Arquivo**: `app/features/admin/configuracoes/components/tabs/PagamentosTab.vue`
+Adicionar nova seção após "Promoção":
 
-- ✅ Armazena `valoresIniciais` com tipo `Mutable<T>`
-- ✅ Computed `hasChanges` implementado
-- ✅ Compara todos os campos de pagamento
-- ✅ Envia apenas campos modificados para o backend
-- ✅ Exibe toast "Nenhuma alteração" se nada mudou
-- ✅ Botão desabilitado quando `!hasChanges || saving`
+<!-- Divisão de Sabores -->
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <h4>Permite dividir sabores?</h4>
+      <p class="text-sm text-muted">Ideal para pizzas e produtos similares</p>
+    </div>
+    <UiSwitch v-model="form.permite_divisao_sabores" />
+  </div>
+  
+  <!-- Quantidade de sabores (só aparece se ativado) -->
+  <div v-if="form.permite_divisao_sabores">
+    <label>Quantos sabores podem ser divididos?</label>
+    <div class="flex gap-2">
+      <button @click="form.max_sabores_divisao = 2">2 sabores</button>
+      <button @click="form.max_sabores_divisao = 3">3 sabores</button>
+      <button @click="form.max_sabores_divisao = 4">4 sabores</button>
+    </div>
+  </div>
+</div>
+🔄 4. ALTERAÇÕES NOS TYPES
+Arquivo: 
+cardapio.ts
 
-### ✅ **FreteEntregaTab** (CONCLUÍDO)
+Adicionar na interface Produto:
 
-**Arquivo**: `app/features/admin/configuracoes/components/tabs/FreteEntregaTab.vue`
+readonly permite_divisao_sabores: boolean;
+readonly max_sabores_divisao: number; // 2, 3 ou 4
+Arquivo:
+cardapio-publico.ts
 
-- ✅ Armazena `valoresIniciais` no watch
-- ✅ Computed `hasChanges` implementado
-- ✅ Compara campos primitivos e arrays (usando JSON.stringify)
-- ✅ Envia apenas campos modificados para o backend
-- ✅ Exibe toast "Nenhuma alteração" se nada mudou
-- ✅ Botão desabilitado quando `!hasChanges || saving`
-- ✅ Corrigidos erros de tipagem (valores undefined com fallbacks)
+Adicionar na interface ProdutoPublico:
 
-### ✅ **HorariosTab** (CONCLUÍDO)
+permite_divisao_sabores: boolean;
+max_sabores_divisao: number;
+🎭 5. ALTERAÇÕES NO CARDÁPIO PÚBLICO
+Arquivo:
+CardapioProdutoDrawer.vue
 
-**Arquivo**: `app/features/admin/configuracoes/components/tabs/HorariosTab.vue`
+Mudanças:
 
-- ✅ Armazena `valoresIniciais` com deep copy (JSON.parse/stringify)
-- ✅ Computed `hasChanges` usando JSON.stringify para comparar arrays
-- ✅ Verifica mudanças antes de salvar em `toggleDia` e `salvarHorario`
-- ✅ Envia apenas quando há mudanças
-- ✅ Exibe toast "Nenhuma alteração" se nada mudou
-- ✅ Botão desabilitado quando `!hasChanges || saving`
-- ✅ **EXTRA**: Card de Info quando nenhum dia está selecionado (UX melhorada)
+Remover hardcoded:
+// ❌ ANTES
+const quantidadeSabores = ref<2 | 3 | 4>(2);
 
-### ✅ **PersonalizarTab** (CONCLUÍDO)
+// ✅ DEPOIS
+const quantidadeSabores = ref<number>(2);
+Computed para opções dinâmicas:
+const opcoesSabores = computed(() => {
+if (!props.produto?.permite_divisao_sabores) return [];
 
-**Arquivo**: `app/features/admin/configuracoes/components/tabs/PersonalizarTab.vue`
+const max = props.produto.max_sabores_divisao;
+const opcoes = [];
 
-- ✅ Armazena `valoresIniciais` para comparação
-- ✅ Computed `hasChanges` implementado (14 campos do tema)
-- ✅ Compara todos os campos do tema (cores, gradientes, estilos)
-- ✅ Envia apenas campos modificados para o backend
-- ✅ Exibe toast "Nenhuma alteração" se nada mudou
-- ✅ Botão desabilitado quando `!hasChanges || saving`
-- ✅ Tipo auxiliar `Mutable<T>` para remover readonly
-
----
-
-## 🎉 RESUMO FINAL
-
-### ✅ TODAS AS TABS CONCLUÍDAS (5/5) - 100% COMPLETO
-
-1. **DadosEmpresaTab** ✅
-2. **PagamentosTab** ✅
-3. **FreteEntregaTab** ✅
-4. **HorariosTab** ✅
-5. **PersonalizarTab** ✅
-
----
-
-## 📈 BENEFÍCIOS ALCANÇADOS
-
-### 🚀 Performance
-
-- **Redução de 85-90% no tráfego de rede** - apenas campos modificados são enviados
-- **Menos processamento no backend** - RPC processa apenas o necessário
-- **Validações mais rápidas** - menos dados para validar
-
-### 💡 UX/UI
-
-- **Feedback visual claro** - botão desabilitado quando não há mudanças
-- **Toast informativo** - usuário sabe quando não há nada para salvar
-- **Prevenção de salvamentos desnecessários** - evita requisições inúteis
-
-### 🔧 Manutenibilidade
-
-- **Padrão consistente** - todas as tabs seguem a mesma lógica
-- **Código reutilizável** - tipo `Mutable<T>` pode ser extraído para shared
-- **Fácil debug** - comparação explícita campo por campo
-
----
-
-## 🔍 DETALHES TÉCNICOS
-
-### Padrão Implementado
-
-```typescript
-// 1. Tipo auxiliar para remover readonly (quando necessário)
-type Mutable<T> = {
-	-readonly [P in keyof T]: T[P];
-};
-
-// 2. Armazenar valores iniciais
-const valoresIniciais = ref<Mutable<TipoConfig> | null>(null);
-
-// 3. Computed para detectar mudanças
-const hasChanges = computed(() => {
-	if (!valoresIniciais.value) return false;
-	return (
-		values.campo1 !== valoresIniciais.value.campo1 ||
-		values.campo2 !== valoresIniciais.value.campo2
-		// ... outros campos
-	);
+for (let i = 2; i <= max; i++) {
+opcoes.push({
+value: i,
+label: `${i} sabores`
 });
+}
 
-// 4. Watch para armazenar valores iniciais
-watch(
-	dados,
-	(newDados) => {
-		if (newDados) {
-			valoresIniciais.value = { ...newDados };
-			resetForm({ values: newDados });
-		}
-	},
-	{ immediate: true },
-);
-
-// 5. onSubmit com comparação e envio parcial
-const onSubmit = handleSubmit(async (formValues) => {
-	if (!hasChanges.value) {
-		info({ title: "Nenhuma alteração" });
-		return;
-	}
-
-	const camposModificados: Mutable<Partial<TipoConfig>> = {};
-
-	if (formValues.campo1 !== valoresIniciais.value?.campo1) {
-		camposModificados.campo1 = formValues.campo1;
-	}
-	// ... outros campos
-
-	const sucesso = await salvar(camposModificados);
-
-	if (sucesso) {
-		valoresIniciais.value = { ...formValues };
-	}
+return opcoes;
 });
+Mostrar seção apenas se permitido:
 
-// 6. Botão desabilitado
-<UiButton :disabled="!hasChanges || saving" @click="onSubmit">
-	Salvar
-</UiButton>
-```
+<!-- ❌ ANTES: Sempre mostra -->
+<div class="p-4">
+  <h3>Quer dividir seu sabor?</h3>
+  ...
+</div>
 
-### Casos Especiais Tratados
+<!-- ✅ DEPOIS: Condicional -->
+<div v-if="produto?.permite_divisao_sabores" class="p-4">
+  <h3>Quer dividir seu sabor?</h3>
+  ...
+</div>
+Botões dinâmicos:
+<button
+  v-for="opcao in opcoesSabores"
+  :key="opcao.value"
+  @click="quantidadeSabores = opcao.value"
+>
+  {{ opcao.label }}
+</button>
+Mesmo para: CardapioProdutoBottomSheet.vue
 
-#### Arrays (FreteEntregaTab, HorariosTab)
+🔌 6. ALTERAÇÕES NO PLUGIN DE CACHE
+Arquivo:
+cardapio-publico-cache.server.ts
 
-```typescript
-// Comparação de arrays usando JSON.stringify
-JSON.stringify(values.array) !== JSON.stringify(valoresIniciais.value?.array);
-```
+Adicionar campos no SELECT:
 
-#### Campos Readonly (PagamentosTab, PersonalizarTab)
+.select(`  id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+  permite_divisao_sabores, max_sabores_divisao,  // ✅ ADICIONAR
+  produto_variacoes (id, nome, preco, preco_promocional)`)
+E no mapeamento:
 
-```typescript
-// Tipo auxiliar para remover readonly
-type Mutable<T> = {
-	-readonly [P in keyof T]: T[P];
-};
+return (data ?? []).map((produto) => ({
+// ... campos existentes
+permite_divisao_sabores: produto.permite_divisao_sabores,
+max_sabores_divisao: produto.max_sabores_divisao,
+}));
+✅ 7. VALIDAÇÕES E REGRAS DE NEGÓCIO
+Se permite_divisao_sabores = false:
 
-const valoresIniciais = ref<Mutable<ConfigType> | null>(null);
-```
+Não mostrar seção de divisão no drawer/bottomsheet
+Não permitir seleção de múltiplos sabores
+Se permite_divisao_sabores = true:
 
-#### Campos Opcionais (PersonalizarTab)
+Mostrar toggle "Quer dividir seu sabor?"
+Mostrar botões de 2 até max_sabores_divisao
+Validar que quantidade de sabores selecionados ≤ max_sabores_divisao
+Valores padrão:
 
-```typescript
-// Comparação com fallback para string vazia
-(values.campo || "") !== (valoresIniciais.value?.campo || "");
-```
-
----
-
-## 🗄️ BACKEND - FUNÇÕES RPC VERIFICADAS E CORRIGIDAS
-
-### ✅ Funções Analisadas:
-
-#### 1. **`fn_rpc_admin_atualizar_estabelecimento`** ✅ CORRETO
-
-**Status**: Já estava implementado corretamente
-
-**Características**:
-
-- ✅ Usa operador `||` para merge de JSONB
-- ✅ Preserva campos não enviados com `COALESCE`
-- ✅ Suporta `config_tema`, `config_geral` e `config_pagamento`
-- ✅ Perfeito para salvamento parcial
-
-**Exemplo de merge**:
-
-```sql
-config_tema = CASE
-  WHEN p_dados->'config_tema' IS NOT NULL THEN
-    COALESCE(config_tema, '{}'::jsonb) || p_dados->'config_tema'
-  ELSE
-    config_tema
-END
-```
-
-#### 2. **`fn_rpc_onboarding_salvar_horarios`** ✅ CORRIGIDO
-
-**Status**: Corrigido via migration `fix_horarios_partial_update`
-
-**Problema anterior**:
-
-- ❌ Usava `jsonb_set` que substituía o array completo
-- ❌ Não fazia merge, perdia dados não enviados
-
-**Correção aplicada**:
-
-- ✅ Agora usa operador `||` para merge
-- ✅ Preserva campos não enviados
-- ✅ Suporta atualização parcial de horários
-
-#### 3. **`fn_rpc_onboarding_salvar_pagamentos`** ✅ CORRIGIDO
-
-**Status**: Corrigido via migration `fix_pagamentos_partial_update`
-
-**Problema anterior**:
-
-- ❌ Substituía `config_pagamento` completamente
-- ❌ Não fazia merge de campos
-
-**Correção aplicada**:
-
-- ✅ Agora usa operador `||` para merge
-- ✅ Preserva campos não enviados
-- ✅ Suporta atualização parcial de métodos de pagamento
-
----
-
-### 📊 Resumo das Migrations Aplicadas:
-
-| Migration                       | Função Corrigida                      | Status      |
-| ------------------------------- | ------------------------------------- | ----------- |
-| `fix_horarios_partial_update`   | `fn_rpc_onboarding_salvar_horarios`   | ✅ Aplicada |
-| `fix_pagamentos_partial_update` | `fn_rpc_onboarding_salvar_pagamentos` | ✅ Aplicada |
-
----
-
-### 🎯 Resultado Final:
-
-**TODAS as funções RPC agora suportam salvamento parcial corretamente!**
-
-- ✅ Frontend envia apenas campos modificados
-- ✅ Backend faz merge preservando campos não enviados
-- ✅ Redução de 85-90% no tráfego de rede
-- ✅ Zero risco de perda de dados
-
----
-
-### Otimizações Futuras
-
-1. **Extrair tipo `Mutable<T>`** para `shared/types/utilities.ts`
-   - Reutilizável em todo o projeto
-   - Evita duplicação de código
-
-2. **Criar composable genérico `useSmartForm`**
-   - Reutilizar lógica de comparação
-   - Reduzir código boilerplate
-
-3. **Adicionar debounce na detecção de mudanças**
-   - Apenas se necessário para performance
-   - Evitar recálculos excessivos
-
-### Testes Recomendados
-
-- [ ] Testar salvamento parcial em todas as tabs
-- [ ] Verificar comportamento do botão desabilitado
-- [ ] Validar toasts informativos
-- [ ] Confirmar no banco que apenas campos modificados foram atualizados
-- [ ] Testar edge cases (valores undefined, null, arrays vazios)
-
----
-
-## 📝 NOTAS IMPORTANTES
-
-1. **Backend RPC**: As funções RPC já aceitam `Partial<T>` e fazem merge automático no JSONB
-2. **Redução de Tráfego**: Economia de 85-90% no tamanho das requisições
-3. **UX Melhorada**: Usuário tem feedback claro sobre o estado do formulário
-4. **Manutenibilidade**: Padrão consistente facilita futuras manutenções
-5. **Performance**: Menos processamento no backend e validações mais rápidas
-6. **Zero Erros**: Todos os arquivos passaram no getDiagnostics sem erros
-
----
-
-**Status Final**: ✅ **IMPLEMENTAÇÃO 100% CONCLUÍDA**  
-**Última Atualização**: 02/02/2026  
-**Responsável**: Sistema de Salvamento Inteligente
-
----
-
-## 🗑️ SEÇÕES ANTIGAS REMOVIDAS
-
-As seções de planejamento inicial foram removidas pois a implementação está completa:
-
-- ❌ Análise inicial (desatualizada)
-- ❌ Planejamento por tab (concluído)
-- ❌ Ordem de execução (finalizada)
-- ❌ Tempo estimado (não mais relevante)
+permite_divisao_sabores: false
+max_sabores_divisao: 2
+📦 8. MIGRAÇÃO DE DADOS EXISTENTES
+-- Produtos existentes ficam sem divisão por padrão
+UPDATE produtos
+SET permite_divisao_sabores = false,
+max_sabores_divisao = 2
+WHERE permite_divisao_sabores IS NULL;
+🎯 9. ORDEM DE IMPLEMENTAÇÃO
+✅ Criar migration no banco
+✅ Atualizar types e schemas
+✅ Atualizar formulário de produto (admin)
+✅ Atualizar plugin de cache
+✅ Atualizar drawer/bottomsheet (público)
+✅ Testar fluxo completo
+✅ Migrar dados existentes
+Resumo: Sistema totalmente dinâmico onde o admin controla se o produto permite divisão e quantos sabores (2, 3 ou 4). No cardápio público, a seção só aparece se configurado, e as opções são geradas dinamicamente baseadas na configuração do produto! 🎉

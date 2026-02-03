@@ -124,15 +124,20 @@ const mensagemCobertura = computed(() => {
 <template>
 	<div
 		v-if="mensagemCobertura"
-		class="mb-2 sm:mb-3 px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+		class="mb-2 sm:mb-3 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border"
+		:style="{
+			backgroundColor: 'var(--cardapio-secondary)',
+			borderColor: 'var(--cardapio-border)',
+		}"
 	>
 		<div class="flex items-center justify-center gap-2 text-center">
-			<p class="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300">
+			<p class="text-xs sm:text-sm font-semibold" :style="{ color: 'var(--cardapio-primary)' }">
 				{{ mensagemCobertura.principal }}
 			</p>
 			<span
 				v-if="mensagemCobertura.detalhes"
-				class="text-xs text-blue-600 dark:text-blue-400 opacity-90"
+				class="text-xs opacity-90"
+				:style="{ color: 'var(--cardapio-text-muted)' }"
 			>
 				• {{ mensagemCobertura.detalhes }}
 			</span>

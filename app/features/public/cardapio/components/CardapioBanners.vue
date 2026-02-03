@@ -43,17 +43,20 @@ interface BannerPublico {
 	ordem: number;
 }
 
-const banners = ref<BannerPublico[]>([]);
-const loading = ref(true);
+const banners = useState<BannerPublico[]>("cardapio-banners", () => []);
+const loading = ref(false);
 
 // ========================================
-// BUSCAR BANNERS DO BANCO
+// BUSCAR BANNERS DO BANCO (Fallback se não vier do cache)
 // ========================================
 
 /**
- * Busca banners ativos do estabelecimento
+ * Busca banners ativos do estabelecimento (apenas se não houver no cache)
  */
 const fetchBanners = async (): Promise<void> => {
+	// Se já tem banners no cache, não busca novamente
+	if (banners.value.length > 0) return;
+
 	try {
 		loading.value = true;
 
@@ -90,7 +93,7 @@ const fetchBanners = async (): Promise<void> => {
 	}
 };
 
-// Buscar banners ao montar o componente
+// Buscar banners ao montar o componente (apenas se não houver no cache)
 onMounted(() => {
 	fetchBanners();
 });
