@@ -21,18 +21,13 @@ const props = defineProps<Props>();
 		<!-- Header Premium -->
 		<div class="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
 			<!-- Ícone com animação de brilho -->
+			<!-- Ícone com animação de brilho (Estilo Premium Igual Ofertas) -->
 			<div
-				class="relative size-8 sm:size-10 rounded-xl bg-gradient-to-br from-[var(--cardapio-highlight-from)] to-[var(--cardapio-highlight-to)] flex items-center justify-center shadow-lg shadow-[var(--cardapio-warning)]/25"
+				class="size-10 sm:size-11 md:size-12 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center shadow-lg shadow-rose-500/25"
 			>
 				<Icon
 					name="lucide:star"
-					class="w-4 h-4 sm:w-5 sm:h-5 fill-current"
-					:style="{ color: 'var(--cardapio-highlight-text)' }"
-				/>
-				<!-- Brilho animado -->
-				<div
-					class="absolute inset-0 rounded-xl bg-white/30 animate-ping opacity-0"
-					style="animation-duration: 2s"
+					class="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 text-white fill-current"
 				/>
 			</div>
 			<div>

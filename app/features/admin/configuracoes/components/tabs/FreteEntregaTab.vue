@@ -9,11 +9,13 @@
 import { toTypedSchema } from "@vee-validate/zod";
 import { useForm } from "vee-validate";
 import { freteEntregaSchema } from "#shared/schemas/configuracoes";
-import { useFreteEntrega } from "../../composables/useFreteEntrega";
+import { useFreteEntrega, type ConfigFreteEntrega } from "../../composables/useFreteEntrega";
 import type { TipoTaxaEntrega } from "#shared/types/estabelecimentos";
+import { useToast } from "~/composables/ui/useToast";
 
 // Composable de frete e entrega
 const { configuracoes, loading, saving, salvarConfiguracoes } = useFreteEntrega();
+const { success } = useToast();
 
 // Schema de validação
 const validationSchema = toTypedSchema(freteEntregaSchema);
@@ -27,6 +29,9 @@ const { values, setFieldValue, resetForm } = useForm({
 // Estados para controle de salvamento
 const hasUnsavedChanges = ref(false);
 const isInitializing = ref(true); // Flag para evitar detecção de mudanças durante inicialização
+
+// Armazenar valores iniciais para comparação
+const valoresIniciais = ref<ConfigFreteEntrega | null>(null);
 
 // Estados para gerenciamento de cidades
 const novaCidade = ref("");
@@ -46,9 +51,9 @@ const canSaveModality = (modality: TipoTaxaEntrega): boolean => {
 	}
 };
 
-// Salvar configurações manualmente
+// Salvar configurações manualmente - SALVAR APENAS CAMPOS MODIFICADOS
 const salvarManual = async () => {
-	if (!configuracoes.value) return;
+	if (!configuracoes.value || !valoresIniciais.value) return;
 
 	// Validar cidades atendidas (obrigatório)
 	if (!cidadesAtendidas.value.length) {
@@ -69,18 +74,76 @@ const salvarManual = async () => {
 
 	if (!isValid) return;
 
-	await salvarConfiguracoes({
-		tipo_taxa_entrega: values.tipo_taxa_entrega,
-		taxa_entrega: values.taxa_entrega,
-		cidades_atendidas: cidadesAtendidas.value,
-		tempo_entrega_min: values.tempo_entrega_min,
-		tempo_entrega_max: values.tempo_entrega_max,
-		valor_minimo_pedido: values.valor_minimo_pedido,
-		taxas_por_localizacao: values.taxas_por_localizacao,
-		taxa_padrao_outros_bairros: values.taxa_padrao_outros_bairros,
-	});
+	// Comparar valores atuais com iniciais e enviar apenas os modificados
+	const camposModificados: Partial<ConfigFreteEntrega> = {};
 
-	hasUnsavedChanges.value = false;
+	// Verificar cada campo individualmente
+	if (values.tipo_taxa_entrega !== valoresIniciais.value.tipo_taxa_entrega) {
+		camposModificados.tipo_taxa_entrega = values.tipo_taxa_entrega;
+	}
+
+	if (values.taxa_entrega !== valoresIniciais.value.taxa_entrega) {
+		camposModificados.taxa_entrega = values.taxa_entrega;
+	}
+
+	// Comparar arrays de cidades (usando JSON.stringify para comparação profunda)
+	if (
+		JSON.stringify(cidadesAtendidas.value) !==
+		JSON.stringify(valoresIniciais.value.cidades_atendidas)
+	) {
+		camposModificados.cidades_atendidas = cidadesAtendidas.value;
+	}
+
+	if (values.tempo_entrega_min !== valoresIniciais.value.tempo_entrega_min) {
+		camposModificados.tempo_entrega_min = values.tempo_entrega_min;
+	}
+
+	if (values.tempo_entrega_max !== valoresIniciais.value.tempo_entrega_max) {
+		camposModificados.tempo_entrega_max = values.tempo_entrega_max;
+	}
+
+	if (values.valor_minimo_pedido !== valoresIniciais.value.valor_minimo_pedido) {
+		camposModificados.valor_minimo_pedido = values.valor_minimo_pedido;
+	}
+
+	// Comparar arrays de taxas por localização
+	if (
+		JSON.stringify(values.taxas_por_localizacao) !==
+		JSON.stringify(valoresIniciais.value.taxas_por_localizacao)
+	) {
+		camposModificados.taxas_por_localizacao = values.taxas_por_localizacao;
+	}
+
+	if (values.taxa_padrao_outros_bairros !== valoresIniciais.value.taxa_padrao_outros_bairros) {
+		camposModificados.taxa_padrao_outros_bairros = values.taxa_padrao_outros_bairros;
+	}
+
+	// Se nenhum campo foi modificado, não fazer nada
+	if (Object.keys(camposModificados).length === 0) {
+		success({
+			title: "Nenhuma alteração",
+			description: "Não há alterações para salvar",
+		});
+		return;
+	}
+
+	// Salvar apenas os campos modificados
+	const sucesso = await salvarConfiguracoes(camposModificados);
+
+	// Se salvou com sucesso, atualizar valores iniciais
+	if (sucesso) {
+		valoresIniciais.value = {
+			tipo_taxa_entrega: values.tipo_taxa_entrega || "taxa_unica",
+			taxa_entrega: values.taxa_entrega || 0,
+			cidades_atendidas: [...cidadesAtendidas.value],
+			tempo_entrega_min: values.tempo_entrega_min || 30,
+			tempo_entrega_max: values.tempo_entrega_max || 60,
+			valor_minimo_pedido: values.valor_minimo_pedido || 0,
+			taxas_por_localizacao: values.taxas_por_localizacao ? [...values.taxas_por_localizacao] : [],
+			taxa_padrao_outros_bairros: values.taxa_padrao_outros_bairros || 0,
+		};
+		hasUnsavedChanges.value = false;
+	}
 };
 
 // Watch para detectar mudanças (sem auto-save)
@@ -108,6 +171,20 @@ watch(
 	configuracoes,
 	(newConfig) => {
 		if (newConfig) {
+			// Armazenar valores iniciais para comparação posterior
+			valoresIniciais.value = {
+				tipo_taxa_entrega: newConfig.tipo_taxa_entrega || "taxa_unica",
+				taxa_entrega: newConfig.taxa_entrega,
+				cidades_atendidas: [...(newConfig.cidades_atendidas || [])],
+				tempo_entrega_min: newConfig.tempo_entrega_min,
+				tempo_entrega_max: newConfig.tempo_entrega_max,
+				valor_minimo_pedido: newConfig.valor_minimo_pedido,
+				taxas_por_localizacao: newConfig.taxas_por_localizacao
+					? [...newConfig.taxas_por_localizacao]
+					: [],
+				taxa_padrao_outros_bairros: newConfig.taxa_padrao_outros_bairros || 0,
+			};
+
 			// Atualizar cidades atendidas
 			cidadesAtendidas.value = newConfig.cidades_atendidas || [];
 
@@ -263,10 +340,6 @@ const modalityStatus = computed(() => {
 	return { status: "success", message: "Configuração salva" };
 });
 
-const canSave = computed(() => {
-	return hasUnsavedChanges.value;
-});
-
 const formatCurrency = (v: number) =>
 	new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -277,12 +350,12 @@ const tipoTaxaLabel = computed(
 
 <template>
 	<div class="h-full flex flex-col">
-		<div v-if="loading" class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+		<div v-if="loading" class="grid grid-cols-1 lg:grid-cols-6 gap-4">
 			<UiSkeleton class="lg:col-span-2 h-64" />
-			<UiSkeleton class="lg:col-span-3 h-64" />
+			<UiSkeleton class="lg:col-span-4 h-64" />
 		</div>
 
-		<div v-else class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
+		<div v-else class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-6 gap-4">
 			<!-- COLUNA ESQUERDA: RESUMO -->
 			<div class="lg:col-span-2 flex min-h-0">
 				<UiCard class="flex-1" fill-height no-padding size="lg">
@@ -467,7 +540,7 @@ const tipoTaxaLabel = computed(
 			</div>
 
 			<!-- COLUNA DIREITA: EDITOR -->
-			<div class="lg:col-span-3 flex min-h-0">
+			<div class="lg:col-span-4 flex min-h-0">
 				<UiCard class="flex-1" fill-height no-padding size="lg">
 					<template #header>
 						<div class="flex items-center gap-2">
@@ -714,7 +787,7 @@ const tipoTaxaLabel = computed(
 								<!-- Botão Salvar -->
 								<div class="flex justify-end">
 									<UiButton
-										:disabled="!canSave || saving"
+										:disabled="!hasUnsavedChanges || saving"
 										:loading="saving"
 										variant="solid"
 										class="bg-primary text-white"
@@ -780,7 +853,7 @@ const tipoTaxaLabel = computed(
 								<!-- Botão Salvar -->
 								<div class="md:col-span-3 flex justify-end">
 									<UiButton
-										:disabled="!canSave || saving"
+										:disabled="!hasUnsavedChanges || saving"
 										:loading="saving"
 										variant="solid"
 										class="bg-primary text-white"
@@ -879,8 +952,8 @@ const tipoTaxaLabel = computed(
 									</UiFormField>
 								</div>
 
-								<div class="grid grid-cols-12 gap-3 items-end">
-									<div class="col-span-3">
+								<div class="flex gap-2 items-end flex-wrap">
+									<div class="w-40 flex-shrink-0">
 										<UiFormField label="Cidade">
 											<UiSelectMenu
 												v-model="novaRegra.localizacao.cidade"
@@ -895,12 +968,12 @@ const tipoTaxaLabel = computed(
 											/>
 										</UiFormField>
 									</div>
-									<div class="col-span-3">
+									<div class="flex-1 min-w-[120px]">
 										<UiFormField label="Bairro / Região">
 											<UiInput v-model="novaRegra.localizacao.nome" placeholder="Ex: Centro" />
 										</UiFormField>
 									</div>
-									<div class="col-span-2">
+									<div class="w-28 flex-shrink-0">
 										<UiFormField label="Taxa">
 											<UiCurrencyInput
 												:model-value="novaRegra.localizacao.taxa_valor"
@@ -909,29 +982,31 @@ const tipoTaxaLabel = computed(
 											/>
 										</UiFormField>
 									</div>
-									<div class="col-span-2">
+									<div class="w-16 flex-shrink-0">
 										<UiFormField label="Tempo Mínimo">
 											<UiInput
 												:model-value="novaRegra.localizacao.tempo_min"
 												type="number"
 												min="10"
 												max="180"
+												placeholder="30"
 												@update:model-value="(v) => (novaRegra.localizacao.tempo_min = Number(v))"
 											/>
 										</UiFormField>
 									</div>
-									<div class="col-span-1">
+									<div class="w-16 flex-shrink-0">
 										<UiFormField label="Tempo Máximo">
 											<UiInput
 												:model-value="novaRegra.localizacao.tempo_max"
 												type="number"
 												min="10"
 												max="180"
+												placeholder="60"
 												@update:model-value="(v) => (novaRegra.localizacao.tempo_max = Number(v))"
 											/>
 										</UiFormField>
 									</div>
-									<div class="col-span-1 flex justify-end">
+									<div class="flex-shrink-0">
 										<UiButton
 											variant="solid"
 											class="h-10 w-10 rounded-lg bg-gray-900 dark:bg-primary text-white flex items-center justify-center"
@@ -1002,7 +1077,7 @@ const tipoTaxaLabel = computed(
 								<!-- Botão Salvar -->
 								<div class="flex justify-end">
 									<UiButton
-										:disabled="!canSave || saving"
+										:disabled="!hasUnsavedChanges || saving"
 										:loading="saving"
 										variant="solid"
 										class="bg-primary text-white"

@@ -239,8 +239,8 @@ const handleLoadMore = async () => {
 						<!-- Busca + Filtros + Ordenação -->
 						<CardapioBusca v-model="termoBusca" @ordenar="handleOrdenar" @filtrar="handleFiltrar" />
 
-						<!-- Container com padding para seções abaixo -->
-						<div class="px-2 sm:px-3 md:px-4">
+						<!-- Container para seções abaixo -->
+						<div>
 							<!-- Ofertas Imperdíveis (apenas quando não há filtros) -->
 							<CardapioOfertasScroll v-show="!temFiltrosAtivos" :ofertas="ofertas" />
 

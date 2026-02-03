@@ -7,6 +7,7 @@
  */
 
 import { useHorariosFuncionamento } from "../../composables/useHorariosFuncionamento";
+import { useToast } from "~/composables/ui/useToast";
 import WeekOverview from "@/components/ui/WeekOverview.vue";
 import DayEditor from "@/components/ui/DayEditor.vue";
 import ExcecoesHorarioDrawer from "../shared/ExcecoesHorarioDrawer.vue";
@@ -18,6 +19,18 @@ import type {
 
 // Composable de horários
 const { horarios, excecoes, loading, saving, salvarHorarios } = useHorariosFuncionamento();
+const { success } = useToast();
+
+// Armazenar valores iniciais para comparação
+const valoresIniciais = ref<HorarioFuncionamento[] | null>(null);
+
+/**
+ * Computed para detectar se houve mudanças nos horários
+ */
+const hasChanges = computed(() => {
+	if (!valoresIniciais.value) return false;
+	return JSON.stringify(horarios.value) !== JSON.stringify(valoresIniciais.value);
+});
 
 // Estado do drawer de exceções
 const drawerExcecoesAberto = ref(false);
@@ -116,7 +129,22 @@ const toggleDia = async (dia: string) => {
 				...horarioAtual,
 				aberto: !horarioAtual.aberto,
 			} as HorarioFuncionamento;
-			await salvarHorarios(novosHorarios);
+
+			// Verificar se houve mudanças antes de salvar
+			if (JSON.stringify(novosHorarios) === JSON.stringify(valoresIniciais.value)) {
+				success({
+					title: "Nenhuma alteração",
+					description: "Não há alterações para salvar",
+				});
+				return;
+			}
+
+			const sucesso = await salvarHorarios(novosHorarios);
+
+			// Atualizar valores iniciais se salvou com sucesso
+			if (sucesso) {
+				valoresIniciais.value = JSON.parse(JSON.stringify(novosHorarios));
+			}
 		}
 	}
 };
@@ -126,9 +154,36 @@ const salvarHorario = async (horarioAtualizado: HorarioFuncionamento) => {
 	if (index !== -1) {
 		const novosHorarios = [...horarios.value];
 		novosHorarios[index] = horarioAtualizado;
-		await salvarHorarios(novosHorarios);
+
+		// Verificar se houve mudanças antes de salvar
+		if (JSON.stringify(novosHorarios) === JSON.stringify(valoresIniciais.value)) {
+			success({
+				title: "Nenhuma alteração",
+				description: "Não há alterações para salvar",
+			});
+			return;
+		}
+
+		const sucesso = await salvarHorarios(novosHorarios);
+
+		// Atualizar valores iniciais se salvou com sucesso
+		if (sucesso) {
+			valoresIniciais.value = JSON.parse(JSON.stringify(novosHorarios));
+		}
 	}
 };
+
+// Watch para armazenar valores iniciais quando horários carregarem
+watch(
+	horarios,
+	(newHorarios) => {
+		if (newHorarios && newHorarios.length > 0 && !valoresIniciais.value) {
+			// Fazer deep copy para evitar referências
+			valoresIniciais.value = JSON.parse(JSON.stringify(newHorarios));
+		}
+	},
+	{ immediate: true, deep: true },
+);
 
 const selecionarDiaHandler = (dia: string) => {
 	selecionarDia(dia);
@@ -360,7 +415,44 @@ const temDiaAberto = computed(() => estatisticas.value.diasAbertos > 0);
 
 					<!-- Conteúdo com scroll -->
 					<div class="flex-1 min-h-0 overflow-y-auto p-6">
-						<div v-if="horarioSelecionado">
+						<!-- Card de Info quando nenhum dia está selecionado -->
+						<div v-if="!horarioSelecionado" class="h-full flex items-center justify-center p-8">
+							<div
+								class="max-w-md w-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 text-center"
+							>
+								<div class="flex justify-center mb-4">
+									<div
+										class="w-16 h-16 bg-blue-100 dark:bg-blue-800/30 rounded-full flex items-center justify-center"
+									>
+										<Icon name="lucide:calendar-clock" class="w-8 h-8 text-blue-600" />
+									</div>
+								</div>
+								<h3 class="text-lg font-bold text-blue-900 dark:text-blue-200 mb-2">
+									Selecione um Dia
+								</h3>
+								<p class="text-sm text-blue-700 dark:text-blue-300 leading-relaxed mb-4">
+									Clique em um dos dias da semana no painel ao lado para configurar os horários de
+									funcionamento.
+								</p>
+								<div class="space-y-2 text-left">
+									<div class="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
+										<Icon name="lucide:check-circle-2" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+										<span>Defina múltiplos períodos de funcionamento por dia</span>
+									</div>
+									<div class="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
+										<Icon name="lucide:check-circle-2" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+										<span>Ative ou desative dias específicos rapidamente</span>
+									</div>
+									<div class="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
+										<Icon name="lucide:check-circle-2" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+										<span>Configure horários diferentes para cada dia da semana</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Editor do dia selecionado -->
+						<div v-else>
 							<DayEditor
 								ref="dayEditorRef"
 								:horario="horarioSelecionado"
@@ -379,7 +471,7 @@ const temDiaAberto = computed(() => estatisticas.value.diasAbertos > 0);
 								color="primary"
 								size="md"
 								:loading="saving"
-								:disabled="saving || !horarioSelecionado"
+								:disabled="!hasChanges || saving || !horarioSelecionado"
 								@click="handleSalvarClick"
 							>
 								<Icon name="lucide:save" class="w-4 h-4 mr-2" />

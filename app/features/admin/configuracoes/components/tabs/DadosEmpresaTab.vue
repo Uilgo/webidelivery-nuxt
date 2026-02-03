@@ -122,6 +122,22 @@ const isWhatsAppValid = computed((): boolean => {
 // Armazenar valores iniciais para comparação
 const valoresIniciais = ref<DadosEmpresa | null>(null);
 
+/**
+ * Computed para detectar se houve mudanças nos campos
+ */
+const hasChanges = computed(() => {
+	if (!valoresIniciais.value) return false;
+
+	return (
+		values.nome !== valoresIniciais.value.nome ||
+		values.slug !== valoresIniciais.value.slug ||
+		(values.descricao || "") !== (valoresIniciais.value.descricao || "") ||
+		(values.logo_url || "") !== (valoresIniciais.value.logo_url || "") ||
+		(values.logo_url_dark || "") !== (valoresIniciais.value.logo_url_dark || "") ||
+		(values.whatsapp || "") !== (valoresIniciais.value.whatsapp || "")
+	);
+});
+
 // Watch para atualizar valores quando dados carregarem
 watch(
 	dados,
@@ -422,7 +438,12 @@ const showSlugWarning = computed(() => {
 						<div
 							class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto"
 						>
-							<UiButton type="submit" :loading="saving" :disabled="saving" class="px-6">
+							<UiButton
+								type="submit"
+								:loading="saving"
+								:disabled="!hasChanges || saving"
+								class="px-6"
+							>
 								<template #iconLeft>
 									<Icon name="lucide:save" class="w-4 h-4" />
 								</template>

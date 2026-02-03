@@ -11,9 +11,19 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { useForm } from "vee-validate";
 import { personalizacaoSchema } from "#shared/schemas/configuracoes";
 import { usePersonalizacao } from "../../composables/usePersonalizacao";
+import { useToast } from "~/composables/ui/useToast";
+import type { ConfiguracoesTema } from "../../types/configuracoes";
+
+/**
+ * Tipo auxiliar para remover readonly das propriedades
+ */
+type Mutable<T> = {
+	-readonly [P in keyof T]: T[P];
+};
 
 // Composable de personalização
 const { tema, loading, saving, salvarTema } = usePersonalizacao();
+const { info } = useToast();
 
 // Schema de validação
 const validationSchema = toTypedSchema(personalizacaoSchema);
@@ -24,15 +34,118 @@ const { handleSubmit, values, setFieldValue, resetForm } = useForm({
 	keepValuesOnUnmount: true,
 });
 
+// Armazenar valores iniciais para comparação
+const valoresIniciais = ref<Mutable<ConfiguracoesTema> | null>(null);
+
+/**
+ * Computed para detectar se houve mudanças nos campos
+ */
+const hasChanges = computed(() => {
+	if (!valoresIniciais.value) return false;
+
+	// Comparar todos os campos do tema
+	return (
+		(values.cor_primaria || "") !== (valoresIniciais.value.cor_primaria || "") ||
+		(values.cor_secundaria || "") !== (valoresIniciais.value.cor_secundaria || "") ||
+		(values.cor_fundo || "") !== (valoresIniciais.value.cor_fundo || "") ||
+		(values.cor_texto || "") !== (valoresIniciais.value.cor_texto || "") ||
+		(values.cor_sucesso || "") !== (valoresIniciais.value.cor_sucesso || "") ||
+		(values.cor_erro || "") !== (valoresIniciais.value.cor_erro || "") ||
+		(values.cor_aviso || "") !== (valoresIniciais.value.cor_aviso || "") ||
+		(values.cor_info || "") !== (valoresIniciais.value.cor_info || "") ||
+		(values.gradiente_promo_inicio || "") !==
+			(valoresIniciais.value.gradiente_promo_inicio || "") ||
+		(values.gradiente_promo_fim || "") !== (valoresIniciais.value.gradiente_promo_fim || "") ||
+		(values.gradiente_destaque_inicio || "") !==
+			(valoresIniciais.value.gradiente_destaque_inicio || "") ||
+		(values.gradiente_destaque_fim || "") !==
+			(valoresIniciais.value.gradiente_destaque_fim || "") ||
+		(values.estilo_botoes || "") !== (valoresIniciais.value.estilo_botoes || "") ||
+		(values.layout_cardapio || "") !== (valoresIniciais.value.layout_cardapio || "")
+	);
+});
+
 // Submeter formulário manual
 const onSubmit = handleSubmit(async (formValues) => {
+	// Verificar se há mudanças antes de salvar
+	if (!hasChanges.value) {
+		info({
+			title: "Nenhuma alteração",
+			description: "Não há alterações para salvar",
+		});
+		return;
+	}
+
+	// Comparar valores atuais com iniciais e enviar apenas os modificados
+	const camposModificados: Mutable<Partial<ConfiguracoesTema>> = {};
+
+	// Comparar cada campo individualmente
+	if ((formValues.cor_primaria || "") !== (valoresIniciais.value?.cor_primaria || "")) {
+		camposModificados.cor_primaria = formValues.cor_primaria;
+	}
+	if ((formValues.cor_secundaria || "") !== (valoresIniciais.value?.cor_secundaria || "")) {
+		camposModificados.cor_secundaria = formValues.cor_secundaria;
+	}
+	if ((formValues.cor_fundo || "") !== (valoresIniciais.value?.cor_fundo || "")) {
+		camposModificados.cor_fundo = formValues.cor_fundo;
+	}
+	if ((formValues.cor_texto || "") !== (valoresIniciais.value?.cor_texto || "")) {
+		camposModificados.cor_texto = formValues.cor_texto;
+	}
+	if ((formValues.cor_sucesso || "") !== (valoresIniciais.value?.cor_sucesso || "")) {
+		camposModificados.cor_sucesso = formValues.cor_sucesso;
+	}
+	if ((formValues.cor_erro || "") !== (valoresIniciais.value?.cor_erro || "")) {
+		camposModificados.cor_erro = formValues.cor_erro;
+	}
+	if ((formValues.cor_aviso || "") !== (valoresIniciais.value?.cor_aviso || "")) {
+		camposModificados.cor_aviso = formValues.cor_aviso;
+	}
+	if ((formValues.cor_info || "") !== (valoresIniciais.value?.cor_info || "")) {
+		camposModificados.cor_info = formValues.cor_info;
+	}
+	if (
+		(formValues.gradiente_promo_inicio || "") !==
+		(valoresIniciais.value?.gradiente_promo_inicio || "")
+	) {
+		camposModificados.gradiente_promo_inicio = formValues.gradiente_promo_inicio;
+	}
+	if (
+		(formValues.gradiente_promo_fim || "") !== (valoresIniciais.value?.gradiente_promo_fim || "")
+	) {
+		camposModificados.gradiente_promo_fim = formValues.gradiente_promo_fim;
+	}
+	if (
+		(formValues.gradiente_destaque_inicio || "") !==
+		(valoresIniciais.value?.gradiente_destaque_inicio || "")
+	) {
+		camposModificados.gradiente_destaque_inicio = formValues.gradiente_destaque_inicio;
+	}
+	if (
+		(formValues.gradiente_destaque_fim || "") !==
+		(valoresIniciais.value?.gradiente_destaque_fim || "")
+	) {
+		camposModificados.gradiente_destaque_fim = formValues.gradiente_destaque_fim;
+	}
+	if ((formValues.estilo_botoes || "") !== (valoresIniciais.value?.estilo_botoes || "")) {
+		camposModificados.estilo_botoes = formValues.estilo_botoes;
+	}
+	if ((formValues.layout_cardapio || "") !== (valoresIniciais.value?.layout_cardapio || "")) {
+		camposModificados.layout_cardapio = formValues.layout_cardapio;
+	}
+
 	// 🔥 CRÍTICO: Remover campos undefined para não sobrescrever valores no banco
 	// Quando em modo simples, cor_secundaria deve ser omitida (não enviada como undefined)
 	const dadosLimpos = Object.fromEntries(
-		Object.entries(formValues).filter(([_, value]) => value !== undefined && value !== ""),
+		Object.entries(camposModificados).filter(([_, value]) => value !== undefined && value !== ""),
 	);
 
-	await salvarTema(dadosLimpos);
+	const sucesso = await salvarTema(dadosLimpos);
+
+	// Atualizar valores iniciais após salvamento bem-sucedido
+	if (sucesso) {
+		valoresIniciais.value = { ...values } as ConfiguracoesTema;
+	}
 });
 
 // Cores padrão do sistema
@@ -79,37 +192,42 @@ watch(
 				newTema.cor_secundaria && newTema.cor_secundaria !== CORES_PADRAO.value.cor_secundaria
 			);
 
+			const valoresFormulario = {
+				// Campos obrigatórios sempre têm valor
+				cor_primaria: newTema.cor_primaria || CORES_PADRAO.value.cor_primaria,
+				cor_fundo: newTema.cor_fundo || CORES_PADRAO.value.cor_fundo,
+				cor_texto: newTema.cor_texto || CORES_PADRAO.value.cor_texto,
+				estilo_botoes: newTema.estilo_botoes || "rounded",
+				layout_cardapio: newTema.layout_cardapio,
+
+				// 🔥 Cor secundária: só incluir se for customizada (modo avançado)
+				...(temCorSecundariaCustomizada ? { cor_secundaria: newTema.cor_secundaria } : {}),
+
+				// 🎨 Cores de status: sempre usar padrão se não definidas
+				cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.value.cor_sucesso,
+				cor_erro: newTema.cor_erro || CORES_PADRAO.value.cor_erro,
+				cor_aviso: newTema.cor_aviso || CORES_PADRAO.value.cor_aviso,
+
+				// 🎨 Gradientes: sempre usar padrão se não definidos
+				gradiente_promo_inicio:
+					newTema.gradiente_promo_inicio || CORES_PADRAO.value.gradiente_promo_inicio,
+				gradiente_promo_fim: newTema.gradiente_promo_fim || CORES_PADRAO.value.gradiente_promo_fim,
+				gradiente_destaque_inicio:
+					newTema.gradiente_destaque_inicio || CORES_PADRAO.value.gradiente_destaque_inicio,
+				gradiente_destaque_fim:
+					newTema.gradiente_destaque_fim || CORES_PADRAO.value.gradiente_destaque_fim,
+
+				// Cor info (opcional, pode não existir)
+				...(newTema.cor_info ? { cor_info: newTema.cor_info } : {}),
+			};
+
+			// Armazenar valores iniciais para comparação
+			valoresIniciais.value = { ...valoresFormulario } as ConfiguracoesTema;
+
 			resetForm({
-				values: {
-					// Campos obrigatórios sempre têm valor
-					cor_primaria: newTema.cor_primaria || CORES_PADRAO.value.cor_primaria,
-					cor_fundo: newTema.cor_fundo || CORES_PADRAO.value.cor_fundo,
-					cor_texto: newTema.cor_texto || CORES_PADRAO.value.cor_texto,
-					estilo_botoes: newTema.estilo_botoes || "rounded",
-					layout_cardapio: newTema.layout_cardapio,
-
-					// 🔥 Cor secundária: só incluir se for customizada (modo avançado)
-					...(temCorSecundariaCustomizada ? { cor_secundaria: newTema.cor_secundaria } : {}),
-
-					// 🎨 Cores de status: sempre usar padrão se não definidas
-					cor_sucesso: newTema.cor_sucesso || CORES_PADRAO.value.cor_sucesso,
-					cor_erro: newTema.cor_erro || CORES_PADRAO.value.cor_erro,
-					cor_aviso: newTema.cor_aviso || CORES_PADRAO.value.cor_aviso,
-
-					// 🎨 Gradientes: sempre usar padrão se não definidos
-					gradiente_promo_inicio:
-						newTema.gradiente_promo_inicio || CORES_PADRAO.value.gradiente_promo_inicio,
-					gradiente_promo_fim:
-						newTema.gradiente_promo_fim || CORES_PADRAO.value.gradiente_promo_fim,
-					gradiente_destaque_inicio:
-						newTema.gradiente_destaque_inicio || CORES_PADRAO.value.gradiente_destaque_inicio,
-					gradiente_destaque_fim:
-						newTema.gradiente_destaque_fim || CORES_PADRAO.value.gradiente_destaque_fim,
-
-					// Cor info (opcional, pode não existir)
-					...(newTema.cor_info ? { cor_info: newTema.cor_info } : {}),
-				},
+				values: valoresFormulario,
 			});
+
 			nextTick(() => {
 				isInitializing.value = false;
 			});
@@ -664,37 +782,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 					</template>
 
 					<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-						<!-- 🎨 Modo de Personalização -->
-						<section
-							class="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 rounded-xl p-4 border border-primary/20"
-						>
-							<div class="flex items-start justify-between gap-4">
-								<div class="flex-1 space-y-1">
-									<div class="flex items-center gap-2">
-										<Icon
-											:name="modoAvancado ? 'lucide:settings-2' : 'lucide:zap'"
-											class="w-4 h-4 text-primary"
-										/>
-										<h4
-											class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
-										>
-											{{ modoAvancado ? "Modo Avançado" : "Modo Simples" }}
-										</h4>
-									</div>
-									<p class="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">
-										<template v-if="!modoAvancado">
-											Cores automáticas baseadas no fundo. Perfeito para começar rápido com um
-											resultado profissional.
-										</template>
-										<template v-else>
-											Controle total sobre todas as cores. Personalize cada detalhe da sua
-											identidade visual.
-										</template>
-									</p>
-								</div>
-								<UiSwitch :model-value="modoAvancado" @update:model-value="toggleModo" />
-							</div>
-						</section>
+						
 
 						<!-- 🎨 Paletas Predefinidas -->
 						<section class="space-y-4">
@@ -808,6 +896,38 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 										<Icon name="lucide:check" class="w-3 h-3 text-white" />
 									</div>
 								</button>
+							</div>
+						</section>
+
+						<!-- 🎨 Modo de Personalização -->
+						<section
+							class="bg-primary/25 dark:bg-slate-700/50 rounded-xl p-4 shadow-xl shadow-primary/20 dark:shadow-slate-900/50 border-0"
+						>
+							<div class="flex items-center justify-between gap-4">
+								<div class="flex-1 space-y-1">
+									<div class="flex items-center gap-2">
+										<Icon
+											:name="modoAvancado ? 'lucide:settings-2' : 'lucide:zap'"
+											class="w-4 h-4 text-primary dark:text-primary-400"
+										/>
+										<h4
+											class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
+										>
+											{{ modoAvancado ? "Modo Avançado" : "Modo Simples" }}
+										</h4>
+									</div>
+									<p class="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+										<template v-if="!modoAvancado">
+											Cores automáticas baseadas no fundo. Perfeito para começar rápido com um
+											resultado profissional.
+										</template>
+										<template v-else>
+											Controle total sobre todas as cores. Personalize cada detalhe da sua
+											identidade visual.
+										</template>
+									</p>
+								</div>
+								<UiSwitch :model-value="modoAvancado" @update:model-value="toggleModo" />
 							</div>
 						</section>
 
@@ -1225,6 +1345,7 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 									color="primary"
 									size="sm"
 									:loading="saving"
+									:disabled="!hasChanges || saving"
 									@click="onSubmit"
 								>
 									<template #iconLeft>

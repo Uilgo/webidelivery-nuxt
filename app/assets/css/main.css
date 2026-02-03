@@ -561,3 +561,19 @@ SCROLLBAR PERSONALIZADO
 	--error: var(--cardapio-danger, var(--color-error-600));
 	--warning: var(--cardapio-warning, var(--color-warning-500));
 }
+
+/* =========================================
+   REMOVER SPINNERS DE INPUT NUMBER
+   ========================================= */
+/* Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}

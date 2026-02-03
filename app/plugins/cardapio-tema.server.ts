@@ -113,12 +113,13 @@ function gerarCSSVariaveis(tema: ConfigTema): string {
 	}
 
 	// 🎨 Texto adaptativo para badges
-	if (tema.gradiente_promo_inicio) {
-		vars.push(`--cardapio-promo-text: ${getContrastText(tema.gradiente_promo_inicio)};`);
-	}
-	if (tema.gradiente_destaque_inicio) {
-		vars.push(`--cardapio-highlight-text: ${getContrastText(tema.gradiente_destaque_inicio)};`);
-	}
+	// 🎨 Texto adaptativo para badges
+	// Com Fallbacks para garantir que nunca fique vazio
+	const promoInicio = tema.gradiente_promo_inicio || "#dc2626";
+	vars.push(`--cardapio-promo-text: ${getContrastText(promoInicio)};`);
+
+	const destaqueInicio = tema.gradiente_destaque_inicio || "#fbbf24";
+	vars.push(`--cardapio-highlight-text: ${getContrastText(destaqueInicio)};`);
 	if (tema.cor_sucesso) {
 		vars.push(`--cardapio-success-text: ${getContrastText(tema.cor_sucesso)};`);
 	}
@@ -184,13 +185,12 @@ function gerarCSSVariaveis(tema: ConfigTema): string {
 	if (tema.cor_aviso) vars.push(`--cardapio-warning: ${tema.cor_aviso};`);
 
 	// 🎨 Gradientes
-	if (tema.gradiente_promo_inicio)
-		vars.push(`--cardapio-promo-from: ${tema.gradiente_promo_inicio};`);
-	if (tema.gradiente_promo_fim) vars.push(`--cardapio-promo-to: ${tema.gradiente_promo_fim};`);
-	if (tema.gradiente_destaque_inicio)
-		vars.push(`--cardapio-highlight-from: ${tema.gradiente_destaque_inicio};`);
-	if (tema.gradiente_destaque_fim)
-		vars.push(`--cardapio-highlight-to: ${tema.gradiente_destaque_fim};`);
+	// 🎨 Gradientes (com Fallbacks)
+	vars.push(`--cardapio-promo-from: ${tema.gradiente_promo_inicio || "#dc2626"};`);
+	vars.push(`--cardapio-promo-to: ${tema.gradiente_promo_fim || "#991b1b"};`);
+
+	vars.push(`--cardapio-highlight-from: ${tema.gradiente_destaque_inicio || "#fbbf24"};`);
+	vars.push(`--cardapio-highlight-to: ${tema.gradiente_destaque_fim || "#eab308"};`);
 
 	// 🎨 Estilo de botões
 	const borderRadius = tema.estilo_botoes === "rounded" ? "9999px" : "8px";

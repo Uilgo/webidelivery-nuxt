@@ -10,9 +10,19 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { useForm, Field } from "vee-validate";
 import { pagamentosSchema } from "#shared/schemas/configuracoes";
 import { usePagamentos } from "../../composables/usePagamentos";
+import { useToast } from "~/composables/ui/useToast";
+import type { ConfiguracoesPagamento } from "../../types/configuracoes";
+import { formatPixKeyProgressive, type TipoChavePix } from "~/lib/formatters/pix";
+import { validatePixKey } from "~/lib/validators/pix";
+
+// Tipo auxiliar para remover readonly
+type Mutable<T> = {
+	-readonly [P in keyof T]: T[P];
+};
 
 // Composable de pagamentos
 const { pagamentos, loading, saving, salvarPagamentos } = usePagamentos();
+const { success } = useToast();
 
 // Schema de validação
 const validationSchema = toTypedSchema(pagamentosSchema);
@@ -23,11 +33,40 @@ const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
 	keepValuesOnUnmount: true,
 });
 
+// Armazenar valores iniciais para comparação
+const valoresIniciais = ref<Mutable<ConfiguracoesPagamento> | null>(null);
+
+/**
+ * Computed para detectar se houve mudanças nos campos
+ */
+const hasChanges = computed(() => {
+	if (!valoresIniciais.value) return false;
+
+	return (
+		values.aceita_dinheiro !== valoresIniciais.value.aceita_dinheiro ||
+		values.aceita_pix !== valoresIniciais.value.aceita_pix ||
+		values.tipo_chave_pix !== valoresIniciais.value.tipo_chave_pix ||
+		(values.chave_pix || "") !== (valoresIniciais.value.chave_pix || "") ||
+		values.aceita_cartao_credito !== valoresIniciais.value.aceita_cartao_credito ||
+		values.aceita_cartao_debito !== valoresIniciais.value.aceita_cartao_debito
+	);
+});
+
 // Watch para atualizar valores quando dados carregarem
 watch(
 	pagamentos,
 	(newPagamentos) => {
 		if (newPagamentos) {
+			// Armazenar valores iniciais para comparação posterior
+			valoresIniciais.value = {
+				aceita_dinheiro: newPagamentos.aceita_dinheiro,
+				aceita_pix: newPagamentos.aceita_pix,
+				tipo_chave_pix: newPagamentos.tipo_chave_pix || "cpf",
+				chave_pix: newPagamentos.chave_pix || "",
+				aceita_cartao_credito: newPagamentos.aceita_cartao_credito,
+				aceita_cartao_debito: newPagamentos.aceita_cartao_debito,
+			};
+
 			resetForm({
 				values: {
 					aceita_dinheiro: newPagamentos.aceita_dinheiro,
@@ -43,9 +82,89 @@ watch(
 	{ immediate: true },
 );
 
-// Submeter formulário
+// Submeter formulário - SALVAR APENAS CAMPOS MODIFICADOS
 const onSubmit = handleSubmit(async (formValues) => {
-	await salvarPagamentos(formValues);
+	if (!valoresIniciais.value) return;
+
+	// Criar objeto mutável para comparação
+	const camposModificados: Record<string, unknown> = {};
+
+	// Verificar cada campo individualmente
+	if (formValues.aceita_dinheiro !== valoresIniciais.value.aceita_dinheiro) {
+		camposModificados.aceita_dinheiro = formValues.aceita_dinheiro;
+	}
+
+	if (formValues.aceita_pix !== valoresIniciais.value.aceita_pix) {
+		camposModificados.aceita_pix = formValues.aceita_pix;
+	}
+
+	if (formValues.tipo_chave_pix !== valoresIniciais.value.tipo_chave_pix) {
+		camposModificados.tipo_chave_pix = formValues.tipo_chave_pix;
+	}
+
+	if ((formValues.chave_pix || "") !== (valoresIniciais.value.chave_pix || "")) {
+		camposModificados.chave_pix = formValues.chave_pix || undefined;
+	}
+
+	if (formValues.aceita_cartao_credito !== valoresIniciais.value.aceita_cartao_credito) {
+		camposModificados.aceita_cartao_credito = formValues.aceita_cartao_credito;
+	}
+
+	if (formValues.aceita_cartao_debito !== valoresIniciais.value.aceita_cartao_debito) {
+		camposModificados.aceita_cartao_debito = formValues.aceita_cartao_debito;
+	}
+
+	// Se nenhum campo foi modificado, não fazer nada
+	if (Object.keys(camposModificados).length === 0) {
+		success({
+			title: "Nenhuma alteração",
+			description: "Não há alterações para salvar",
+		});
+		return;
+	}
+
+	// Mesclar campos modificados com valores atuais para enviar ao backend
+	const dadosParaSalvar = {
+		aceita_dinheiro:
+			"aceita_dinheiro" in camposModificados
+				? (camposModificados.aceita_dinheiro as boolean)
+				: valoresIniciais.value.aceita_dinheiro,
+		aceita_pix:
+			"aceita_pix" in camposModificados
+				? (camposModificados.aceita_pix as boolean)
+				: valoresIniciais.value.aceita_pix,
+		tipo_chave_pix:
+			"tipo_chave_pix" in camposModificados
+				? (camposModificados.tipo_chave_pix as "cpf" | "cnpj" | "email" | "telefone" | "aleatoria")
+				: valoresIniciais.value.tipo_chave_pix,
+		chave_pix:
+			"chave_pix" in camposModificados
+				? (camposModificados.chave_pix as string | undefined)
+				: valoresIniciais.value.chave_pix,
+		aceita_cartao_credito:
+			"aceita_cartao_credito" in camposModificados
+				? (camposModificados.aceita_cartao_credito as boolean)
+				: valoresIniciais.value.aceita_cartao_credito,
+		aceita_cartao_debito:
+			"aceita_cartao_debito" in camposModificados
+				? (camposModificados.aceita_cartao_debito as boolean)
+				: valoresIniciais.value.aceita_cartao_debito,
+	} as ConfiguracoesPagamento;
+
+	// Salvar
+	const sucesso = await salvarPagamentos(dadosParaSalvar);
+
+	// Se salvou com sucesso, atualizar valores iniciais criando um novo objeto
+	if (sucesso) {
+		valoresIniciais.value = {
+			aceita_dinheiro: formValues.aceita_dinheiro,
+			aceita_pix: formValues.aceita_pix,
+			tipo_chave_pix: formValues.tipo_chave_pix,
+			chave_pix: formValues.chave_pix,
+			aceita_cartao_credito: formValues.aceita_cartao_credito,
+			aceita_cartao_debito: formValues.aceita_cartao_debito,
+		};
+	}
 });
 
 /**
@@ -56,6 +175,7 @@ const tiposChavePix = [
 		value: "cpf",
 		label: "CPF",
 		placeholder: "000.000.000-00",
+		maxLength: 14,
 		mask: "###.###.###-##",
 		icon: "lucide:user",
 	},
@@ -63,6 +183,7 @@ const tiposChavePix = [
 		value: "cnpj",
 		label: "CNPJ",
 		placeholder: "00.000.000/0000-00",
+		maxLength: 18,
 		mask: "##.###.###/####-##",
 		icon: "lucide:briefcase",
 	},
@@ -70,12 +191,14 @@ const tiposChavePix = [
 		value: "email",
 		label: "E-mail",
 		placeholder: "seu@email.com",
+		maxLength: 254,
 		icon: "lucide:mail",
 	},
 	{
 		value: "telefone",
 		label: "Telefone",
 		placeholder: "(00) 00000-0000",
+		maxLength: 15,
 		mask: "(##) #####-####",
 		icon: "lucide:phone",
 	},
@@ -83,6 +206,7 @@ const tiposChavePix = [
 		value: "aleatoria",
 		label: "Chave Aleatória",
 		placeholder: "Cole sua chave aleatória aqui",
+		maxLength: 36,
 		icon: "lucide:key",
 	},
 ] as const;
@@ -92,6 +216,55 @@ const tiposChavePix = [
  */
 const tipoChaveSelecionado = computed(() => {
 	return tiposChavePix.find((tipo) => tipo.value === values.tipo_chave_pix) || tiposChavePix[0];
+});
+
+/**
+ * Handler para mudança da chave PIX - COM FORMATAÇÃO AUTOMÁTICA
+ */
+const handleChavePixChange = (value: string | number): void => {
+	const rawValue = String(value);
+	const tipo = values.tipo_chave_pix as TipoChavePix;
+
+	// Aplicar formatação progressiva
+	const formatted = formatPixKeyProgressive(rawValue, tipo);
+
+	// Atualizar campo do formulário
+	setFieldValue("chave_pix", formatted);
+};
+
+/**
+ * Validação em tempo real da chave PIX
+ */
+const chavePixError = computed((): string | null => {
+	if (!values.aceita_pix) return null;
+	if (!values.chave_pix) return null;
+
+	const tipo = values.tipo_chave_pix as TipoChavePix;
+	return validatePixKey(values.chave_pix, tipo);
+});
+
+/**
+ * Ícone de feedback da chave PIX
+ */
+const chavePixIcon = computed(() => {
+	if (!values.aceita_pix || !values.chave_pix) return null;
+
+	const tipo = values.tipo_chave_pix as TipoChavePix;
+	const isValid = validatePixKey(values.chave_pix, tipo) === null;
+
+	return isValid ? "lucide:check-circle" : "lucide:alert-circle";
+});
+
+/**
+ * Cor do ícone de feedback
+ */
+const chavePixIconColor = computed(() => {
+	if (!values.aceita_pix || !values.chave_pix) return "";
+
+	const tipo = values.tipo_chave_pix as TipoChavePix;
+	const isValid = validatePixKey(values.chave_pix, tipo) === null;
+
+	return isValid ? "text-green-500" : "text-red-500";
 });
 
 /**
@@ -408,14 +581,23 @@ const percentualAtivacao = computed(() => {
 										</div>
 									</UiFormField>
 
-									<UiFormField label="Chave PIX" required :error="errors.chave_pix">
+									<UiFormField
+										label="Chave PIX"
+										required
+										:error="chavePixError || errors.chave_pix"
+									>
 										<Field v-slot="{ field }" name="chave_pix">
 											<UiInput
 												:model-value="String(field.value || '')"
 												:placeholder="tipoChaveSelecionado.placeholder"
+												:maxlength="tipoChaveSelecionado.maxLength"
 												size="md"
-												@update:model-value="(value) => setFieldValue('chave_pix', String(value))"
-											/>
+												@update:model-value="handleChavePixChange"
+											>
+												<template v-if="chavePixIcon" #iconRight>
+													<Icon :name="chavePixIcon" :class="['w-4 h-4', chavePixIconColor]" />
+												</template>
+											</UiInput>
 										</Field>
 									</UiFormField>
 								</div>
@@ -439,7 +621,7 @@ const percentualAtivacao = computed(() => {
 						<div class="p-0">
 							<UiButton
 								:loading="saving"
-								:disabled="saving || !temMetodoAtivo"
+								:disabled="!hasChanges || saving || !temMetodoAtivo"
 								class="w-full"
 								size="lg"
 								@click="onSubmit"

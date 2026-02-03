@@ -119,17 +119,15 @@ export const useTemaPublico = (
 			}
 		}
 
-		// 🎨 Texto adaptativo para badges de promoção
-		if (tema.value.gradiente_promo_inicio) {
-			const textoPromo = getContrastText(tema.value.gradiente_promo_inicio);
-			root.style.setProperty("--cardapio-promo-text", textoPromo);
-		}
+		// 🎨 Texto adaptativo para badges de promoção (com fallback)
+		const promoInicio = tema.value.gradiente_promo_inicio || "#dc2626";
+		const textoPromo = getContrastText(promoInicio);
+		root.style.setProperty("--cardapio-promo-text", textoPromo);
 
-		// 🎨 Texto adaptativo para badges de destaque
-		if (tema.value.gradiente_destaque_inicio) {
-			const textoDestaque = getContrastText(tema.value.gradiente_destaque_inicio);
-			root.style.setProperty("--cardapio-highlight-text", textoDestaque);
-		}
+		// 🎨 Texto adaptativo para badges de destaque (com fallback)
+		const destaqueInicio = tema.value.gradiente_destaque_inicio || "#fbbf24";
+		const textoDestaque = getContrastText(destaqueInicio);
+		root.style.setProperty("--cardapio-highlight-text", textoDestaque);
 
 		// 🎨 Texto adaptativo para badge de status (Aberto/Fechado)
 		if (tema.value.cor_sucesso) {
@@ -225,16 +223,18 @@ export const useTemaPublico = (
 		if (tema.value.cor_erro) root.style.setProperty("--cardapio-danger", tema.value.cor_erro);
 		if (tema.value.cor_aviso) root.style.setProperty("--cardapio-warning", tema.value.cor_aviso);
 
-		// Aplica gradientes (se definidos)
-		if (tema.value.gradiente_promo_inicio)
-			root.style.setProperty("--cardapio-promo-from", tema.value.gradiente_promo_inicio);
-		if (tema.value.gradiente_promo_fim)
-			root.style.setProperty("--cardapio-promo-to", tema.value.gradiente_promo_fim);
+		// Aplica gradientes (com fallbacks explícitos)
+		root.style.setProperty("--cardapio-promo-from", tema.value.gradiente_promo_inicio || "#dc2626");
+		root.style.setProperty("--cardapio-promo-to", tema.value.gradiente_promo_fim || "#991b1b");
 
-		if (tema.value.gradiente_destaque_inicio)
-			root.style.setProperty("--cardapio-highlight-from", tema.value.gradiente_destaque_inicio);
-		if (tema.value.gradiente_destaque_fim)
-			root.style.setProperty("--cardapio-highlight-to", tema.value.gradiente_destaque_fim);
+		root.style.setProperty(
+			"--cardapio-highlight-from",
+			tema.value.gradiente_destaque_inicio || "#fbbf24",
+		);
+		root.style.setProperty(
+			"--cardapio-highlight-to",
+			tema.value.gradiente_destaque_fim || "#eab308",
+		);
 
 		// Aplica estilo de botões
 		root.style.setProperty(
@@ -336,7 +336,7 @@ export const useTemaPublico = (
 				removerTema();
 			}
 		},
-		{ immediate: false }, // Plugin SSR já aplicou no primeiro render
+		{ immediate: true }, // Garantir que aplique na hidratação também
 	);
 
 	// Remove tema ao desmontar

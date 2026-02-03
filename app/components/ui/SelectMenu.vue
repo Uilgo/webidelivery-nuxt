@@ -122,10 +122,27 @@ const checkDropdownPosition = (): void => {
 
 // Estilo computado para posicionamento do dropdown
 const dropdownPositionStyle = computed(() => {
+	// Pegar CSS variables do root para aplicar no dropdown (que está no body via Teleport)
+	const rootStyles = getComputedStyle(document.documentElement);
+
 	return {
 		top: `${dropdownPosition.value.top}px`,
 		left: `${dropdownPosition.value.left}px`,
 		width: `${dropdownPosition.value.width}px`,
+		"--card-bg": rootStyles.getPropertyValue("--card-bg"),
+		"--text-primary": rootStyles.getPropertyValue("--text-primary"),
+		"--text-secondary": rootStyles.getPropertyValue("--text-secondary"),
+		"--text-muted": rootStyles.getPropertyValue("--text-muted"),
+		"--border-default": rootStyles.getPropertyValue("--border-default"),
+		"--border-muted": rootStyles.getPropertyValue("--border-muted"),
+		"--bg-hover": rootStyles.getPropertyValue("--bg-hover"),
+		"--primary": rootStyles.getPropertyValue("--primary"),
+		"--primary-light": rootStyles.getPropertyValue("--primary-light"),
+		"--input-bg": rootStyles.getPropertyValue("--input-bg"),
+		"--input-border": rootStyles.getPropertyValue("--input-border"),
+		"--input-border-focus": rootStyles.getPropertyValue("--input-border-focus"),
+		"--input-text": rootStyles.getPropertyValue("--input-text"),
+		"--input-placeholder": rootStyles.getPropertyValue("--input-placeholder"),
 	};
 });
 
@@ -520,12 +537,15 @@ defineExpose({
 			<Teleport to="body">
 				<div
 					v-if="isOpen"
-					:class="[dropdownClasses, 'select-menu-dropdown', 'cardapio-theme-bridge']"
+					:class="[dropdownClasses, 'select-menu-dropdown']"
 					:style="dropdownPositionStyle"
 					class="fixed z-[9999]"
 				>
 					<!-- Input de busca -->
-					<div v-if="searchable" class="p-2 border-b border-[var(--border-muted)]">
+					<div
+						v-if="searchable"
+						class="p-2 border-b border-[var(--border-muted)] bg-[var(--card-bg)]"
+					>
 						<div class="relative">
 							<Icon
 								name="lucide:search"
@@ -536,7 +556,7 @@ defineExpose({
 								v-model="searchQuery"
 								type="text"
 								:placeholder="searchPlaceholder"
-								class="w-full pl-9 pr-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200 placeholder-[var(--input-placeholder)]"
+								class="w-full pl-9 pr-3 py-2 text-sm text-[var(--input-text)] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 outline-none transition-all duration-200 placeholder-[var(--input-placeholder)]"
 								@input="handleSearch"
 								@click.stop
 							/>
@@ -544,7 +564,7 @@ defineExpose({
 					</div>
 
 					<!-- Lista de opções -->
-					<div class="max-h-60 overflow-y-auto py-2">
+					<div class="max-h-60 overflow-y-auto py-2 bg-[var(--card-bg)]">
 						<!-- Loading state -->
 						<div
 							v-if="loading"
@@ -561,13 +581,14 @@ defineExpose({
 								:key="option.value"
 								class="flex items-center px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1 my-1"
 								:class="{
-									'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
+									'text-[var(--text-primary)] bg-transparent hover:bg-[var(--bg-hover)]':
 										!option.disabled && !normalizedValue.includes(option.value),
 									'text-[var(--primary)] bg-[var(--primary-light)]': normalizedValue.includes(
 										option.value,
 									),
-									'text-[var(--text-muted)] cursor-not-allowed opacity-50': option.disabled,
-									'cursor-not-allowed opacity-50':
+									'text-[var(--text-muted)] cursor-not-allowed opacity-50 bg-transparent':
+										option.disabled,
+									'cursor-not-allowed opacity-50 bg-transparent':
 										!canSelectMore && !normalizedValue.includes(option.value) && multiple,
 								}"
 								@click="selectOption(option)"

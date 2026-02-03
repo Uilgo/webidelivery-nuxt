@@ -48,18 +48,13 @@ const props = defineProps<Props>();
 			</NuxtLink>
 		</div>
 
-		<!-- Scroll Horizontal com fade -->
-		<div class="relative -mx-2 sm:-mx-3 md:-mx-4">
-			<div
-				class="flex overflow-x-auto gap-3 sm:gap-4 pb-4 px-2 sm:px-3 md:px-4 hide-scroll snap-x snap-mandatory"
-			>
-				<CardapioOfertaCard
-					v-for="oferta in ofertas"
-					:key="oferta.id"
-					:produto="oferta"
-					class="snap-start"
-				/>
-			</div>
+		<div class="flex overflow-x-auto gap-3 sm:gap-4 pb-4 hide-scroll snap-x snap-mandatory">
+			<CardapioOfertaCard
+				v-for="oferta in ofertas"
+				:key="oferta.id"
+				:produto="oferta"
+				class="snap-start"
+			/>
 		</div>
 	</section>
 </template>
