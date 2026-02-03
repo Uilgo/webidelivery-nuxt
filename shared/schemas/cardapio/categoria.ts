@@ -59,6 +59,8 @@ export const createCategoriaSchema = z
 		promocao_valor: z.number().min(0).nullable().optional(),
 		promocao_inicio: z.string().nullable().optional(),
 		promocao_fim: z.string().nullable().optional(),
+		permite_divisao_sabores: z.boolean().optional(),
+		max_sabores_divisao: z.number().int().min(2).max(4).optional(),
 	})
 	.refine(
 		(data) => {
@@ -116,6 +118,23 @@ export const createCategoriaSchema = z
 		{
 			message: "Data de término deve ser posterior à data de início",
 			path: ["promocao_fim"],
+		},
+	)
+	.refine(
+		(data) => {
+			// Se permite divisão, max_sabores deve estar entre 2-4
+			if (data.permite_divisao_sabores) {
+				return (
+					data.max_sabores_divisao !== undefined &&
+					data.max_sabores_divisao >= 2 &&
+					data.max_sabores_divisao <= 4
+				);
+			}
+			return true;
+		},
+		{
+			message: "Quantidade de sabores deve ser 2, 3 ou 4",
+			path: ["max_sabores_divisao"],
 		},
 	);
 
@@ -134,6 +153,8 @@ export const updateCategoriaSchema = z
 		promocao_valor: z.number().min(0).nullable().optional(),
 		promocao_inicio: z.string().nullable().optional(),
 		promocao_fim: z.string().nullable().optional(),
+		permite_divisao_sabores: z.boolean().optional(),
+		max_sabores_divisao: z.number().int().min(2).max(4).optional(),
 	})
 	.refine(
 		(data) => {
@@ -191,6 +212,19 @@ export const updateCategoriaSchema = z
 		{
 			message: "Data de término deve ser posterior à data de início",
 			path: ["promocao_fim"],
+		},
+	)
+	.refine(
+		(data) => {
+			// Se permite divisão, max_sabores deve estar entre 2-4
+			if (data.permite_divisao_sabores && data.max_sabores_divisao) {
+				return data.max_sabores_divisao >= 2 && data.max_sabores_divisao <= 4;
+			}
+			return true;
+		},
+		{
+			message: "Quantidade de sabores deve ser 2, 3 ou 4",
+			path: ["max_sabores_divisao"],
 		},
 	);
 

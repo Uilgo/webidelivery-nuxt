@@ -25,6 +25,8 @@ export interface Produto {
 	readonly promocao_inicio: TimestampTz | null;
 	readonly promocao_fim: TimestampTz | null;
 	readonly total_vendas: number;
+	readonly permite_divisao_sabores_override: boolean | null;
+	readonly max_sabores_divisao_override: number | null;
 }
 
 export interface ProdutoVariacao {
@@ -60,6 +62,8 @@ export interface ProdutoCreateData {
 	promocao_valor?: number | null;
 	promocao_inicio?: string | null;
 	promocao_fim?: string | null;
+	permite_divisao_sabores_override?: boolean | null;
+	max_sabores_divisao_override?: number | null;
 	variacoes?: ProdutoVariacaoCreateData[];
 	grupos_adicionais_ids?: UUID[];
 }
@@ -76,6 +80,8 @@ export interface ProdutoUpdateData {
 	promocao_inicio?: string | null;
 	promocao_fim?: string | null;
 	categoria_id?: UUID | null;
+	permite_divisao_sabores_override?: boolean | null;
+	max_sabores_divisao_override?: number | null;
 	variacoes?: ProdutoVariacaoCreateData[];
 	grupos_adicionais_ids?: UUID[];
 }

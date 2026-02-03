@@ -59,6 +59,8 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_promocao_valor: data.promocao_valor ?? null,
 				p_promocao_inicio: data.promocao_inicio ?? null,
 				p_promocao_fim: data.promocao_fim ?? null,
+				p_permite_divisao_sabores_override: data.permite_divisao_sabores_override ?? null,
+				p_max_sabores_divisao_override: data.max_sabores_divisao_override ?? null,
 				p_variacoes: variacoesJsonb,
 			});
 
@@ -118,6 +120,8 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_promocao_inicio: data.promocao_inicio ?? null,
 				p_promocao_fim: data.promocao_fim ?? null,
 				p_categoria_id: data.categoria_id ?? null,
+				p_permite_divisao_sabores_override: data.permite_divisao_sabores_override ?? null,
+				p_max_sabores_divisao_override: data.max_sabores_divisao_override ?? null,
 			});
 
 			if (error) {
@@ -229,7 +233,7 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 			const { data: produto, error: fetchError } = await supabase
 				.from("produtos")
 				.select(
-					"categoria_id, nome, descricao, imagem_url, destaque, em_promocao, promocao_tipo, promocao_valor, promocao_inicio, promocao_fim",
+					"categoria_id, nome, descricao, imagem_url, destaque, em_promocao, promocao_tipo, promocao_valor, promocao_inicio, promocao_fim, permite_divisao_sabores_override, max_sabores_divisao_override",
 				)
 				.eq("id", id)
 				.single();
@@ -252,6 +256,8 @@ export const useProdutosActions = (): UseProdutosActionsReturn => {
 				p_promocao_inicio: produto.promocao_inicio,
 				p_promocao_fim: produto.promocao_fim,
 				p_categoria_id: produto.categoria_id,
+				p_permite_divisao_sabores_override: produto.permite_divisao_sabores_override ?? null,
+				p_max_sabores_divisao_override: produto.max_sabores_divisao_override ?? null,
 			});
 
 			if (error) {

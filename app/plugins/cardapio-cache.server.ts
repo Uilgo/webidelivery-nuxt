@@ -78,7 +78,12 @@ export default defineNuxtPlugin(async () => {
 			categoriasCache.get(async () => {
 				const { data, error } = await supabase
 					.from("categorias")
-					.select(`*, produtos:produtos(count)`)
+					.select(
+						`
+						*,
+						produtos:produtos(count)
+					`,
+					)
 					.eq("estabelecimento_id", estabelecimentoId)
 					.order("ordem", { ascending: true });
 

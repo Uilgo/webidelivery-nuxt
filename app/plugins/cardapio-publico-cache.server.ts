@@ -201,6 +201,8 @@ export default defineNuxtPlugin({
 						.select(
 							`
 						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						permite_divisao_sabores_override, max_sabores_divisao_override,
+						categorias!inner (permite_divisao_sabores, max_sabores_divisao),
 						produto_variacoes (id, nome, preco, preco_promocional)
 					`,
 						)
@@ -210,27 +212,42 @@ export default defineNuxtPlugin({
 						.order("ordem", { ascending: true })
 						.limit(8);
 
-					return (data ?? []).map((produto) => ({
-						id: produto.id,
-						nome: produto.nome,
-						descricao: produto.descricao,
-						imagem_url: produto.imagem_url,
-						destaque: produto.destaque,
-						em_promocao: produto.em_promocao,
-						categoria_id: produto.categoria_id,
-						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-							const variacao = v as Record<string, unknown>;
-							return {
-								id: variacao.id as string,
-								nome: variacao.nome as string,
-								preco: parseFloat(variacao.preco as string),
-								preco_promocional: variacao.preco_promocional
-									? parseFloat(variacao.preco_promocional as string)
-									: null,
-							};
-						}),
-						grupos_adicionais: [],
-					}));
+					return (data ?? []).map((produto) => {
+						const categoria = produto.categorias as unknown as Record<string, unknown> | null;
+						// Calcular valores efetivos (override ou herda da categoria)
+						const permiteDivisao =
+							produto.permite_divisao_sabores_override ??
+							(categoria?.permite_divisao_sabores as boolean) ??
+							false;
+						const maxSabores =
+							produto.max_sabores_divisao_override ??
+							(categoria?.max_sabores_divisao as number) ??
+							2;
+
+						return {
+							id: produto.id,
+							nome: produto.nome,
+							descricao: produto.descricao,
+							imagem_url: produto.imagem_url,
+							destaque: produto.destaque,
+							em_promocao: produto.em_promocao,
+							categoria_id: produto.categoria_id,
+							permite_divisao_sabores: permiteDivisao,
+							max_sabores_divisao: maxSabores,
+							variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+								const variacao = v as Record<string, unknown>;
+								return {
+									id: variacao.id as string,
+									nome: variacao.nome as string,
+									preco: parseFloat(variacao.preco as string),
+									preco_promocional: variacao.preco_promocional
+										? parseFloat(variacao.preco_promocional as string)
+										: null,
+								};
+							}),
+							grupos_adicionais: [],
+						};
+					});
 				}),
 
 				// 4. Destaques (produtos mais vendidos)
@@ -248,6 +265,8 @@ export default defineNuxtPlugin({
 						.select(
 							`
 						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						permite_divisao_sabores_override, max_sabores_divisao_override,
+						categorias!inner (permite_divisao_sabores, max_sabores_divisao),
 						produto_variacoes (id, nome, preco, preco_promocional)
 					`,
 						)
@@ -257,27 +276,42 @@ export default defineNuxtPlugin({
 						.order("total_vendas", { ascending: false })
 						.limit(9);
 
-					return (data ?? []).map((produto) => ({
-						id: produto.id,
-						nome: produto.nome,
-						descricao: produto.descricao,
-						imagem_url: produto.imagem_url,
-						destaque: produto.destaque,
-						em_promocao: produto.em_promocao,
-						categoria_id: produto.categoria_id,
-						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-							const variacao = v as Record<string, unknown>;
-							return {
-								id: variacao.id as string,
-								nome: variacao.nome as string,
-								preco: parseFloat(variacao.preco as string),
-								preco_promocional: variacao.preco_promocional
-									? parseFloat(variacao.preco_promocional as string)
-									: null,
-							};
-						}),
-						grupos_adicionais: [],
-					}));
+					return (data ?? []).map((produto) => {
+						const categoria = produto.categorias as unknown as Record<string, unknown> | null;
+						// Calcular valores efetivos (override ou herda da categoria)
+						const permiteDivisao =
+							produto.permite_divisao_sabores_override ??
+							(categoria?.permite_divisao_sabores as boolean) ??
+							false;
+						const maxSabores =
+							produto.max_sabores_divisao_override ??
+							(categoria?.max_sabores_divisao as number) ??
+							2;
+
+						return {
+							id: produto.id,
+							nome: produto.nome,
+							descricao: produto.descricao,
+							imagem_url: produto.imagem_url,
+							destaque: produto.destaque,
+							em_promocao: produto.em_promocao,
+							categoria_id: produto.categoria_id,
+							permite_divisao_sabores: permiteDivisao,
+							max_sabores_divisao: maxSabores,
+							variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+								const variacao = v as Record<string, unknown>;
+								return {
+									id: variacao.id as string,
+									nome: variacao.nome as string,
+									preco: parseFloat(variacao.preco as string),
+									preco_promocional: variacao.preco_promocional
+										? parseFloat(variacao.preco_promocional as string)
+										: null,
+								};
+							}),
+							grupos_adicionais: [],
+						};
+					});
 				}),
 
 				// 5. Produtos (primeira página - 20 itens)
@@ -295,6 +329,8 @@ export default defineNuxtPlugin({
 						.select(
 							`
 						id, nome, descricao, imagem_url, destaque, em_promocao, categoria_id,
+						permite_divisao_sabores_override, max_sabores_divisao_override,
+						categorias!inner (permite_divisao_sabores, max_sabores_divisao),
 						produto_variacoes (id, nome, preco, preco_promocional)
 					`,
 						)
@@ -303,27 +339,42 @@ export default defineNuxtPlugin({
 						.order("ordem", { ascending: true })
 						.limit(20); // Primeira página
 
-					return (data ?? []).map((produto) => ({
-						id: produto.id,
-						nome: produto.nome,
-						descricao: produto.descricao,
-						imagem_url: produto.imagem_url,
-						destaque: produto.destaque,
-						em_promocao: produto.em_promocao,
-						categoria_id: produto.categoria_id,
-						variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
-							const variacao = v as Record<string, unknown>;
-							return {
-								id: variacao.id as string,
-								nome: variacao.nome as string,
-								preco: parseFloat(variacao.preco as string),
-								preco_promocional: variacao.preco_promocional
-									? parseFloat(variacao.preco_promocional as string)
-									: null,
-							};
-						}),
-						grupos_adicionais: [],
-					}));
+					return (data ?? []).map((produto) => {
+						const categoria = produto.categorias as unknown as Record<string, unknown> | null;
+						// Calcular valores efetivos (override ou herda da categoria)
+						const permiteDivisao =
+							produto.permite_divisao_sabores_override ??
+							(categoria?.permite_divisao_sabores as boolean) ??
+							false;
+						const maxSabores =
+							produto.max_sabores_divisao_override ??
+							(categoria?.max_sabores_divisao as number) ??
+							2;
+
+						return {
+							id: produto.id,
+							nome: produto.nome,
+							descricao: produto.descricao,
+							imagem_url: produto.imagem_url,
+							destaque: produto.destaque,
+							em_promocao: produto.em_promocao,
+							categoria_id: produto.categoria_id,
+							permite_divisao_sabores: permiteDivisao,
+							max_sabores_divisao: maxSabores,
+							variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
+								const variacao = v as Record<string, unknown>;
+								return {
+									id: variacao.id as string,
+									nome: variacao.nome as string,
+									preco: parseFloat(variacao.preco as string),
+									preco_promocional: variacao.preco_promocional
+										? parseFloat(variacao.preco_promocional as string)
+										: null,
+								};
+							}),
+							grupos_adicionais: [],
+						};
+					});
 				}),
 
 				// 6. Banners (carrossel)

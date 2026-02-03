@@ -41,7 +41,7 @@ const adicionaisSelecionados = ref<Map<string, number>>(new Map());
 const observacao = ref("");
 const quantidade = ref(1);
 const multiplosSabores = ref(false);
-const quantidadeSabores = ref<2 | 3 | 4>(2);
+const quantidadeSabores = ref<number>(2);
 const saboresSelecionados = ref<string[]>([]);
 const produtosDisponiveis = ref<ProdutoPublico[]>([]);
 const carregandoProdutos = ref(false);
@@ -108,11 +108,21 @@ const variacoesOptions = computed(() => {
 
 const maxSaboresAdicionais = computed(() => quantidadeSabores.value - 1);
 
-const opcoesSabores = [
-	{ label: "2 sabores", value: 2 },
-	{ label: "3 sabores", value: 3 },
-	{ label: "4 sabores", value: 4 },
-];
+const opcoesSabores = computed(() => {
+	if (!props.produto?.permite_divisao_sabores) return [];
+
+	const max = props.produto.max_sabores_divisao;
+	const opcoes = [];
+
+	for (let i = 2; i <= max; i++) {
+		opcoes.push({
+			value: i,
+			label: `${i} sabores`,
+		});
+	}
+
+	return opcoes;
+});
 
 const categoriaPai = computed<CategoriaPublica | null>(() => {
 	if (!props.produto) return null;
@@ -647,8 +657,11 @@ const toggleDetalhes = () => {
 				</div>
 			</div>
 
-			<!-- Múltiplos Sabores -->
-			<div v-if="produtosDisponiveisFiltrados.length > 0" class="space-y-3">
+			<!-- Múltiplos Sabores (condicional) -->
+			<div
+				v-if="produto?.permite_divisao_sabores && produtosDisponiveisFiltrados.length > 0"
+				class="space-y-3"
+			>
 				<!-- Toggle Switch -->
 				<div
 					class="p-3 rounded-xl border-2 transition-all duration-200"
@@ -675,7 +688,7 @@ const toggleDetalhes = () => {
 									Quer dividir seu sabor?
 								</h3>
 								<p class="text-[10px] text-[var(--cardapio-text-muted)]">
-									Personalize com até 4 sabores
+									Personalize com até {{ produto.max_sabores_divisao }} sabores
 								</p>
 							</div>
 						</div>

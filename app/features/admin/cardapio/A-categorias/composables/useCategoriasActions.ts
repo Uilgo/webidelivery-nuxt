@@ -50,6 +50,8 @@ export const useCategoriasActions = (): UseCategoriasActionsReturn => {
 				p_promocao_valor: data.promocao_valor ?? null,
 				p_promocao_inicio: data.promocao_inicio ?? null,
 				p_promocao_fim: data.promocao_fim ?? null,
+				p_permite_divisao_sabores: data.permite_divisao_sabores ?? false,
+				p_max_sabores_divisao: data.max_sabores_divisao ?? 2,
 			});
 
 			if (error) {
@@ -87,6 +89,8 @@ export const useCategoriasActions = (): UseCategoriasActionsReturn => {
 				p_promocao_valor: data.promocao_valor ?? null,
 				p_promocao_inicio: data.promocao_inicio ?? null,
 				p_promocao_fim: data.promocao_fim ?? null,
+				p_permite_divisao_sabores: data.permite_divisao_sabores ?? null,
+				p_max_sabores_divisao: data.max_sabores_divisao ?? null,
 			});
 
 			if (error) {

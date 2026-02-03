@@ -22,6 +22,8 @@ export interface Categoria {
 	readonly promocao_valor: number | null;
 	readonly promocao_inicio: TimestampTz | null;
 	readonly promocao_fim: TimestampTz | null;
+	readonly permite_divisao_sabores: boolean;
+	readonly max_sabores_divisao: number;
 }
 
 export interface CategoriaCreateData {
@@ -35,6 +37,8 @@ export interface CategoriaCreateData {
 	promocao_valor?: number | null;
 	promocao_inicio?: string | null;
 	promocao_fim?: string | null;
+	permite_divisao_sabores?: boolean;
+	max_sabores_divisao?: number;
 }
 
 export interface CategoriaUpdateData {
@@ -49,6 +53,8 @@ export interface CategoriaUpdateData {
 	promocao_valor?: number | null;
 	promocao_inicio?: string | null;
 	promocao_fim?: string | null;
+	permite_divisao_sabores?: boolean;
+	max_sabores_divisao?: number;
 }
 
 export interface CategoriaFilters {

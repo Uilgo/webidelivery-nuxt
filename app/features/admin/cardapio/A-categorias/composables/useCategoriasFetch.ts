@@ -96,10 +96,15 @@ export const useCategoriasFetch = (): UseCategoriasFetchReturn => {
 		error.value = null;
 
 		try {
-			// ✅ NOVO: Inclui categoria_pai_id na query
+			// ✅ NOVO: Inclui categoria_pai_id e campos de divisão de sabores na query
 			const { data, error: fetchError } = await supabase
 				.from("categorias")
-				.select(`*, produtos:produtos(count)`)
+				.select(
+					`
+					*,
+					produtos:produtos(count)
+				`,
+				)
 				.eq("estabelecimento_id", estabelecimentoId)
 				.order("ordem", { ascending: true });
 

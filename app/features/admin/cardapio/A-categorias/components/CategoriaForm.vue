@@ -99,6 +99,10 @@ const promocao_valor = ref<number>(0);
 const promocao_inicio = ref<string | null>(null);
 const promocao_fim = ref<string | null>(null);
 
+// Campos de divisão de sabores (não estão no schema VeeValidate, usar ref simples)
+const permite_divisao_sabores = ref<boolean>(false);
+const max_sabores_divisao = ref<number>(2);
+
 /**
  * Computed para validação geral do formulário
  */
@@ -125,7 +129,13 @@ const onSubmit = handleSubmit((values) => {
 				promocao_fim: null,
 			};
 
-	emit("submit", { ...values, ...dadosPromocao });
+	// Adicionar campos de divisão de sabores
+	const dadosDivisaoSabores = {
+		permite_divisao_sabores: permite_divisao_sabores.value,
+		max_sabores_divisao: max_sabores_divisao.value,
+	};
+
+	emit("submit", { ...values, ...dadosPromocao, ...dadosDivisaoSabores });
 });
 
 /**
@@ -153,8 +163,13 @@ watch(
 				promocao_inicio.value = newData.promocao_inicio || null;
 				promocao_fim.value = newData.promocao_fim || null;
 			}
+
+			// Atualizar campos de divisão de sabores
+			permite_divisao_sabores.value = newData.permite_divisao_sabores ?? false;
+			max_sabores_divisao.value = newData.max_sabores_divisao ?? 2;
 		}
 	},
+	{ immediate: true }, // ✅ IMPORTANTE: executar imediatamente na montagem
 );
 
 /**
@@ -309,6 +324,91 @@ defineExpose({
 					<p class="text-xs text-blue-600 dark:text-blue-400 italic mt-2">
 						💡 Dica: Promoções em categoria são aplicadas automaticamente a produtos novos
 						adicionados nela.
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Divisão de Sabores -->
+		<div class="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-4">
+			<!-- Header com Toggle -->
+			<div class="flex items-center justify-between">
+				<div class="flex-1">
+					<h3 class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+						Permite dividir sabores?
+					</h3>
+					<p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+						Ideal para pizzas e produtos similares. Todos os produtos desta categoria herdarão essa
+						configuração.
+					</p>
+				</div>
+				<UiSwitch v-model="permite_divisao_sabores" :disabled="loading" />
+			</div>
+
+			<!-- Quantidade de sabores (só aparece se ativado) -->
+			<div
+				v-if="permite_divisao_sabores"
+				class="pt-2 border-t border-neutral-200 dark:border-neutral-800"
+			>
+				<label class="block text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-3">
+					Quantos sabores podem ser divididos?
+				</label>
+				<div class="flex gap-2">
+					<UiButton
+						type="button"
+						:variant="max_sabores_divisao === 2 ? 'solid' : 'outline'"
+						size="sm"
+						:disabled="loading"
+						@click="max_sabores_divisao = 2"
+					>
+						2 sabores
+					</UiButton>
+					<UiButton
+						type="button"
+						:variant="max_sabores_divisao === 3 ? 'solid' : 'outline'"
+						size="sm"
+						:disabled="loading"
+						@click="max_sabores_divisao = 3"
+					>
+						3 sabores
+					</UiButton>
+					<UiButton
+						type="button"
+						:variant="max_sabores_divisao === 4 ? 'solid' : 'outline'"
+						size="sm"
+						:disabled="loading"
+						@click="max_sabores_divisao = 4"
+					>
+						4 sabores
+					</UiButton>
+				</div>
+			</div>
+		</div>
+
+		<!-- Card Informativo sobre Divisão de Sabores -->
+		<div
+			class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
+		>
+			<div class="flex gap-3">
+				<Icon
+					name="lucide:info"
+					class="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5"
+				/>
+				<div class="space-y-2">
+					<h4 class="text-sm font-medium text-purple-900 dark:text-purple-100">
+						Como funciona a divisão de sabores?
+					</h4>
+					<p class="text-xs text-purple-700 dark:text-purple-300 leading-relaxed">
+						Ao ativar divisão de sabores na categoria, <strong>todos os produtos</strong> dela
+						permitirão que o cliente escolha múltiplos sabores. Exemplos:
+					</p>
+					<ul class="text-xs text-purple-700 dark:text-purple-300 space-y-1 ml-4 list-disc">
+						<li><strong>Pizzas:</strong> Meia Calabresa, meia Margherita</li>
+						<li><strong>Açaí:</strong> Metade com morango, metade com banana</li>
+						<li><strong>Esfihas:</strong> 3 sabores diferentes no mesmo pedido</li>
+					</ul>
+					<p class="text-xs text-purple-600 dark:text-purple-400 italic mt-2">
+						💡 Dica: Produtos individuais podem sobrescrever essa configuração se necessário.
 					</p>
 				</div>
 			</div>

@@ -62,6 +62,8 @@ const getInitialValues = () => {
 			ativo: props.produto.ativo ?? true,
 			destaque: props.produto.destaque ?? false,
 			em_promocao: props.produto.em_promocao ?? false,
+			permite_divisao_sabores_override: props.produto.permite_divisao_sabores_override ?? null,
+			max_sabores_divisao_override: props.produto.max_sabores_divisao_override ?? null,
 		};
 	}
 
@@ -82,6 +84,8 @@ const getInitialValues = () => {
 		ativo: true,
 		destaque: false,
 		em_promocao: false,
+		permite_divisao_sabores_override: null,
+		max_sabores_divisao_override: null,
 	};
 };
 
@@ -109,6 +113,30 @@ const promocao_tipo = ref<"percentual" | "valor_fixo">("percentual");
 const promocao_valor = ref<number>(0);
 const promocao_inicio = ref<string | null>(null);
 const promocao_fim = ref<string | null>(null);
+
+// Campos de divisão de sabores
+const [permite_divisao_sabores_override] = defineField("permite_divisao_sabores_override");
+const [max_sabores_divisao_override] = defineField("max_sabores_divisao_override");
+
+// Computed para obter categoria selecionada
+const categoriaSelecionada = computed(() => {
+	if (!categoria_id.value) return null;
+	return categorias.value.find((c) => c.id === categoria_id.value) ?? null;
+});
+
+// Computed para valor efetivo de permite_divisao_sabores (usado no v-if)
+const permiteDivisaoEfetivo = computed(() => {
+	return Boolean(
+		permite_divisao_sabores_override.value ??
+		categoriaSelecionada.value?.permite_divisao_sabores ??
+		false,
+	);
+});
+
+// Computed para valor efetivo de max_sabores (usado nos botões)
+const maxSaboresEfetivo = computed(() => {
+	return max_sabores_divisao_override.value ?? categoriaSelecionada.value?.max_sabores_divisao ?? 2;
+});
 
 // Campos que só existem no modo criação - usar ref simples no modo edição
 const grupos_adicionais_ids = ref<string[]>([]);
@@ -191,6 +219,8 @@ watch(
 					ativo: newData.ativo ?? true,
 					destaque: newData.destaque ?? false,
 					em_promocao: newData.em_promocao ?? false,
+					permite_divisao_sabores_override: newData.permite_divisao_sabores_override ?? null,
+					max_sabores_divisao_override: newData.max_sabores_divisao_override ?? null,
 				},
 			});
 
@@ -484,6 +514,91 @@ defineExpose({
 						}
 					"
 				/>
+			</div>
+		</div>
+
+		<!-- Seção Divisão de Sabores -->
+		<div class="p-6 bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg">
+			<div class="flex items-center justify-between mb-4">
+				<div>
+					<h3 class="text-base font-semibold text-[var(--text-primary)]">
+						Permite dividir sabores?
+					</h3>
+					<p class="text-xs text-[var(--text-muted)] mt-1">
+						<template v-if="permite_divisao_sabores_override === null && categoriaSelecionada">
+							Herdando da categoria:
+							<strong>{{ categoriaSelecionada.permite_divisao_sabores ? "Sim" : "Não" }}</strong>
+							{{
+								categoriaSelecionada.permite_divisao_sabores
+									? `(até ${categoriaSelecionada.max_sabores_divisao} sabores)`
+									: ""
+							}}
+						</template>
+						<template v-else-if="permite_divisao_sabores_override !== null">
+							Configuração personalizada para este produto
+						</template>
+						<template v-else> Selecione uma categoria primeiro </template>
+					</p>
+				</div>
+				<div class="flex items-center gap-2">
+					<!-- Botão para resetar para padrão da categoria -->
+					<UiButton
+						v-if="permite_divisao_sabores_override !== null"
+						type="button"
+						variant="ghost"
+						size="sm"
+						@click="
+							permite_divisao_sabores_override = null;
+							max_sabores_divisao_override = null;
+						"
+					>
+						<Icon name="lucide:rotate-ccw" class="w-4 h-4 mr-1.5" />
+						Usar padrão
+					</UiButton>
+					<UiSwitch
+						:model-value="permiteDivisaoEfetivo"
+						@update:model-value="permite_divisao_sabores_override = $event"
+					/>
+				</div>
+			</div>
+
+			<!-- Quantidade de sabores (só aparece se ativado) -->
+			<div v-if="permiteDivisaoEfetivo" class="mt-4">
+				<label class="block text-sm font-medium text-[var(--text-primary)] mb-3">
+					Quantos sabores podem ser divididos?
+					<span
+						v-if="max_sabores_divisao_override === null && categoriaSelecionada"
+						class="text-xs font-normal text-[var(--text-muted)]"
+					>
+						(Herdando: {{ categoriaSelecionada.max_sabores_divisao }} sabores)
+					</span>
+				</label>
+				<div class="flex gap-2">
+					<UiButton
+						type="button"
+						:variant="maxSaboresEfetivo === 2 ? 'solid' : 'outline'"
+						size="sm"
+						@click="max_sabores_divisao_override = 2"
+					>
+						2 sabores
+					</UiButton>
+					<UiButton
+						type="button"
+						:variant="maxSaboresEfetivo === 3 ? 'solid' : 'outline'"
+						size="sm"
+						@click="max_sabores_divisao_override = 3"
+					>
+						3 sabores
+					</UiButton>
+					<UiButton
+						type="button"
+						:variant="maxSaboresEfetivo === 4 ? 'solid' : 'outline'"
+						size="sm"
+						@click="max_sabores_divisao_override = 4"
+					>
+						4 sabores
+					</UiButton>
+				</div>
 			</div>
 		</div>
 	</form>

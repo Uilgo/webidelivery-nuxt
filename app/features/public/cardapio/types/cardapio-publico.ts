@@ -104,6 +104,8 @@ export interface ProdutoPublico {
 	destaque: boolean;
 	em_promocao: boolean;
 	categoria_id: string;
+	permite_divisao_sabores: boolean;
+	max_sabores_divisao: number;
 	variacoes: readonly VariacaoPublica[];
 	grupos_adicionais: readonly GrupoAdicionalPublico[];
 }

@@ -60,6 +60,8 @@ export interface Categoria {
 	readonly ativo: boolean;
 	readonly categoria_pai_id: UUID | null; // ✅ NOVO: ID da categoria pai para hierarquia
 	readonly configuracoes: CategoriaConfiguracoes | null; // ✅ Campo JSONB para configurações
+	readonly permite_divisao_sabores: boolean;
+	readonly max_sabores_divisao: number;
 }
 
 // ========================================
@@ -108,6 +110,8 @@ export interface Produto {
 	readonly em_promocao: boolean;
 	readonly total_vendas: number;
 	readonly metadata: ProdutoMetadata | null;
+	readonly permite_divisao_sabores_override: boolean | null;
+	readonly max_sabores_divisao_override: number | null;
 }
 
 // ========================================
