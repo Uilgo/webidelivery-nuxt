@@ -14,6 +14,8 @@ import {
 	formatarTempoDecorrido,
 } from "~/features/admin/pedidos/utils/pedido-formatters";
 import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
+import { useToast } from "~/composables/ui/useToast";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 interface Props {
 	pedido: PedidoCompleto;
@@ -25,6 +27,64 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+/**
+ * Composables
+ */
+const toast = useToast();
+const estabelecimentoStore = useEstabelecimentoStore();
+
+/**
+ * Copiar link da página de rastreamento do pedido
+ */
+const copiarLinkRastreamento = async (event: Event) => {
+	event.stopPropagation(); // Evita abrir o drawer
+
+	const estabelecimento = estabelecimentoStore.estabelecimento;
+	if (!estabelecimento?.slug) {
+		toast.add({
+			title: "Erro",
+			description: "Não foi possível obter o slug do estabelecimento",
+			color: "error",
+		});
+		return;
+	}
+
+	// Gerar URL completa da página de rastreamento
+	const baseUrl = window.location.origin;
+	const linkRastreamento = `${baseUrl}/${estabelecimento.slug}/pedido/${props.pedido.codigo_rastreamento}`;
+
+	try {
+		await navigator.clipboard.writeText(linkRastreamento);
+		toast.add({
+			title: "Link copiado!",
+			description: "O link de rastreamento foi copiado para a área de transferência",
+			color: "success",
+			duration: 3000,
+		});
+	} catch {
+		toast.add({
+			title: "Erro ao copiar",
+			description: "Não foi possível copiar o link",
+			color: "error",
+		});
+	}
+};
+
+/**
+ * Abrir página de rastreamento em nova aba
+ */
+const abrirPaginaRastreamento = (event: Event) => {
+	event.stopPropagation(); // Evita abrir o drawer
+
+	const estabelecimento = estabelecimentoStore.estabelecimento;
+	if (!estabelecimento?.slug) return;
+
+	const baseUrl = window.location.origin;
+	const linkRastreamento = `${baseUrl}/${estabelecimento.slug}/pedido/${props.pedido.codigo_rastreamento}`;
+
+	window.open(linkRastreamento, "_blank");
+};
 
 /**
  * Configuração visual do status
@@ -101,11 +161,38 @@ const handleClick = () => {
 					</UiBadge>
 				</div>
 				<!-- Código de Rastreamento -->
-				<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-					<Icon name="lucide:hash" class="w-3.5 h-3.5" />
-					<span class="font-mono">{{
-						formatarCodigoRastreamento(pedido.codigo_rastreamento)
-					}}</span>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+						<Icon name="lucide:hash" class="w-3.5 h-3.5" />
+						<span class="font-mono">{{
+							formatarCodigoRastreamento(pedido.codigo_rastreamento)
+						}}</span>
+					</div>
+					<!-- Botões de Ação -->
+					<div class="flex items-center gap-1">
+						<button
+							type="button"
+							class="p-1 rounded-md hover:bg-[var(--bg-muted)] transition-colors"
+							title="Copiar link de rastreamento"
+							@click="copiarLinkRastreamento"
+						>
+							<Icon
+								name="lucide:copy"
+								class="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+							/>
+						</button>
+						<button
+							type="button"
+							class="p-1 rounded-md hover:bg-[var(--bg-muted)] transition-colors"
+							title="Abrir página de rastreamento"
+							@click="abrirPaginaRastreamento"
+						>
+							<Icon
+								name="lucide:external-link"
+								class="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+							/>
+						</button>
+					</div>
 				</div>
 			</div>
 		</template>

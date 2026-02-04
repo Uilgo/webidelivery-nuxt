@@ -9,6 +9,7 @@ import { usePedido } from "~/features/public/pedido/composables/usePedido";
 import { useCancelarPedido } from "~/features/public/pedido/composables/useCancelarPedido";
 import { useAvaliacaoPedido } from "~/composables/ui/useAvaliacaoPedido";
 import { useToast } from "~/composables/ui/useToast";
+import { useTemaPublico } from "~/features/public/cardapio/composables/useTemaPublico";
 import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 import {
 	clientePodeCancelar,
@@ -30,6 +31,46 @@ import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 const codigo = computed(() => route.params.codigo as string); // ✅ MUDANÇA: usa código em vez de ID
+const supabase = useSupabaseClient();
+
+/**
+ * Dados do estabelecimento (reativo para useTemaPublico)
+ */
+const estabelecimentoRef = ref<{
+	id: string;
+	endereco: string;
+	whatsapp: string;
+	config_tema?: unknown;
+} | null>(null);
+
+/**
+ * Aplicar tema do estabelecimento usando o mesmo composable do cardápio
+ */
+useTemaPublico(estabelecimentoRef as Ref<any>);
+
+/**
+ * Busca dados do estabelecimento
+ */
+const buscarEstabelecimento = async () => {
+	const { data, error } = await supabase
+		.from("estabelecimentos")
+		.select(
+			"id, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, whatsapp, config_tema",
+		)
+		.eq("slug", slug.value)
+		.single();
+
+	if (error || !data) {
+		return;
+	}
+
+	estabelecimentoRef.value = {
+		id: data.id,
+		endereco: `${data.endereco_rua}, ${data.endereco_numero} - ${data.endereco_bairro} - ${data.endereco_cidade}/${data.endereco_estado}`,
+		whatsapp: data.whatsapp || "",
+		config_tema: data.config_tema,
+	};
+};
 
 /**
  * Composables
@@ -67,8 +108,12 @@ const carregarPedido = async () => {
 /**
  * Carrega pedido ao montar
  */
-onMounted(() => {
-	carregarPedido();
+onMounted(async () => {
+	// Buscar dados do estabelecimento primeiro (para aplicar tema)
+	await buscarEstabelecimento();
+
+	// Depois carregar o pedido
+	await carregarPedido();
 });
 
 /**
@@ -198,30 +243,32 @@ const copiarCodigo = async () => {
 </script>
 
 <template>
-	<div class="min-h-screen bg-[var(--bg-base)] py-8">
+	<div class="min-h-screen bg-[var(--cardapio-background)] py-8">
 		<div class="container mx-auto px-4 max-w-3xl">
 			<!-- Header -->
 			<div class="mb-8">
 				<button
 					type="button"
 					@click="navigateTo(`/${slug}`)"
-					class="flex items-center gap-2 text-[var(--text-muted)] hover:text-primary transition-colors mb-4"
+					class="flex items-center gap-2 text-[var(--cardapio-text-muted)] hover:text-[var(--cardapio-primary)] transition-colors mb-4"
 				>
 					<Icon name="lucide:arrow-left" class="w-5 h-5" />
 					<span class="text-sm">Voltar ao cardápio</span>
 				</button>
-				<h1 class="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">Acompanhar Pedido</h1>
+				<h1 class="text-2xl md:text-3xl font-bold text-[var(--cardapio-text)]">
+					Acompanhar Pedido
+				</h1>
 			</div>
 
 			<!-- Loading -->
 			<div v-if="loading && !pedido" class="flex justify-center py-12">
-				<Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-primary" />
+				<Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-[var(--cardapio-primary)]" />
 			</div>
 
 			<!-- Erro -->
 			<div
 				v-else-if="erro"
-				class="p-6 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600"
+				class="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 shadow-[var(--cardapio-card-shadow)]"
 			>
 				<div class="flex items-start gap-3">
 					<Icon name="lucide:alert-circle" class="w-6 h-6 flex-shrink-0" />
@@ -239,7 +286,7 @@ const copiarCodigo = async () => {
 			<div v-else-if="pedido" class="space-y-6">
 				<!-- Mensagem de Sucesso com Código de Rastreamento -->
 				<div
-					class="p-6 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400"
+					class="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 shadow-[var(--cardapio-card-shadow)]"
 				>
 					<div class="flex items-start gap-3">
 						<Icon name="lucide:check-circle-2" class="w-6 h-6 flex-shrink-0" />
@@ -252,7 +299,7 @@ const copiarCodigo = async () => {
 
 							<!-- ✅ CÓDIGO DE RASTREAMENTO -->
 							<div
-								class="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-lg border border-green-500/30"
+								class="mt-4 p-4 bg-[var(--cardapio-secondary)] rounded-xl border border-green-500/30 shadow-[var(--cardapio-card-shadow)]"
 							>
 								<p class="text-xs font-medium mb-2 text-green-600 dark:text-green-400">
 									Código de Rastreamento:
@@ -286,7 +333,7 @@ const copiarCodigo = async () => {
 				<!-- Alerta PIX -->
 				<div
 					v-if="pedido.forma_pagamento === 'pix' && pedido.status === STATUS_PEDIDO.PENDENTE"
-					class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400"
+					class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-[var(--cardapio-card-shadow)]"
 				>
 					<div class="flex items-start gap-3">
 						<Icon name="lucide:info" class="w-5 h-5 flex-shrink-0" />
@@ -306,7 +353,7 @@ const copiarCodigo = async () => {
 				<!-- Aviso sobre Cancelamento -->
 				<div
 					v-if="avisoCancelamento"
-					class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20"
+					class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 shadow-[var(--cardapio-card-shadow)]"
 				>
 					<div class="flex items-start gap-3">
 						<Icon name="lucide:info" class="w-5 h-5 flex-shrink-0 text-blue-600" />
@@ -317,7 +364,7 @@ const copiarCodigo = async () => {
 				<!-- Aviso quando NÃO pode cancelar -->
 				<div
 					v-if="!podeCancelar && pedido.status !== 'concluido' && pedido.status !== 'cancelado'"
-					class="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20"
+					class="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/20 shadow-[var(--cardapio-card-shadow)]"
 				>
 					<div class="flex items-start gap-3">
 						<Icon name="lucide:alert-triangle" class="w-5 h-5 flex-shrink-0 text-orange-600" />
@@ -348,13 +395,13 @@ const copiarCodigo = async () => {
 				<!-- Botão de Avaliar (quando concluído) -->
 				<div
 					v-if="pedido.status === STATUS_PEDIDO.CONCLUIDO"
-					class="p-6 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
+					class="p-6 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 shadow-[var(--cardapio-card-shadow)]"
 				>
 					<div class="text-center space-y-4">
 						<div>
 							<Icon name="lucide:star" class="w-12 h-12 mx-auto text-yellow-500 mb-2" />
-							<h3 class="font-bold text-lg text-[var(--text-primary)] mb-1">Pedido Concluído!</h3>
-							<p class="text-sm text-[var(--text-muted)]">
+							<h3 class="font-bold text-lg text-[var(--cardapio-text)] mb-1">Pedido Concluído!</h3>
+							<p class="text-sm text-[var(--cardapio-text-muted)]">
 								Como foi sua experiência? Sua opinião é muito importante para nós!
 							</p>
 						</div>
@@ -370,7 +417,7 @@ const copiarCodigo = async () => {
 					<button
 						type="button"
 						@click="navigateTo(`/${slug}`)"
-						class="flex-1 py-3 px-6 rounded-lg font-bold text-[var(--text-primary)] bg-[var(--bg-muted)] hover:bg-[var(--bg-muted)]/80 transition-colors"
+						class="flex-1 py-3 px-6 rounded-2xl font-bold text-[var(--cardapio-text)] bg-[var(--cardapio-secondary)] hover:bg-[var(--cardapio-hover)] transition-colors shadow-[var(--cardapio-card-shadow)]"
 					>
 						Voltar ao Cardápio
 					</button>
@@ -382,7 +429,7 @@ const copiarCodigo = async () => {
 								open: { target: '_blank' },
 							})
 						"
-						class="flex-1 py-3 px-6 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+						class="flex-1 py-3 px-6 rounded-2xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-[var(--cardapio-card-shadow)]"
 					>
 						<Icon name="lucide:message-circle" class="w-5 h-5" />
 						<span>Falar no WhatsApp</span>
@@ -390,7 +437,7 @@ const copiarCodigo = async () => {
 				</div>
 
 				<!-- Atualização Automática -->
-				<p class="text-xs text-center text-[var(--text-muted)]">
+				<p class="text-xs text-center text-[var(--cardapio-text-muted)]">
 					Esta página atualiza automaticamente a cada 10 segundos
 				</p>
 			</div>
@@ -401,12 +448,14 @@ const copiarCodigo = async () => {
 	<UiModal v-model="mostrarModalCancelar" title="Cancelar Pedido" size="sm">
 		<div class="space-y-4">
 			<!-- Aviso -->
-			<div class="bg-[var(--warning-surface)] p-4 rounded-lg">
+			<div
+				class="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl shadow-[var(--cardapio-card-shadow)]"
+			>
 				<div class="flex gap-3">
-					<Icon name="lucide:alert-triangle" class="w-5 h-5 text-[var(--warning)] flex-shrink-0" />
+					<Icon name="lucide:alert-triangle" class="w-5 h-5 text-orange-600 flex-shrink-0" />
 					<div class="text-sm">
-						<p class="font-medium text-[var(--warning)] mb-1">Tem certeza que deseja cancelar?</p>
-						<p class="text-[var(--text-muted)]">
+						<p class="font-medium text-orange-600 mb-1">Tem certeza que deseja cancelar?</p>
+						<p class="text-[var(--cardapio-text-muted)]">
 							Esta ação não pode ser desfeita. Você precisará fazer um novo pedido.
 						</p>
 					</div>
@@ -415,10 +464,12 @@ const copiarCodigo = async () => {
 
 			<!-- Motivo (opcional) -->
 			<div>
-				<label class="block text-sm font-medium mb-2"> Motivo do cancelamento (opcional) </label>
+				<label class="block text-sm font-medium mb-2 text-[var(--cardapio-text)]">
+					Motivo do cancelamento (opcional)
+				</label>
 				<select
 					v-model="motivoCancelamento"
-					class="w-full px-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg focus:outline-none focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20"
+					class="w-full px-3 py-2 text-sm bg-[var(--cardapio-secondary)] border border-[var(--cardapio-border)] rounded-xl focus:outline-none focus:border-[var(--cardapio-primary)] focus:ring-2 focus:ring-[var(--cardapio-primary)]/20 text-[var(--cardapio-text)]"
 				>
 					<option value="">Selecione um motivo</option>
 					<option v-for="(label, key) in MOTIVOS_CANCELAMENTO_LABELS" :key="key" :value="key">

@@ -15,14 +15,41 @@ export const usePedido = () => {
 	 * @returns Pedido completo ou null se não encontrado
 	 */
 	const buscarPedido = async (codigoRastreamento: string): Promise<PedidoCompleto | null> => {
-		// Normaliza o código (remove hífen e converte para maiúsculas)
-		const codigoNormalizado = codigoRastreamento.replace("-", "").toUpperCase();
+		// Normaliza o código para maiúsculas, mas mantém o formato original
+		const codigoNormalizado = codigoRastreamento.toUpperCase();
 
-		const { data: pedido, error: pedidoError } = await supabase
+		// Tenta buscar primeiro com o formato original
+		let { data: pedido, error: pedidoError } = await supabase
 			.from("pedidos")
 			.select("*")
 			.eq("codigo_rastreamento", codigoNormalizado)
 			.single();
+
+		// Se não encontrou e o código não tem hífen, tenta com hífen no formato XXXX-YYYY
+		if (pedidoError && !codigoNormalizado.includes("-") && codigoNormalizado.length === 8) {
+			const codigoComHifen = `${codigoNormalizado.slice(0, 4)}-${codigoNormalizado.slice(4)}`;
+			const resultado = await supabase
+				.from("pedidos")
+				.select("*")
+				.eq("codigo_rastreamento", codigoComHifen)
+				.single();
+
+			pedido = resultado.data;
+			pedidoError = resultado.error;
+		}
+
+		// Se não encontrou e o código tem hífen, tenta sem hífen
+		if (pedidoError && codigoNormalizado.includes("-")) {
+			const codigoSemHifen = codigoNormalizado.replace("-", "");
+			const resultado = await supabase
+				.from("pedidos")
+				.select("*")
+				.eq("codigo_rastreamento", codigoSemHifen)
+				.single();
+
+			pedido = resultado.data;
+			pedidoError = resultado.error;
+		}
 
 		if (pedidoError || !pedido) {
 			return null;

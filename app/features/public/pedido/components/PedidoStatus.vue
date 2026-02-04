@@ -23,7 +23,7 @@ const statusInfo = computed(() => getStatusInfo(props.status));
 </script>
 
 <template>
-	<div :class="['p-6 rounded-lg border-2', statusInfo.cor]">
+	<div :class="['p-6 rounded-2xl border-2 shadow-[var(--cardapio-card-shadow)]', statusInfo.cor]">
 		<div class="flex items-start gap-4">
 			<div class="flex-shrink-0">
 				<Icon :name="statusInfo.icone" class="w-8 h-8" />

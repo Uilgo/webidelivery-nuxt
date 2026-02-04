@@ -17,6 +17,8 @@ import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento
 import { usePedidoHistorico } from "~/features/admin/pedidos/composables/usePedidoHistorico";
 import { requerObservacao } from "~/features/admin/pedidos/utils/status-transitions";
 import { STATUS_PEDIDO } from "#shared/constants/pedidos";
+import { useToast } from "~/composables/ui/useToast";
+import { useEstabelecimentoStore } from "~/stores/estabelecimento";
 
 interface Props {
 	modelValue: boolean;
@@ -32,6 +34,12 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 /**
+ * Composables
+ */
+const toast = useToast();
+const estabelecimentoStore = useEstabelecimentoStore();
+
+/**
  * Buscar histórico do pedido
  */
 const { historico, loading: loadingHistorico } = usePedidoHistorico(
@@ -44,6 +52,58 @@ const { historico, loading: loadingHistorico } = usePedidoHistorico(
 const podeReativar = computed(() => {
 	return props.pedido?.status === STATUS_PEDIDO.CANCELADO;
 });
+
+/**
+ * Copiar link da página de rastreamento do pedido
+ */
+const copiarLinkRastreamento = async () => {
+	if (!props.pedido) return;
+
+	const estabelecimento = estabelecimentoStore.estabelecimento;
+	if (!estabelecimento?.slug) {
+		toast.add({
+			title: "Erro",
+			description: "Não foi possível obter o slug do estabelecimento",
+			color: "error",
+		});
+		return;
+	}
+
+	// Gerar URL completa da página de rastreamento
+	const baseUrl = window.location.origin;
+	const linkRastreamento = `${baseUrl}/${estabelecimento.slug}/pedido/${props.pedido.codigo_rastreamento}`;
+
+	try {
+		await navigator.clipboard.writeText(linkRastreamento);
+		toast.add({
+			title: "Link copiado!",
+			description: "O link de rastreamento foi copiado para a área de transferência",
+			color: "success",
+			duration: 3000,
+		});
+	} catch {
+		toast.add({
+			title: "Erro ao copiar",
+			description: "Não foi possível copiar o link",
+			color: "error",
+		});
+	}
+};
+
+/**
+ * Abrir página de rastreamento em nova aba
+ */
+const abrirPaginaRastreamento = () => {
+	if (!props.pedido) return;
+
+	const estabelecimento = estabelecimentoStore.estabelecimento;
+	if (!estabelecimento?.slug) return;
+
+	const baseUrl = window.location.origin;
+	const linkRastreamento = `${baseUrl}/${estabelecimento.slug}/pedido/${props.pedido.codigo_rastreamento}`;
+
+	window.open(linkRastreamento, "_blank");
+};
 
 /**
  * Buscar status anterior ao cancelamento no histórico
@@ -260,11 +320,38 @@ const getStatusIcon = (status: StatusPedido): string => {
 						{{ formatarStatus(pedido.status) }}
 					</UiBadge>
 					<!-- Código de Rastreamento -->
-					<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-						<Icon name="lucide:hash" class="w-3.5 h-3.5" />
-						<span class="font-mono font-medium">
-							{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
-						</span>
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+							<Icon name="lucide:hash" class="w-3.5 h-3.5" />
+							<span class="font-mono font-medium">
+								{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
+							</span>
+						</div>
+						<!-- Botões de Ação -->
+						<div class="flex items-center gap-1">
+							<button
+								type="button"
+								class="p-1 rounded-md hover:bg-[var(--bg-muted)] transition-colors"
+								title="Copiar link de rastreamento"
+								@click="copiarLinkRastreamento"
+							>
+								<Icon
+									name="lucide:copy"
+									class="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+								/>
+							</button>
+							<button
+								type="button"
+								class="p-1 rounded-md hover:bg-[var(--bg-muted)] transition-colors"
+								title="Abrir página de rastreamento"
+								@click="abrirPaginaRastreamento"
+							>
+								<Icon
+									name="lucide:external-link"
+									class="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+								/>
+							</button>
+						</div>
 					</div>
 				</div>
 				<div class="text-right">
