@@ -197,23 +197,6 @@ export const useCheckout = () => {
 			}));
 
 			/**
-			 * Formatar endereço (apenas para delivery)
-			 */
-			const endereco =
-				dadosValidados.tipo_entrega === "delivery" && dadosValidados.endereco
-					? {
-							rua: dadosValidados.endereco.rua,
-							numero: dadosValidados.endereco.numero,
-							complemento: dadosValidados.endereco.complemento || null,
-							bairro: dadosValidados.endereco.bairro,
-							cidade: dadosValidados.endereco.cidade,
-							estado: dadosValidados.endereco.estado,
-							cep: dadosValidados.endereco.cep,
-							referencia: dadosValidados.endereco.referencia || null,
-						}
-					: {};
-
-			/**
 			 * Chamar RPC para criar pedido
 			 */
 			const { data: pedidoId, error } = await supabase.rpc("fn_pedidos_criar", {
@@ -222,7 +205,7 @@ export const useCheckout = () => {
 				p_cliente_nome: dadosValidados.cliente.nome,
 				p_cliente_telefone: dadosValidados.cliente.telefone,
 				p_cliente_email: dadosValidados.cliente.email || null,
-				p_endereco: endereco,
+				p_endereco: dadosValidados.endereco || {}, // Enviar o objeto completo (com taxa e tempos)
 				p_forma_pagamento: dadosValidados.pagamento.forma_pagamento,
 				p_troco_para: dadosValidados.pagamento.troco_para || null,
 				p_observacoes: dadosValidados.observacoes || null,
@@ -230,6 +213,7 @@ export const useCheckout = () => {
 			});
 
 			if (error) {
+				console.error("❌ Erro RPC fn_pedidos_criar:", error);
 				throw error;
 			}
 

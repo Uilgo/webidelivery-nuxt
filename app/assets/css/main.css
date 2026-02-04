@@ -577,3 +577,29 @@ input[type="number"] {
 	-moz-appearance: textfield;
 	appearance: textfield;
 }
+
+/* =========================================
+   REMOVER TOOLTIPS NATIVOS GLOBALMENTE
+   ========================================= */
+/* ✅ CRÍTICO: Forçar remoção de tooltips em elementos com classe no-tooltips */
+.no-tooltips *,
+.no-tooltips *::before,
+.no-tooltips *::after,
+.combobox-dropdown *,
+.combobox-dropdown *::before,
+.combobox-dropdown *::after {
+	/* Remove tooltip nativo do navegador */
+	pointer-events: auto !important;
+}
+
+/* ✅ CRÍTICO: Esconder elementos <title> dentro de SVGs */
+.no-tooltips svg title,
+.combobox-dropdown svg title {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	position: absolute !important;
+	width: 0 !important;
+	height: 0 !important;
+	overflow: hidden !important;
+}

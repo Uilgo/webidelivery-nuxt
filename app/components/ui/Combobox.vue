@@ -43,6 +43,10 @@ interface Props {
 	emptyText?: string;
 	/** Texto quando não há resultados na busca */
 	noResultsText?: string;
+	/** Descrição adicional para estado vazio */
+	emptyDescription?: string;
+	/** Descrição adicional para sem resultados */
+	noResultsDescription?: string;
 	/** Permitir limpar seleção */
 	clearable?: boolean;
 	/** Estado de erro (para styling) */
@@ -55,6 +59,8 @@ interface Props {
 	feedbackState?: "success" | "warning" | "error" | null;
 	/** Mensagem de feedback */
 	feedbackMessage?: string;
+	/** Valor do atributo autocomplete */
+	autocomplete?: string;
 }
 
 // Props com valores padrão
@@ -75,6 +81,9 @@ const props = withDefaults(defineProps<Props>(), {
 	openOnFocus: false,
 	feedbackState: null,
 	feedbackMessage: undefined,
+	autocomplete: "off",
+	emptyDescription: undefined,
+	noResultsDescription: undefined,
 });
 
 // Emits tipados
@@ -94,8 +103,10 @@ const emit = defineEmits<Emits>();
 
 const isOpen = ref(false);
 const inputRef = ref<HTMLInputElement>();
+const inputContainerRef = ref<HTMLElement>();
 const dropdownRef = ref<HTMLElement>();
 const comboboxRef = ref<HTMLElement>();
+
 const highlightedIndex = ref(-1);
 const shouldOpenUpward = ref(false);
 const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
@@ -240,9 +251,9 @@ const dropdownClasses = computed(() => {
 
 // Calcular posição do dropdown
 const checkDropdownPosition = (): void => {
-	if (!comboboxRef.value) return;
+	if (!inputContainerRef.value) return;
 
-	const rect = comboboxRef.value.getBoundingClientRect();
+	const rect = inputContainerRef.value.getBoundingClientRect();
 	const viewportHeight = window.innerHeight;
 	const dropdownHeight = 240; // max-h-60 = 240px
 	const spaceBelow = viewportHeight - rect.bottom;
@@ -250,9 +261,12 @@ const checkDropdownPosition = (): void => {
 
 	shouldOpenUpward.value = spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
 
+	// ✅ CORRIGIDO: Usar window.scrollY para posição absoluta correta
 	dropdownPosition.value = {
-		top: shouldOpenUpward.value ? rect.top - 4 : rect.bottom + 4,
-		left: rect.left,
+		top: shouldOpenUpward.value
+			? rect.top + window.scrollY - dropdownHeight - 4
+			: rect.bottom + window.scrollY + 4,
+		left: rect.left + window.scrollX,
 		width: rect.width,
 	};
 };
@@ -260,6 +274,7 @@ const checkDropdownPosition = (): void => {
 // Estilo computado para posicionamento do dropdown
 const dropdownPositionStyle = computed(() => {
 	return {
+		position: "absolute" as const, // ✅ CORRIGIDO: Type assertion para Position
 		top: `${dropdownPosition.value.top}px`,
 		left: `${dropdownPosition.value.left}px`,
 		width: `${dropdownPosition.value.width}px`,
@@ -421,20 +436,97 @@ const handleResize = (): void => {
 	}
 };
 
+// ✅ CRÍTICO: Função para remover TODOS os tooltips agressivamente
+const removeAllTooltips = (): void => {
+	if (!import.meta.client) return;
+
+	// Remover title de TODOS os elementos da página
+	document.querySelectorAll("[title]").forEach((el) => {
+		el.removeAttribute("title");
+	});
+
+	// Remover <title> de TODOS os SVGs
+	document.querySelectorAll("svg title").forEach((titleEl) => {
+		titleEl.remove();
+	});
+
+	// Remover aria-label que pode causar tooltips
+	document.querySelectorAll("[aria-label]").forEach((el) => {
+		if (el.closest(".combobox-dropdown")) {
+			el.removeAttribute("aria-label");
+		}
+	});
+};
+
+// Watch para remover tooltips quando dropdown abrir
+watch(isOpen, (opened) => {
+	if (opened) {
+		nextTick(() => {
+			// ✅ CRÍTICO: Remover title de TODOS os elementos da página
+			// (não só do dropdown, pois tooltips podem vir de qualquer lugar)
+			const allElementsWithTitle = document.querySelectorAll("[title]");
+			allElementsWithTitle.forEach((el) => {
+				el.removeAttribute("title");
+			});
+
+			// ✅ CRÍTICO: Remover <title> de TODOS os SVGs da página
+			const allSvgTitles = document.querySelectorAll("svg title");
+			allSvgTitles.forEach((titleEl) => {
+				titleEl.remove();
+			});
+
+			// Observer global para remover title de novos elementos
+			if (svgTitleObserver) {
+				svgTitleObserver.observe(document.body, {
+					childList: true,
+					subtree: true,
+				});
+			}
+		});
+	} else {
+		// Desativar observer quando dropdown fechar
+		if (svgTitleObserver) {
+			svgTitleObserver.disconnect();
+		}
+	}
+});
+
 // ============================================
 // LIFECYCLE HOOKS
 // ============================================
+
+let svgTitleObserver: MutationObserver | null = null;
 
 onMounted(() => {
 	document.addEventListener("click", handleClickOutside, true);
 	window.addEventListener("resize", handleResize);
 	window.addEventListener("scroll", handleResize, true);
+
+	// Observer para remover <title> de SVGs adicionados dinamicamente
+	svgTitleObserver = new MutationObserver(() => {
+		// Remover title de TODOS os elementos novos
+		const allElementsWithTitle = document.querySelectorAll("[title]");
+		allElementsWithTitle.forEach((el) => {
+			el.removeAttribute("title");
+		});
+
+		// Remover <title> de TODOS os SVGs
+		const allSvgTitles = document.querySelectorAll("svg title");
+		allSvgTitles.forEach((titleEl) => {
+			titleEl.remove();
+		});
+	});
 });
 
 onUnmounted(() => {
 	document.removeEventListener("click", handleClickOutside, true);
 	window.removeEventListener("resize", handleResize);
 	window.removeEventListener("scroll", handleResize, true);
+
+	// Desconectar observer
+	if (svgTitleObserver) {
+		svgTitleObserver.disconnect();
+	}
 });
 
 // ============================================
@@ -457,11 +549,11 @@ defineExpose({
 <template>
 	<div ref="comboboxRef" class="relative w-full">
 		<!-- Container do input -->
-		<div :class="containerClasses">
+		<div ref="inputContainerRef" :class="containerClasses">
 			<!-- Ícone à esquerda -->
 			<div
 				v-if="icon"
-				class="flex items-center justify-center text-[var(--text-muted)] pointer-events-none mr-2"
+				class="flex items-center justify-center text-[var(--text-muted)] pointer-events-none mr-2 mt-0.5"
 			>
 				<Icon :name="icon" class="w-5 h-5" />
 			</div>
@@ -482,7 +574,7 @@ defineExpose({
 				:aria-activedescendant="
 					highlightedIndex >= 0 ? `${comboboxId}-option-${highlightedIndex}` : undefined
 				"
-				autocomplete="off"
+				:autocomplete="autocomplete"
 				@input="handleInput"
 				@focus="handleFocus"
 				@blur="handleBlur"
@@ -502,7 +594,7 @@ defineExpose({
 				<button
 					v-else-if="clearable && inputValue && !disabled"
 					type="button"
-					class="flex items-center justify-center p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-200 rounded hover:bg-[var(--bg-hover)] pointer-events-auto cursor-pointer z-10"
+					class="flex items-center justify-center p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-200 rounded hover:bg-[var(--bg-hover)] pointer-events-auto cursor-pointer z-10 mt-0.5"
 					tabindex="-1"
 					aria-label="Limpar campo"
 					@click.prevent.stop="clearSelection"
@@ -514,7 +606,7 @@ defineExpose({
 				<!-- Seta do dropdown -->
 				<Icon
 					name="lucide:chevron-down"
-					class="w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 pointer-events-none"
+					class="w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 pointer-events-none mt-0.5"
 					:class="{ 'rotate-180': isOpen }"
 				/>
 			</div>
@@ -525,10 +617,10 @@ defineExpose({
 			<span
 				class="text-sm"
 				:class="{
-					'text-[var(--success)]': feedbackState === 'success',
-					'text-[var(--warning)]': feedbackState === 'warning',
-					'text-[var(--error)]': feedbackState === 'error' || error,
-					'text-[var(--text-muted)]': !feedbackState && !error,
+					'text-green-600 dark:text-green-400': feedbackState === 'success',
+					'text-amber-600 dark:text-amber-400': feedbackState === 'warning',
+					'text-red-600 dark:text-red-400': feedbackState === 'error' || error,
+					'text-gray-500 dark:text-gray-400': !feedbackState && !error,
 				}"
 			>
 				{{ feedbackMessage }}
@@ -541,10 +633,10 @@ defineExpose({
 				v-if="isOpen"
 				:id="`${comboboxId}-listbox`"
 				ref="dropdownRef"
-				:class="[dropdownClasses, 'combobox-dropdown', 'cardapio-theme-bridge']"
+				:class="[dropdownClasses, 'combobox-dropdown', 'cardapio-theme-bridge', 'no-tooltips']"
 				:style="dropdownPositionStyle"
-				class="fixed"
 				role="listbox"
+				@mouseenter="removeAllTooltips"
 			>
 				<!-- Loading state -->
 				<div v-if="loading" class="flex items-center justify-center py-8 text-[var(--text-muted)]">
@@ -558,6 +650,7 @@ defineExpose({
 						v-for="(option, index) in filteredOptions"
 						:id="`${comboboxId}-option-${index}`"
 						:key="option.value"
+						title=""
 						class="flex items-center justify-between px-3 py-2 cursor-pointer transition-colors duration-150 rounded-md mx-1 my-0.5"
 						:class="{
 							'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]':
@@ -571,23 +664,28 @@ defineExpose({
 						@mouseenter="highlightedIndex = index"
 					>
 						<!-- Conteúdo da opção -->
-						<div class="flex items-center gap-2 flex-1 min-w-0">
+						<div class="flex items-center gap-2 flex-1 min-w-0" title="">
 							<!-- Ícone da opção -->
-							<Icon v-if="option.icon" :name="option.icon" class="w-4 h-4 flex-shrink-0" />
+							<Icon v-if="option.icon" :name="option.icon" class="w-4 h-4 flex-shrink-0" title="" />
 
 							<!-- Label e descrição -->
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-medium truncate">{{ option.label }}</div>
-								<div v-if="option.description" class="text-xs text-[var(--text-muted)] truncate">
+							<div class="flex-1 min-w-0" title="">
+								<div class="text-sm font-medium truncate" title="">{{ option.label }}</div>
+								<div
+									v-if="option.description"
+									class="text-xs text-[var(--text-muted)] truncate"
+									title=""
+								>
 									{{ option.description }}
 								</div>
 							</div>
 						</div>
 
 						<!-- Badge (ex: taxa) -->
-						<div v-if="option.badge" class="ml-2 flex-shrink-0">
+						<div v-if="option.badge" class="ml-2 flex-shrink-0" title="">
 							<span
 								class="text-xs font-medium px-2 py-0.5 rounded-md bg-[var(--primary-light)] text-[var(--primary)]"
+								title=""
 							>
 								{{ option.badge }}
 							</span>
@@ -598,6 +696,7 @@ defineExpose({
 							v-if="matchedOption?.value === option.value"
 							name="lucide:check"
 							class="w-4 h-4 ml-2 text-[var(--primary)] flex-shrink-0"
+							title=""
 						/>
 					</div>
 				</template>
@@ -605,16 +704,25 @@ defineExpose({
 				<!-- Estado sem resultados -->
 				<div
 					v-else-if="inputValue.trim()"
-					class="px-3 py-8 text-sm text-[var(--text-muted)] text-center"
+					class="flex flex-col items-center justify-center px-3 py-8 text-center"
 				>
-					<Icon name="lucide:search-x" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-					{{ noResultsText }}
+					<Icon name="lucide:search-x" class="w-10 h-10 text-gray-400 mb-2" />
+					<p class="text-sm text-[var(--text-muted)] font-medium">{{ noResultsText }}</p>
+					<p v-if="noResultsDescription" class="text-xs text-[var(--text-muted)] opacity-70 mt-1">
+						{{ noResultsDescription }}
+					</p>
+					<p v-else class="text-xs text-[var(--text-muted)] opacity-70 mt-1">
+						Tente buscar com outros termos
+					</p>
 				</div>
 
 				<!-- Estado vazio -->
-				<div v-else class="px-3 py-8 text-sm text-[var(--text-muted)] text-center">
-					<Icon name="lucide:inbox" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-					{{ emptyText }}
+				<div v-else class="flex flex-col items-center justify-center px-3 py-8 text-center">
+					<Icon name="lucide:inbox" class="w-10 h-10 text-gray-400 mb-2" />
+					<p class="text-sm text-[var(--text-muted)] font-medium">{{ emptyText }}</p>
+					<p v-if="emptyDescription" class="text-xs text-[var(--text-muted)] opacity-70 mt-1">
+						{{ emptyDescription }}
+					</p>
 				</div>
 			</div>
 		</Teleport>
@@ -637,5 +745,33 @@ defineExpose({
 /* Highlight da opção selecionada via teclado */
 .combobox-dropdown [role="option"][aria-selected="true"] {
 	font-weight: 500;
+}
+
+/* ✅ CRÍTICO: Forçar remoção de tooltips nativos via CSS */
+.combobox-dropdown *,
+.combobox-dropdown *::before,
+.combobox-dropdown *::after {
+	/* Remove tooltip nativo do navegador */
+	pointer-events: auto !important;
+}
+
+/* ✅ CRÍTICO: Esconder elementos <title> dentro de SVGs */
+.combobox-dropdown svg title {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+}
+
+/* DESABILITAR TODOS OS TOOLTIPS NATIVOS DO NAVEGADOR */
+.combobox-dropdown * {
+	pointer-events: auto !important;
+}
+
+.combobox-dropdown [role="option"],
+.combobox-dropdown [role="option"] *,
+.combobox-dropdown [role="option"] *::before,
+.combobox-dropdown [role="option"] *::after {
+	/* Remove qualquer title que possa estar causando tooltip */
+	content: none !important;
 }
 </style>

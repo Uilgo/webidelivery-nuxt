@@ -38,10 +38,9 @@ const emit = defineEmits<Emits>();
 const {
 	estaAberto,
 	proximoHorario,
-	tempoPreparoMin,
-	tempoPreparoMax,
 	calcularProximaEntrega,
 	obterHorariosDisponiveis,
+	horariosFuncionamento, // ✅ Adicionado para validação de dias
 } = useHorarioFuncionamento();
 
 /**
@@ -167,7 +166,7 @@ const feedbackBairroMessage = computed(() => {
 	}
 
 	if (taxaPadraoOutros.value > 0) {
-		return `⚠️ Taxa padrão de R$ ${taxaPadraoOutros.value.toFixed(2).replace(".", ",")} será aplicada`;
+		return `⚠️ Bairro não cadastrado - Taxa padrão de R$ ${taxaPadraoOutros.value.toFixed(2).replace(".", ",")} será aplicada para bairros não listados`;
 	}
 
 	return "❌ Bairro não atendido - Entre em contato via WhatsApp";
@@ -260,9 +259,14 @@ const labelTaxaEntrega = computed(() => {
 
 /**
  * Tempo de entrega dinâmico (baseado no CEP/bairro)
+ * ✅ CORRIGIDO: Inicializar com valores globais do estabelecimento
  */
-const tempoEntregaMin = ref(15);
-const tempoEntregaMax = ref(30);
+const tempoEntregaMin = ref(
+	(estabelecimentoStore.estabelecimento?.config_geral?.tempo_entrega_min as number) || 30,
+);
+const tempoEntregaMax = ref(
+	(estabelecimentoStore.estabelecimento?.config_geral?.tempo_entrega_max as number) || 60,
+);
 const taxaEntrega = ref(0);
 const entregaDisponivel = ref(true);
 const motivoIndisponivel = ref<string>();
@@ -283,14 +287,16 @@ const tipoAgendamento = ref<"agora" | "agendar">("agora");
 const horarioSelecionado = ref<string>("");
 
 /**
- * Tempos calculados
+ * Estado do accordion de taxas por região
  */
-const tempoTotalMin = computed(
-	() => tempoPreparoMin.value + (tipoSelecionado.value === "delivery" ? tempoEntregaMin.value : 0),
-);
-const tempoTotalMax = computed(
-	() => tempoPreparoMax.value + (tipoSelecionado.value === "delivery" ? tempoEntregaMin.value : 0),
-);
+const taxasRegiaoExpandido = ref(false);
+
+/**
+ * Tempos calculados
+ * ✅ CORRIGIDO: Mostrar apenas tempo de entrega (já inclui preparo calculado pelo admin)
+ */
+const tempoTotalMin = computed(() => tempoEntregaMin.value);
+const tempoTotalMax = computed(() => tempoEntregaMax.value);
 
 /**
  * Lógica do agendamento inteligente contextual
@@ -321,7 +327,115 @@ const agendamentoOptions = computed(() => {
 	}
 });
 
-// Definir opção padrão baseada no contexto
+/**
+ * Próxima entrega/retirada (contextual)
+ * ✅ CORRIGIDO: Calcular horário atual + tempo min/max
+ */
+const proximaEntregaMin = computed(() => {
+	const agora = new Date();
+	agora.setMinutes(agora.getMinutes() + tempoTotalMin.value);
+	return agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+});
+
+const proximaEntregaMax = computed(() => {
+	const agora = new Date();
+	agora.setMinutes(agora.getMinutes() + tempoTotalMax.value);
+	return agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+});
+
+/**
+ * Validar se horário de entrega ultrapassa horário de fechamento
+ */
+const validarHorarioEntrega = computed(() => {
+	const estabelecimento = estabelecimentoStore.estabelecimento;
+
+	// ✅ Validar se estabelecimento e config_geral existem
+	if (!estabelecimento || !estabelecimento.config_geral) {
+		return { valido: true, mensagem: "" };
+	}
+
+	const configGeral = estabelecimento.config_geral as Record<string, unknown>;
+	const horarios = configGeral.horarios as
+		| Array<{
+				dia_semana: string;
+				aberto: boolean;
+				periodos: Array<{
+					horario_abertura: string;
+					horario_fechamento: string;
+				}>;
+		  }>
+		| undefined;
+
+	if (!horarios || horarios.length === 0) {
+		return { valido: true, mensagem: "" };
+	}
+
+	const agora = new Date();
+	const diaSemana = agora.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+	const diasMap = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+	const diaAtual = diasMap[diaSemana];
+
+	// ✅ Validar se diaAtual é válido
+	if (!diaAtual) {
+		return { valido: true, mensagem: "" };
+	}
+
+	// Encontrar horário do dia atual
+	const horarioDia = horarios.find((h) => h.dia_semana === diaAtual);
+
+	// Se não tem horário configurado ou está fechado
+	if (!horarioDia || !horarioDia.aberto) {
+		return {
+			valido: false,
+			mensagem: "Estabelecimento fechado hoje. Agende para outro dia.",
+		};
+	}
+
+	// Pegar horário de fechamento
+	const periodos = horarioDia.periodos;
+	if (!periodos || periodos.length === 0) {
+		return { valido: true, mensagem: "" };
+	}
+
+	// Pegar o último período (horário de fechamento)
+	const ultimoPeriodo = periodos[periodos.length - 1];
+
+	// ✅ Validar se ultimoPeriodo existe
+	if (!ultimoPeriodo || !ultimoPeriodo.horario_fechamento) {
+		return { valido: true, mensagem: "" };
+	}
+
+	const [horaFim, minFim] = ultimoPeriodo.horario_fechamento.split(":").map(Number);
+
+	// ✅ Validar se horaFim e minFim são números válidos
+	if (horaFim === undefined || minFim === undefined || isNaN(horaFim) || isNaN(minFim)) {
+		return { valido: true, mensagem: "" };
+	}
+
+	// Criar data do horário de fechamento
+	const horarioFechamento = new Date();
+	horarioFechamento.setHours(horaFim, minFim, 0, 0);
+
+	// Calcular horário máximo de entrega
+	const horarioEntregaMax = new Date();
+	horarioEntregaMax.setMinutes(horarioEntregaMax.getMinutes() + tempoTotalMax.value);
+
+	// Verificar se ultrapassa
+	if (horarioEntregaMax > horarioFechamento) {
+		const horarioFechamentoStr = horarioFechamento.toLocaleTimeString("pt-BR", {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+		return {
+			valido: false,
+			mensagem: `⚠️ Seu pedido pode não chegar antes do fechamento (${horarioFechamentoStr}). Recomendamos agendar para outro horário.`,
+		};
+	}
+
+	return { valido: true, mensagem: "" };
+});
+
+// ✅ Definir opção padrão baseada no contexto
 watch(
 	agendamentoOptions,
 	(options) => {
@@ -329,52 +443,110 @@ watch(
 	},
 	{ immediate: true },
 );
-/**
- * Próxima entrega/retirada (contextual)
- */
-const proximaEntregaRapida = computed(() => {
-	return calcularProximaEntrega(tipoSelecionado.value === "delivery" ? tempoEntregaMin.value : 0);
-});
+
+// ✅ Forçar agendamento quando horário inválido
+watch(
+	validarHorarioEntrega,
+	(validacao) => {
+		if (!validacao.valido && tipoAgendamento.value === "agora") {
+			tipoAgendamento.value = "agendar";
+		}
+	},
+	{ immediate: true },
+);
 
 /**
- * Datas formatadas
+ * ✅ NOVO: Seletor de data para agendamento (qualquer data futura)
  */
-const hoje = new Date();
-const amanha = new Date(hoje);
-amanha.setDate(amanha.getDate() + 1);
+const dataSelecionada = ref<string>(""); // ISO date string (YYYY-MM-DD)
 
-const dataHoje = computed(() => {
-	return hoje
-		.toLocaleDateString("pt-BR", {
-			weekday: "long",
-			day: "2-digit",
-			month: "2-digit",
-		})
-		.replace("-feira", "");
-});
-
-const dataAmanha = computed(() => {
-	return amanha
-		.toLocaleDateString("pt-BR", {
-			weekday: "long",
-			day: "2-digit",
-			month: "2-digit",
-		})
-		.replace("-feira", "");
+/**
+ * ✅ NOVO: Data mínima (hoje)
+ */
+const dataMinima = computed(() => {
+	const hoje = new Date();
+	return hoje.toISOString().split("T")[0]; // YYYY-MM-DD
 });
 
 /**
- * Horários disponíveis (integrados com dados reais)
+ * ✅ NOVO: Verificar se a data selecionada é um dia que o estabelecimento abre
  */
-const horariosHoje = computed(() => {
-	if (!estaAberto.value) return [];
-	return obterHorariosDisponiveis(new Date());
+const diaEstaAberto = computed(() => {
+	if (!dataSelecionada.value) return { aberto: false, mensagem: "" };
+
+	const data = new Date(dataSelecionada.value + "T00:00:00");
+	const diaSemana = data.getDay();
+	const diasMap = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+	const diaAtual = diasMap[diaSemana];
+
+	// ✅ Validar se diaAtual é válido
+	if (!diaAtual) {
+		return { aberto: false, mensagem: "Dia inválido" };
+	}
+
+	const horarios = horariosFuncionamento.value;
+	if (!horarios) {
+		return { aberto: false, mensagem: "Horários não configurados" };
+	}
+
+	const horarioDia = horarios[diaAtual];
+	if (!horarioDia?.ativo || !horarioDia?.periodos || horarioDia.periodos.length === 0) {
+		const diasSemanaLabel = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+		return {
+			aberto: false,
+			mensagem: `Estabelecimento fechado às ${diasSemanaLabel[diaSemana]}s. Escolha outro dia.`,
+		};
+	}
+
+	return { aberto: true, mensagem: "" };
 });
 
-const horariosAmanha = computed(() => {
-	const amanha = new Date();
+/**
+ * ✅ NOVO: Horários disponíveis para a data selecionada
+ */
+const horariosDisponiveisData = computed(() => {
+	if (!dataSelecionada.value || !diaEstaAberto.value.aberto) return [];
+
+	const data = new Date(dataSelecionada.value + "T00:00:00");
+
+	// Passar os tempos de entrega (min e max)
+	return obterHorariosDisponiveis(data, tempoEntregaMin.value, tempoEntregaMax.value);
+});
+
+/**
+ * ✅ NOVO: Label formatado da data selecionada
+ */
+const dataFormatada = computed(() => {
+	if (!dataSelecionada.value) return "";
+
+	const data = new Date(dataSelecionada.value + "T00:00:00");
+	const hoje = new Date();
+	hoje.setHours(0, 0, 0, 0);
+	const amanha = new Date(hoje);
 	amanha.setDate(amanha.getDate() + 1);
-	return obterHorariosDisponiveis(amanha);
+
+	// Verificar se é hoje ou amanhã
+	if (data.getTime() === hoje.getTime()) {
+		return "Hoje";
+	} else if (data.getTime() === amanha.getTime()) {
+		return "Amanhã";
+	}
+
+	// Formatar data completa
+	const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+	const diaSemana = diasSemana[data.getDay()];
+	const dataStr = data.toLocaleDateString("pt-BR", {
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+	});
+
+	return `${diaSemana}, ${dataStr}`;
+});
+
+// ✅ Limpar horário selecionado quando mudar a data
+watch(dataSelecionada, () => {
+	horarioSelecionado.value = "";
 });
 
 /**
@@ -417,7 +589,10 @@ const formValido = computed(() => {
 		tipoAgendamento.value === "agora" ||
 		(tipoAgendamento.value === "agendar" && horarioSelecionado.value);
 
-	return tipoValido && agendamentoValido;
+	// ✅ NOVO: Validação de horário de funcionamento
+	const horarioValido = tipoAgendamento.value === "agendar" || validarHorarioEntrega.value.valido;
+
+	return tipoValido && agendamentoValido && horarioValido;
 });
 
 /**
@@ -445,6 +620,9 @@ const handleSubmit = () => {
 				cidade: endereco.cidade?.trim() || "",
 				estado: endereco.estado?.trim() || "",
 				referencia: endereco.referencia?.trim() || undefined,
+				taxa_entrega: taxaEntrega.value,
+				tempo_min: tempoEntregaMin.value,
+				tempo_max: tempoEntregaMax.value,
 			},
 			dadosAgendamento,
 		);
@@ -493,9 +671,11 @@ watch(
 				tipoTaxaEntrega.value = calculo.tipoTaxa || "taxa_unica";
 			} catch (error) {
 				console.error("Erro ao calcular entrega:", error);
-				// Manter valores padrão em caso de erro
-				tempoEntregaMin.value = 15;
-				tempoEntregaMax.value = 30;
+				// ✅ CORRIGIDO: Manter valores globais em caso de erro
+				tempoEntregaMin.value =
+					(estabelecimentoStore.estabelecimento?.config_geral?.tempo_entrega_min as number) || 30;
+				tempoEntregaMax.value =
+					(estabelecimentoStore.estabelecimento?.config_geral?.tempo_entrega_max as number) || 60;
 				taxaEntrega.value = 0;
 				entregaDisponivel.value = true;
 				motivoIndisponivel.value = undefined;
@@ -543,36 +723,41 @@ const formatarCEP = (event: Event) => {
 	<div class="space-y-6">
 		<form @submit.prevent="handleSubmit" class="space-y-6">
 			<!-- Seleção de tipo -->
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<!-- Delivery -->
 				<button
 					type="button"
 					@click="tipoSelecionado = 'delivery'"
-					class="relative p-4 rounded-xl border-2 transition-all duration-200 text-center group overflow-hidden"
+					class="relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left group"
 					:class="{
-						'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5 shadow-md shadow-primary/10':
+						'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5 shadow-md':
 							tipoSelecionado === 'delivery',
 						'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 hover:bg-[var(--cardapio-muted)]':
 							tipoSelecionado !== 'delivery',
 					}"
 				>
-					<div class="relative z-10">
-						<div
-							class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors"
-							:class="
-								tipoSelecionado === 'delivery'
-									? 'bg-[var(--cardapio-primary)] text-white'
-									: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)]'
-							"
-						>
-							<Icon name="lucide:truck" class="w-6 h-6" />
-						</div>
-						<p class="font-bold text-[var(--cardapio-text)]">Delivery</p>
-						<p class="text-xs text-[var(--cardapio-text-muted)] mt-1">Receba em casa</p>
+					<!-- Ícone à esquerda -->
+					<div
+						class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+						:class="
+							tipoSelecionado === 'delivery'
+								? 'bg-[var(--cardapio-primary)] text-white'
+								: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)]'
+						"
+					>
+						<Icon name="lucide:truck" class="w-5 h-5" />
 					</div>
+
+					<!-- Textos à direita -->
+					<div class="flex-1 min-w-0">
+						<p class="font-bold text-sm text-[var(--cardapio-text)]">Delivery</p>
+						<p class="text-xs text-[var(--cardapio-text-muted)]">Receba em casa</p>
+					</div>
+
+					<!-- Check indicator -->
 					<div
 						v-if="tipoSelecionado === 'delivery'"
-						class="absolute top-2 right-2 text-[var(--cardapio-primary)]"
+						class="flex-shrink-0 text-[var(--cardapio-primary)]"
 					>
 						<Icon name="lucide:check-circle-2" class="w-5 h-5" />
 					</div>
@@ -582,31 +767,36 @@ const formatarCEP = (event: Event) => {
 				<button
 					type="button"
 					@click="tipoSelecionado = 'retirada'"
-					class="relative p-4 rounded-xl border-2 transition-all duration-200 text-center group overflow-hidden"
+					class="relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left group"
 					:class="{
-						'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5 shadow-md shadow-primary/10':
+						'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5 shadow-md':
 							tipoSelecionado === 'retirada',
 						'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 hover:bg-[var(--cardapio-muted)]':
 							tipoSelecionado !== 'retirada',
 					}"
 				>
-					<div class="relative z-10">
-						<div
-							class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors"
-							:class="
-								tipoSelecionado === 'retirada'
-									? 'bg-[var(--cardapio-primary)] text-white'
-									: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)]'
-							"
-						>
-							<Icon name="lucide:store" class="w-6 h-6" />
-						</div>
-						<p class="font-bold text-[var(--cardapio-text)]">Retirada</p>
-						<p class="text-xs text-[var(--cardapio-text-muted)] mt-1">Busque no local</p>
+					<!-- Ícone à esquerda -->
+					<div
+						class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+						:class="
+							tipoSelecionado === 'retirada'
+								? 'bg-[var(--cardapio-primary)] text-white'
+								: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)] group-hover:text-[var(--cardapio-primary)]'
+						"
+					>
+						<Icon name="lucide:store" class="w-5 h-5" />
 					</div>
+
+					<!-- Textos à direita -->
+					<div class="flex-1 min-w-0">
+						<p class="font-bold text-sm text-[var(--cardapio-text)]">Retirada</p>
+						<p class="text-xs text-[var(--cardapio-text-muted)]">Busque no local</p>
+					</div>
+
+					<!-- Check indicator -->
 					<div
 						v-if="tipoSelecionado === 'retirada'"
-						class="absolute top-2 right-2 text-[var(--cardapio-primary)]"
+						class="flex-shrink-0 text-[var(--cardapio-primary)]"
 					>
 						<Icon name="lucide:check-circle-2" class="w-5 h-5" />
 					</div>
@@ -708,7 +898,20 @@ const formatarCEP = (event: Event) => {
 						:feedback-state="feedbackBairroState"
 						:feedback-message="feedbackBairroMessage"
 						icon="lucide:map-pin"
+						autocomplete="off-bairro"
 						required
+						empty-text="Nenhum bairro cadastrado"
+						:empty-description="
+							taxaPadraoOutros > 0
+								? `Digite o nome do seu bairro - Taxa padrão de R$ ${taxaPadraoOutros.toFixed(2).replace('.', ',')} será aplicada`
+								: 'Entre em contato para verificar disponibilidade'
+						"
+						no-results-text="Bairro não encontrado na lista"
+						:no-results-description="
+							taxaPadraoOutros > 0
+								? `Você pode digitar qualquer bairro - Taxa padrão de R$ ${taxaPadraoOutros.toFixed(2).replace('.', ',')} será aplicada`
+								: 'Digite o nome correto do seu bairro'
+						"
 						@change="handleBairroChange"
 						@update:model-value="handleBairroInput"
 					/>
@@ -798,66 +1001,23 @@ const formatarCEP = (event: Event) => {
 						</h6>
 
 						<!-- Mensagem de aviso (se taxa padrão) -->
-						<p
+						<div
 							v-if="motivoIndisponivel"
-							class="text-sm text-amber-600 dark:text-amber-400 font-medium"
+							class="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800"
 						>
-							⚠️ {{ motivoIndisponivel }}
-						</p>
+							<p class="text-sm text-amber-700 dark:text-amber-300 font-medium mb-2">
+								ℹ️ Seu bairro não está cadastrado no sistema
+							</p>
+							<p class="text-xs text-amber-600 dark:text-amber-400">
+								Como seu bairro não está na lista de regiões cadastradas, será aplicada a taxa
+								padrão de
+								<strong>R$ {{ taxaPadraoOutros.toFixed(2).replace(".", ",") }}</strong> para bairros
+								não listados.
+							</p>
+						</div>
 
 						<div class="space-y-2 text-sm">
-							<!-- Tempo de preparo -->
-							<div class="flex justify-between items-center">
-								<span
-									:class="[
-										motivoIndisponivel
-											? 'text-amber-600 dark:text-amber-400'
-											: 'text-green-600 dark:text-green-400',
-									]"
-									>👨‍🍳 Tempo de preparo:</span
-								>
-								<p
-									class="font-bold"
-									:class="[
-										motivoIndisponivel
-											? 'text-amber-700 dark:text-amber-300'
-											: 'text-green-700 dark:text-green-300',
-									]"
-								>
-									{{ tempoPreparoMin }}-{{ tempoPreparoMax }} min
-								</p>
-							</div>
-							<!-- Tempo de deslocamento -->
-							<div class="flex justify-between items-center">
-								<span
-									:class="[
-										motivoIndisponivel
-											? 'text-amber-600 dark:text-amber-400'
-											: 'text-green-600 dark:text-green-400',
-									]"
-									>🚚 Tempo de deslocamento:</span
-								>
-								<p
-									class="font-bold"
-									:class="[
-										motivoIndisponivel
-											? 'text-amber-700 dark:text-amber-300'
-											: 'text-green-700 dark:text-green-300',
-									]"
-								>
-									{{ tempoEntregaMin }}-{{ tempoEntregaMax }} min
-								</p>
-							</div>
-							<!-- Separador -->
-							<div
-								class="border-t my-2"
-								:class="[
-									motivoIndisponivel
-										? 'border-amber-200 dark:border-amber-800'
-										: 'border-green-200 dark:border-green-800',
-								]"
-							></div>
-							<!-- Tempo total -->
+							<!-- Tempo total estimado para entrega -->
 							<div class="flex justify-between items-center">
 								<span
 									class="font-medium"
@@ -866,7 +1026,7 @@ const formatarCEP = (event: Event) => {
 											? 'text-amber-600 dark:text-amber-400'
 											: 'text-green-600 dark:text-green-400',
 									]"
-									>⏱️ Tempo total estimado:</span
+									>⏱️ Tempo total estimado para entrega:</span
 								>
 								<p
 									class="font-bold text-base"
@@ -924,59 +1084,77 @@ const formatarCEP = (event: Event) => {
 					</div>
 				</div>
 
-				<!-- Lista de Bairros com Taxas (Taxa por Localização) -->
+				<!-- Lista de Bairros com Taxas (Taxa por Localização) - COLAPSÁVEL -->
 				<div
 					v-if="tipoTaxaEntrega === 'taxa_localizacao' && taxasPorBairro.length > 0"
-					class="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+					class="rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 overflow-hidden"
 				>
-					<h6 class="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 mb-3">
-						<Icon name="lucide:map-pin" class="w-4 h-4" />
-						Taxas de Entrega por Região
-					</h6>
-
-					<!-- Regiões cadastradas -->
-					<div class="space-y-2 mb-3">
-						<div
-							v-for="taxa in taxasPorBairro"
-							:key="taxa.id"
-							class="flex justify-between items-center p-2 rounded bg-white dark:bg-gray-800 border border-blue-100 dark:border-blue-900"
-						>
-							<span class="text-sm font-medium text-blue-700 dark:text-blue-300 capitalize">
-								{{ taxa.nome }}
-							</span>
-							<span class="text-sm font-bold text-blue-900 dark:text-blue-100">
-								R$ {{ taxa.taxa_valor.toFixed(2).replace(".", ",") }}
-							</span>
-						</div>
-					</div>
-
-					<!-- Taxa padrão -->
-					<div
-						v-if="taxaPadraoOutros > 0"
-						class="p-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-3"
+					<!-- Header clicável -->
+					<button
+						type="button"
+						@click="taxasRegiaoExpandido = !taxasRegiaoExpandido"
+						class="w-full p-4 flex items-center justify-between hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
 					>
-						<div class="flex justify-between items-center">
-							<span class="text-sm font-medium text-amber-700 dark:text-amber-300">
-								Outros bairros
-							</span>
-							<span class="text-sm font-bold text-amber-900 dark:text-amber-100">
-								R$ {{ taxaPadraoOutros.toFixed(2).replace(".", ",") }}
-							</span>
-						</div>
-					</div>
+						<h6 class="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+							<Icon name="lucide:map-pin" class="w-4 h-4" />
+							Taxas de Entrega por Região
+						</h6>
+						<Icon
+							name="lucide:chevron-down"
+							class="w-5 h-5 text-blue-700 dark:text-blue-300 transition-transform duration-200"
+							:class="{ 'rotate-180': taxasRegiaoExpandido }"
+						/>
+					</button>
 
-					<!-- Instruções -->
-					<div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-						<p class="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">
-							ℹ️ Como funciona:
-						</p>
-						<ul class="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-							<li>1️⃣ Selecione a <strong>região mais próxima</strong> para calcular a taxa</li>
-							<li>2️⃣ Digite o <strong>nome exato do seu bairro</strong> para o entregador</li>
-							<li v-if="taxaPadraoOutros > 0">
-								3️⃣ Se seu bairro não estiver listado, selecione "Outros bairros"
-							</li>
-						</ul>
+					<!-- Conteúdo colapsável -->
+					<div
+						v-show="taxasRegiaoExpandido"
+						class="px-4 pb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200"
+					>
+						<!-- Regiões cadastradas -->
+						<div class="space-y-2">
+							<div
+								v-for="taxa in taxasPorBairro"
+								:key="taxa.id"
+								class="flex justify-between items-center p-2 rounded bg-white dark:bg-gray-800 border border-blue-100 dark:border-blue-900"
+							>
+								<span class="text-sm font-medium text-blue-700 dark:text-blue-300 capitalize">
+									{{ taxa.nome }}
+								</span>
+								<span class="text-sm font-bold text-blue-900 dark:text-blue-100">
+									R$ {{ taxa.taxa_valor.toFixed(2).replace(".", ",") }}
+								</span>
+							</div>
+						</div>
+
+						<!-- Taxa padrão -->
+						<div
+							v-if="taxaPadraoOutros > 0"
+							class="p-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+						>
+							<div class="flex justify-between items-center">
+								<span class="text-sm font-medium text-amber-700 dark:text-amber-300">
+									Outros bairros
+								</span>
+								<span class="text-sm font-bold text-amber-900 dark:text-amber-100">
+									R$ {{ taxaPadraoOutros.toFixed(2).replace(".", ",") }}
+								</span>
+							</div>
+						</div>
+
+						<!-- Instruções -->
+						<div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+							<p class="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">
+								ℹ️ Como funciona:
+							</p>
+							<ul class="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+								<li>1️⃣ Selecione a <strong>região mais próxima</strong> para calcular a taxa</li>
+								<li>2️⃣ Digite o <strong>nome exato do seu bairro</strong> para o entregador</li>
+								<li v-if="taxaPadraoOutros > 0">
+									3️⃣ Se seu bairro não estiver listado, selecione "Outros bairros"
+								</li>
+							</ul>
+						</div>
 					</div>
 				</div>
 
@@ -1048,7 +1226,7 @@ const formatarCEP = (event: Event) => {
 
 					<!-- Opções de entrega (contextual baseada no status) -->
 					<div class="space-y-3">
-						<!-- Opção 1: Mais rápido (só aparece quando aberto) -->
+						<!-- Opção 1: Mais rápido (só aparece quando aberto E horário válido) -->
 						<div
 							v-if="agendamentoOptions.showAgora"
 							class="border rounded-lg p-4"
@@ -1056,14 +1234,19 @@ const formatarCEP = (event: Event) => {
 								tipoAgendamento === 'agora'
 									? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5'
 									: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50',
+								!validarHorarioEntrega.valido ? 'opacity-60' : '',
 							]"
 						>
-							<label class="flex items-start gap-3 cursor-pointer">
+							<label
+								class="flex items-start gap-3"
+								:class="validarHorarioEntrega.valido ? 'cursor-pointer' : 'cursor-not-allowed'"
+							>
 								<input
 									type="radio"
 									v-model="tipoAgendamento"
 									value="agora"
-									class="mt-1 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)]"
+									:disabled="!validarHorarioEntrega.valido"
+									class="mt-1 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
 								/>
 								<div class="flex-1">
 									<div class="flex items-center gap-2 mb-1">
@@ -1071,20 +1254,42 @@ const formatarCEP = (event: Event) => {
 										<span class="font-bold text-[var(--cardapio-text)]"
 											>O MAIS RÁPIDO POSSÍVEL</span
 										>
+										<span
+											v-if="!validarHorarioEntrega.valido"
+											class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+										>
+											Indisponível
+										</span>
 									</div>
 									<div class="text-sm text-[var(--cardapio-text-muted)]">
 										<div class="space-y-1">
-											<p>📦 Preparo: ~{{ tempoPreparoMin }}-{{ tempoPreparoMax }} min</p>
 											<p>
 												🚚
-												{{ tipoSelecionado === "delivery" ? "Entrega" : "Pronto para retirada" }}:
-												~{{ tipoSelecionado === "delivery" ? tempoEntregaMin : 0 }} min
+												{{
+													tipoSelecionado === "delivery" ? "Tempo de entrega" : "Tempo de preparo"
+												}}: ~{{ tempoTotalMin }}-{{ tempoTotalMax }} min
 											</p>
 											<p class="font-medium text-[var(--cardapio-text)]">
 												⏰ Seu pedido
-												{{ tipoSelecionado === "delivery" ? "chegará" : "estará pronto" }} às:
-												<strong>{{ proximaEntregaRapida }}</strong>
+												{{
+													tipoSelecionado === "delivery"
+														? "deverá chegar entre"
+														: "deverá estar pronto entre"
+												}}:
+												<strong>{{ proximaEntregaMin }} e {{ proximaEntregaMax }}</strong>
 											</p>
+											<!-- Aviso de horário de fechamento -->
+											<div
+												v-if="!validarHorarioEntrega.valido"
+												class="mt-2 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+											>
+												<p class="text-xs text-red-700 dark:text-red-300 font-medium">
+													{{ validarHorarioEntrega.mensagem }}
+												</p>
+												<p class="text-xs text-red-600 dark:text-red-400 mt-1">
+													Por favor, agende seu pedido para outro horário.
+												</p>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -1126,60 +1331,76 @@ const formatarCEP = (event: Event) => {
 						</div>
 					</div>
 
-					<!-- Lista de horários (se agendar selecionado) -->
+					<!-- Seleção de data e horário para agendamento -->
 					<div v-if="tipoAgendamento === 'agendar'" class="space-y-4">
-						<h5 class="font-bold text-[var(--cardapio-text)]">📋 Horários Disponíveis:</h5>
-
-						<!-- Hoje -->
-						<div v-if="horariosHoje.length > 0" class="space-y-2">
-							<h6 class="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wide">
-								🗓️ HOJE ({{ dataHoje }})
-							</h6>
-							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								<button
-									v-for="horario in horariosHoje"
-									:key="horario.value"
-									type="button"
-									@click="horarioSelecionado = horario.value"
-									class="p-3 rounded-lg border text-left transition-all"
-									:class="[
-										horarioSelecionado === horario.value
-											? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10 text-[var(--cardapio-primary)]'
-											: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 text-[var(--cardapio-text)]',
-									]"
-								>
-									<div class="font-bold">{{ horario.display }}</div>
-									<div class="text-xs opacity-75">
-										<span v-if="horario.isProximoDisponivel" class="text-[var(--cardapio-primary)]"
-											>⚡ Mais cedo</span
-										>
-										<span v-else-if="horario.tempoRestante">Em {{ horario.tempoRestante }}</span>
-									</div>
-								</button>
-							</div>
+						<!-- Seletor de Data -->
+						<div class="space-y-2">
+							<label
+								class="text-sm font-medium text-[var(--cardapio-text)] flex items-center gap-2"
+							>
+								<Icon name="lucide:calendar" class="w-4 h-4" />
+								Escolha o Dia:
+							</label>
+							<UiDatePicker
+								v-model="dataSelecionada"
+								placeholder="Selecione uma data"
+								:min-date="dataMinima"
+								size="lg"
+								class="w-full"
+							/>
 						</div>
 
-						<!-- Amanhã -->
-						<div v-if="horariosAmanha.length > 0" class="space-y-2">
-							<h6 class="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wide">
-								🗓️ AMANHÃ ({{ dataAmanha }})
-							</h6>
-							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								<button
-									v-for="horario in horariosAmanha"
-									:key="horario.value"
-									type="button"
-									@click="horarioSelecionado = horario.value"
-									class="p-3 rounded-lg border text-left transition-all"
-									:class="[
-										horarioSelecionado === horario.value
-											? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10 text-[var(--cardapio-primary)]'
-											: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 text-[var(--cardapio-text)]',
-									]"
-								>
-									<div class="font-bold">{{ horario.display }}</div>
-									<div class="text-xs opacity-75">{{ horario.diaSemana }}</div>
-								</button>
+						<!-- Aviso se dia está fechado -->
+						<div
+							v-if="dataSelecionada && !diaEstaAberto.aberto"
+							class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+						>
+							<p
+								class="text-sm text-amber-700 dark:text-amber-300 font-medium flex items-center gap-2"
+							>
+								<Icon name="lucide:alert-triangle" class="w-4 h-4" />
+								{{ diaEstaAberto.mensagem }}
+							</p>
+						</div>
+
+						<!-- Seletor de Horário (só aparece se dia está aberto) -->
+						<div v-if="dataSelecionada && diaEstaAberto.aberto" class="space-y-2">
+							<label
+								class="text-sm font-medium text-[var(--cardapio-text)] flex items-center gap-2"
+							>
+								<Icon name="lucide:clock" class="w-4 h-4" />
+								Escolha o Horário para {{ dataFormatada }}:
+							</label>
+
+							<!-- Mostrar horários disponíveis -->
+							<div v-if="horariosDisponiveisData.length > 0">
+								<UiSelectMenu
+									v-model="horarioSelecionado"
+									:options="
+										horariosDisponiveisData.map((h) => ({
+											value: h.value,
+											label: h.display,
+											description: h.isProximoDisponivel
+												? '⚡ Mais cedo'
+												: h.tempoRestante
+													? `Em ${h.tempoRestante}`
+													: '',
+										}))
+									"
+									placeholder="Selecione um horário"
+									size="lg"
+									class="w-full"
+								/>
+							</div>
+
+							<!-- Sem horários disponíveis -->
+							<div
+								v-else
+								class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800"
+							>
+								<p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+									Nenhum horário disponível para esta data
+								</p>
 							</div>
 						</div>
 
@@ -1197,9 +1418,7 @@ const formatarCEP = (event: Event) => {
 									{{ tipoSelecionado === "delivery" ? "chegar" : "ficar pronto" }} no horário
 									escolhido
 								</li>
-								<li>
-									⏰ <strong>Começamos a preparar</strong> {{ tempoPreparoMin }} minutos antes
-								</li>
+								<li>⏰ <strong>Começamos a preparar</strong> {{ tempoTotalMin }} minutos antes</li>
 								<li v-if="tipoSelecionado === 'delivery'">
 									🚚 <strong>Saímos para entrega</strong> com tempo suficiente para chegar no
 									horário
@@ -1295,7 +1514,7 @@ const formatarCEP = (event: Event) => {
 
 					<!-- Opções de retirada (contextual baseada no status) -->
 					<div class="space-y-3">
-						<!-- Opção 1: Mais rápido (só aparece quando aberto) -->
+						<!-- Opção 1: Mais rápido (só aparece quando aberto E horário válido) -->
 						<div
 							v-if="agendamentoOptions.showAgora"
 							class="border rounded-lg p-4"
@@ -1303,14 +1522,19 @@ const formatarCEP = (event: Event) => {
 								tipoAgendamento === 'agora'
 									? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/5'
 									: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50',
+								!validarHorarioEntrega.valido ? 'opacity-60' : '',
 							]"
 						>
-							<label class="flex items-start gap-3 cursor-pointer">
+							<label
+								class="flex items-start gap-3"
+								:class="validarHorarioEntrega.valido ? 'cursor-pointer' : 'cursor-not-allowed'"
+							>
 								<input
 									type="radio"
 									v-model="tipoAgendamento"
 									value="agora"
-									class="mt-1 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)]"
+									:disabled="!validarHorarioEntrega.valido"
+									class="mt-1 text-[var(--cardapio-primary)] focus:ring-[var(--cardapio-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
 								/>
 								<div class="flex-1">
 									<div class="flex items-center gap-2 mb-1">
@@ -1318,13 +1542,32 @@ const formatarCEP = (event: Event) => {
 										<span class="font-bold text-[var(--cardapio-text)]"
 											>O MAIS RÁPIDO POSSÍVEL</span
 										>
+										<span
+											v-if="!validarHorarioEntrega.valido"
+											class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+										>
+											Indisponível
+										</span>
 									</div>
 									<div class="text-sm text-[var(--cardapio-text-muted)]">
 										<div class="space-y-1">
-											<p>📦 Preparo: ~{{ tempoPreparoMin }}-{{ tempoPreparoMax }} min</p>
+											<p>📦 Tempo de preparo: ~{{ tempoTotalMin }}-{{ tempoTotalMax }} min</p>
 											<p class="font-medium text-[var(--cardapio-text)]">
-												⏰ Seu pedido estará pronto às: <strong>{{ proximaEntregaRapida }}</strong>
+												⏰ Seu pedido deverá estar pronto entre:
+												<strong>{{ proximaEntregaMin }} e {{ proximaEntregaMax }}</strong>
 											</p>
+											<!-- Aviso de horário de fechamento -->
+											<div
+												v-if="!validarHorarioEntrega.valido"
+												class="mt-2 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+											>
+												<p class="text-xs text-red-700 dark:text-red-300 font-medium">
+													{{ validarHorarioEntrega.mensagem }}
+												</p>
+												<p class="text-xs text-red-600 dark:text-red-400 mt-1">
+													Por favor, agende seu pedido para outro horário.
+												</p>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -1366,60 +1609,76 @@ const formatarCEP = (event: Event) => {
 						</div>
 					</div>
 
-					<!-- Lista de horários para retirada -->
+					<!-- Seleção de data e horário para agendamento (Retirada) -->
 					<div v-if="tipoAgendamento === 'agendar'" class="space-y-4">
-						<h5 class="font-bold text-[var(--cardapio-text)]">📋 Horários Disponíveis:</h5>
-
-						<!-- Hoje -->
-						<div v-if="horariosHoje.length > 0" class="space-y-2">
-							<h6 class="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wide">
-								🗓️ HOJE ({{ dataHoje }})
-							</h6>
-							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								<button
-									v-for="horario in horariosHoje"
-									:key="horario.value"
-									type="button"
-									@click="horarioSelecionado = horario.value"
-									class="p-3 rounded-lg border text-left transition-all"
-									:class="[
-										horarioSelecionado === horario.value
-											? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10 text-[var(--cardapio-primary)]'
-											: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 text-[var(--cardapio-text)]',
-									]"
-								>
-									<div class="font-bold">{{ horario.display }}</div>
-									<div class="text-xs opacity-75">
-										<span v-if="horario.isProximoDisponivel" class="text-[var(--cardapio-primary)]"
-											>⚡ Mais cedo</span
-										>
-										<span v-else-if="horario.tempoRestante">Em {{ horario.tempoRestante }}</span>
-									</div>
-								</button>
-							</div>
+						<!-- Seletor de Data -->
+						<div class="space-y-2">
+							<label
+								class="text-sm font-medium text-[var(--cardapio-text)] flex items-center gap-2"
+							>
+								<Icon name="lucide:calendar" class="w-4 h-4" />
+								Escolha o Dia:
+							</label>
+							<UiDatePicker
+								v-model="dataSelecionada"
+								placeholder="Selecione uma data"
+								:min-date="dataMinima"
+								size="lg"
+								class="w-full"
+							/>
 						</div>
 
-						<!-- Amanhã -->
-						<div v-if="horariosAmanha.length > 0" class="space-y-2">
-							<h6 class="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wide">
-								🗓️ AMANHÃ ({{ dataAmanha }})
-							</h6>
-							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								<button
-									v-for="horario in horariosAmanha"
-									:key="horario.value"
-									type="button"
-									@click="horarioSelecionado = horario.value"
-									class="p-3 rounded-lg border text-left transition-all"
-									:class="[
-										horarioSelecionado === horario.value
-											? 'border-[var(--cardapio-primary)] bg-[var(--cardapio-primary)]/10 text-[var(--cardapio-primary)]'
-											: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50 text-[var(--cardapio-text)]',
-									]"
-								>
-									<div class="font-bold">{{ horario.display }}</div>
-									<div class="text-xs opacity-75">{{ horario.diaSemana }}</div>
-								</button>
+						<!-- Aviso se dia está fechado -->
+						<div
+							v-if="dataSelecionada && !diaEstaAberto.aberto"
+							class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+						>
+							<p
+								class="text-sm text-amber-700 dark:text-amber-300 font-medium flex items-center gap-2"
+							>
+								<Icon name="lucide:alert-triangle" class="w-4 h-4" />
+								{{ diaEstaAberto.mensagem }}
+							</p>
+						</div>
+
+						<!-- Seletor de Horário (só aparece se dia está aberto) -->
+						<div v-if="dataSelecionada && diaEstaAberto.aberto" class="space-y-2">
+							<label
+								class="text-sm font-medium text-[var(--cardapio-text)] flex items-center gap-2"
+							>
+								<Icon name="lucide:clock" class="w-4 h-4" />
+								Escolha o Horário para {{ dataFormatada }}:
+							</label>
+
+							<!-- Mostrar horários disponíveis -->
+							<div v-if="horariosDisponiveisData.length > 0">
+								<UiSelectMenu
+									v-model="horarioSelecionado"
+									:options="
+										horariosDisponiveisData.map((h) => ({
+											value: h.value,
+											label: h.display,
+											description: h.isProximoDisponivel
+												? '⚡ Mais cedo'
+												: h.tempoRestante
+													? `Em ${h.tempoRestante}`
+													: '',
+										}))
+									"
+									placeholder="Selecione um horário"
+									size="lg"
+									class="w-full"
+								/>
+							</div>
+
+							<!-- Sem horários disponíveis -->
+							<div
+								v-else
+								class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800"
+							>
+								<p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+									Nenhum horário disponível para esta data
+								</p>
 							</div>
 						</div>
 					</div>

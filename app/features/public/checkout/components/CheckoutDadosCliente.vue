@@ -6,7 +6,7 @@
  */
 
 import type { DadosCliente } from "~/features/public/checkout/types/checkout";
-import { formatPhone, parsePhone } from "~/lib/formatters/phone";
+import { formatPhone, parsePhone, isValidPhone } from "~/lib/formatters/phone";
 import { formatCPF, parseCPF } from "~/lib/formatters/document";
 import { isValidCPF } from "~/lib/validators/document";
 
@@ -35,13 +35,18 @@ const form = reactive<DadosCliente>({
 /**
  * Validação do formulário
  */
+const telefoneValido = computed(() => {
+	if (!form.telefone || form.telefone.trim().length === 0) return false;
+	return isValidPhone(form.telefone);
+});
+
 const cpfValido = computed(() => {
 	if (!form.cpf || form.cpf.trim().length === 0) return true; // CPF é opcional
 	return isValidCPF(form.cpf);
 });
 
 const formValido = computed(() => {
-	return form.nome.trim().length >= 3 && form.telefone.trim().length >= 10 && cpfValido.value;
+	return form.nome.trim().length >= 3 && telefoneValido.value && cpfValido.value;
 });
 
 /**
@@ -101,7 +106,11 @@ const formatarCPF = (event: Event) => {
 					placeholder="(00) 00000-0000"
 					maxlength="15"
 					@input="formatarTelefone"
+					:class="{ 'border-error': form.telefone && !telefoneValido }"
 				/>
+				<p v-if="form.telefone && !telefoneValido" class="text-xs text-error mt-1">
+					Telefone inválido. Digite um número com DDD.
+				</p>
 			</div>
 
 			<!-- Email -->
@@ -124,7 +133,11 @@ const formatarCPF = (event: Event) => {
 					placeholder="000.000.000-00"
 					maxlength="14"
 					@input="formatarCPF"
+					:class="{ 'border-error': form.cpf && !cpfValido }"
 				/>
+				<p v-if="form.cpf && !cpfValido" class="text-xs text-error mt-1">
+					CPF inválido. Verifique os dígitos.
+				</p>
 			</div>
 
 			<!-- Botão -->

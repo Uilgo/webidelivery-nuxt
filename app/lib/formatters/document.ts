@@ -5,25 +5,36 @@
  */
 
 /**
- * Formata CPF brasileiro
+ * Formata CPF brasileiro - FORMATAÇÃO PROGRESSIVA
  *
- * @param cpf - CPF (apenas dígitos)
- * @returns String formatada
+ * @param cpf - CPF (pode estar parcialmente digitado)
+ * @returns String formatada progressivamente
  *
  * @example
+ * formatCPF("123") // "123"
+ * formatCPF("12345678") // "123.456.78"
  * formatCPF("12345678909") // "123.456.789-09"
  */
 export const formatCPF = (cpf: string): string => {
 	// Remove tudo que não é dígito
 	const cleaned = cpf.replace(/\D/g, "");
 
-	// Formata: XXX.XXX.XXX-XX
-	if (cleaned.length === 11) {
-		return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-	}
+	// Limita a 11 dígitos
+	const limited = cleaned.slice(0, 11);
 
-	// Retorna original se não for formato válido
-	return cpf;
+	// Formatação progressiva
+	if (limited.length === 0) {
+		return "";
+	} else if (limited.length <= 3) {
+		return limited;
+	} else if (limited.length <= 6) {
+		return `${limited.slice(0, 3)}.${limited.slice(3)}`;
+	} else if (limited.length <= 9) {
+		return `${limited.slice(0, 3)}.${limited.slice(3, 6)}.${limited.slice(6)}`;
+	} else {
+		// Completo: XXX.XXX.XXX-XX
+		return `${limited.slice(0, 3)}.${limited.slice(3, 6)}.${limited.slice(6, 9)}-${limited.slice(9)}`;
+	}
 };
 
 /**

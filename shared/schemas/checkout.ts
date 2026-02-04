@@ -77,8 +77,10 @@ export const dadosClienteSchema = z.object({
 const cepSchema = z
 	.string()
 	.min(1, VALIDATION_MESSAGES.CEP_REQUIRED)
-	.regex(VALIDATION_PATTERNS.CEP, VALIDATION_MESSAGES.CEP_INVALID)
-	.transform((cep) => cep.replace(/\D/g, ""));
+	.transform((cep) => cep.replace(/\D/g, "")) // PRIMEIRO: Remove formatação
+	.refine((cep) => VALIDATION_PATTERNS.CEP.test(cep), {
+		message: VALIDATION_MESSAGES.CEP_INVALID,
+	}); // DEPOIS: Valida apenas números
 
 /**
  * Schema para estado (UF)
@@ -125,6 +127,9 @@ export const enderecoEntregaSchema = z.object({
 		.max(200, "Referência deve ter no máximo 200 caracteres")
 		.optional()
 		.or(z.literal("")),
+	taxa_entrega: z.number().min(0).optional(),
+	tempo_min: z.number().min(0).optional(),
+	tempo_max: z.number().min(0).optional(),
 });
 
 // ========================================

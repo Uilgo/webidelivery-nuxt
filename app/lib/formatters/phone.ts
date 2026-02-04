@@ -5,12 +5,14 @@
  */
 
 /**
- * Formata telefone brasileiro
+ * Formata telefone brasileiro - FORMATAÇÃO PROGRESSIVA
  *
- * @param phone - Número de telefone (apenas dígitos)
- * @returns String formatada
+ * @param phone - Número de telefone (pode estar parcialmente digitado)
+ * @returns String formatada progressivamente
  *
  * @example
+ * formatPhone("11") // "(11"
+ * formatPhone("119") // "(11) 9"
  * formatPhone("11987654321") // "(11) 98765-4321"
  * formatPhone("1133334444") // "(11) 3333-4444"
  */
@@ -18,18 +20,23 @@ export const formatPhone = (phone: string): string => {
 	// Remove tudo que não é dígito
 	const cleaned = phone.replace(/\D/g, "");
 
-	// Celular com 11 dígitos: (XX) XXXXX-XXXX
-	if (cleaned.length === 11) {
-		return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-	}
+	// Limita a 11 dígitos
+	const limited = cleaned.slice(0, 11);
 
-	// Fixo com 10 dígitos: (XX) XXXX-XXXX
-	if (cleaned.length === 10) {
-		return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+	// Formatação progressiva
+	if (limited.length === 0) {
+		return "";
+	} else if (limited.length <= 2) {
+		return `(${limited}`;
+	} else if (limited.length <= 6) {
+		return `(${limited.slice(0, 2)}) ${limited.slice(2)}`;
+	} else if (limited.length <= 10) {
+		// Fixo: (XX) XXXX-XXXX
+		return `(${limited.slice(0, 2)}) ${limited.slice(2, 6)}-${limited.slice(6)}`;
+	} else {
+		// Celular: (XX) XXXXX-XXXX
+		return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
 	}
-
-	// Retorna original se não for formato válido
-	return phone;
 };
 
 /**

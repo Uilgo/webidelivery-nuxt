@@ -39,19 +39,55 @@ onMounted(() => {
 });
 
 /**
+ * Store do estabelecimento para fallbacks
+ */
+const estabelecimentoStore = useEstabelecimentoStore();
+
+/**
  * Observações do pedido
  */
 const observacoes = ref<string>("");
+
+/**
+ * Taxa de entrega calculada
+ */
+const taxaEntrega = computed(() => {
+	if (props.dados.tipo_entrega === "retirada") return 0;
+	return props.dados.endereco?.taxa_entrega || 0;
+});
+
+/**
+ * Tempo estimado dinâmico
+ */
+const tempoEstimado = computed(() => {
+	const tipo = props.dados.tipo_entrega;
+	const config = estabelecimentoStore.estabelecimento?.config_geral;
+
+	// Se for delivery, tenta pegar do endereço (calculado no passo anterior)
+	if (tipo === "delivery" && props.dados.endereco?.tempo_min) {
+		return `${props.dados.endereco.tempo_min}-${props.dados.endereco.tempo_max} min`;
+	}
+
+	// Fallback para config global
+	if (tipo === "retirada") {
+		const min = config?.tempo_retirada_min || 15;
+		const max = config?.tempo_retirada_max || 30;
+		return `${min}-${max} min`;
+	}
+
+	const min = config?.tempo_entrega_min || 30;
+	const max = config?.tempo_entrega_max || 60;
+	return `${min}-${max} min`;
+});
 
 /**
  * Calcula o total do pedido
  */
 const calcularTotal = computed(() => {
 	const subtotal = carrinho.subtotal;
-	const taxaEntrega = 0; // TODO: Implementar cálculo de taxa de entrega
 	const desconto = carrinho.desconto;
 
-	return subtotal + taxaEntrega - desconto;
+	return subtotal + taxaEntrega.value - desconto;
 });
 
 /**
@@ -223,8 +259,8 @@ const handleConfirmar = () => {
 				<div class="flex justify-between">
 					<span class="text-[var(--cardapio-text-muted)]">Taxa de entrega</span>
 					<span class="font-medium text-[var(--cardapio-text)]">
-						R$ 0,00
-						<span class="text-xs text-yellow-600">(a implementar)</span>
+						<span v-if="taxaEntrega === 0" class="text-green-600">Grátis</span>
+						<span v-else>R$ {{ taxaEntrega.toFixed(2) }}</span>
 					</span>
 				</div>
 				<div v-if="carrinho.desconto > 0" class="flex justify-between text-green-600">
@@ -254,11 +290,21 @@ const handleConfirmar = () => {
 			/>
 		</div>
 
-		<!-- TODO: Placeholder para tempo estimado -->
+		<!-- Tempo estimado -->
 		<div
-			class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400"
+			class="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 flex gap-3 items-center"
 		>
-			<p class="text-sm font-medium">⏱️ Tempo estimado: A calcular (implementar no painel admin)</p>
+			<div
+				class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0"
+			>
+				<span class="text-xl">⏱️</span>
+			</div>
+			<div>
+				<p class="text-sm font-bold text-blue-800 dark:text-blue-300">Tempo estimado</p>
+				<p class="text-xs text-blue-700 dark:text-blue-400">
+					{{ formatarTipoEntrega(dados.tipo_entrega) }}: {{ tempoEstimado }}
+				</p>
+			</div>
 		</div>
 
 		<!-- Botões -->

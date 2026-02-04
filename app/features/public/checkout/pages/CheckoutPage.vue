@@ -8,6 +8,7 @@
 import { useCheckout } from "~/features/public/checkout/composables/useCheckout";
 import { useCarrinhoStore } from "~/stores/carrinho";
 import { useEstabelecimentoStore } from "~/stores/estabelecimento";
+import { useTemaPublico } from "~/features/public/cardapio/composables/useTemaPublico";
 import CheckoutDadosCliente from "~/features/public/checkout/components/CheckoutDadosCliente.vue";
 import CheckoutTipoEntrega from "~/features/public/checkout/components/CheckoutTipoEntrega.vue";
 import CheckoutFormaPagamento from "~/features/public/checkout/components/CheckoutFormaPagamento.vue";
@@ -40,13 +41,19 @@ const formatarPagamento = (forma?: string) => {
 const slug = computed(() => route.params.slug as string);
 
 /**
- * Dados do estabelecimento
+ * Dados do estabelecimento (reativo para useTemaPublico)
  */
-const estabelecimento = ref<{
+const estabelecimentoRef = ref<{
 	id: string;
 	endereco: string;
 	whatsapp: string;
+	config_tema?: unknown;
 } | null>(null);
+
+/**
+ * Aplicar tema do estabelecimento usando o mesmo composable do cardápio
+ */
+useTemaPublico(estabelecimentoRef as Ref<any>);
 
 /**
  * Busca dados do estabelecimento
@@ -55,7 +62,7 @@ const buscarEstabelecimento = async () => {
 	const { data, error } = await supabase
 		.from("estabelecimentos")
 		.select(
-			"id, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, whatsapp, config_geral",
+			"id, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, whatsapp, config_geral, config_tema",
 		)
 		.eq("slug", slug.value)
 		.single();
@@ -65,10 +72,11 @@ const buscarEstabelecimento = async () => {
 		return;
 	}
 
-	estabelecimento.value = {
+	estabelecimentoRef.value = {
 		id: data.id,
 		endereco: `${data.endereco_rua}, ${data.endereco_numero} - ${data.endereco_bairro} - ${data.endereco_cidade}/${data.endereco_estado}`,
 		whatsapp: data.whatsapp || "",
+		config_tema: data.config_tema,
 	};
 
 	// Carregar estabelecimento na store para que composables possam acessar config_geral
@@ -86,7 +94,7 @@ onMounted(async () => {
 		return;
 	}
 
-	// Buscar dados do estabelecimento
+	// Buscar dados do estabelecimento (isso vai trigger o useTemaPublico automaticamente)
 	await buscarEstabelecimento();
 
 	// Validar se estabelecimento está aberto
@@ -100,7 +108,7 @@ onMounted(async () => {
  * Handler para confirmar pedido
  */
 const handleConfirmarPedido = async (observacoes: string) => {
-	if (!estabelecimento.value) {
+	if (!estabelecimentoRef.value) {
 		return;
 	}
 
@@ -108,7 +116,7 @@ const handleConfirmarPedido = async (observacoes: string) => {
 	checkout.salvarObservacoes(observacoes);
 
 	// Finalizar pedido
-	const pedidoId = await checkout.finalizarPedido(estabelecimento.value.id, carrinho.itens);
+	const pedidoId = await checkout.finalizarPedido(estabelecimentoRef.value.id, carrinho.itens);
 
 	if (pedidoId) {
 		// Limpar carrinho
@@ -145,28 +153,31 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 </script>
 
 <template>
-	<div class="min-h-screen bg-[var(--bg-base)] py-8 pb-32">
+	<div class="min-h-screen bg-[var(--cardapio-background)] py-8 pb-32">
 		<div class="container mx-auto px-4 max-w-2xl">
 			<!-- Header -->
 			<div class="mb-8 text-center">
 				<button
 					type="button"
 					@click="navigateTo(`/${slug}`)"
-					class="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-primary transition-colors mb-6 text-sm font-medium"
+					class="inline-flex items-center gap-2 text-[var(--cardapio-text-muted)] hover:text-[var(--cardapio-primary)] transition-colors mb-6 text-sm font-medium"
 				>
 					<Icon name="lucide:arrow-left" class="w-4 h-4" />
 					Voltar ao cardápio
 				</button>
-				<h1 class="text-3xl font-bold text-[var(--text-primary)] mb-2">Finalizar Pedido</h1>
-				<p class="text-[var(--text-muted)]">Complete seus dados para receber seu pedido</p>
+				<h1 class="text-3xl font-bold text-[var(--cardapio-text)] mb-2">Finalizar Pedido</h1>
+				<p class="text-[var(--cardapio-text-muted)]">Complete seus dados para receber seu pedido</p>
 			</div>
 
 			<!-- Conteúdo das Etapas -->
-			<div v-if="estabelecimento" class="space-y-4">
+			<div v-if="estabelecimentoRef" class="space-y-4">
 				<!-- Etapa 1: Dados do Cliente -->
 				<div
-					class="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-color)] overflow-hidden transition-all duration-300"
-					:class="{ 'ring-2 ring-primary border-primary': etapasExpandidas.cliente }"
+					class="bg-[var(--cardapio-secondary)] rounded-2xl border border-[var(--cardapio-border)] overflow-hidden transition-all duration-300"
+					:class="{
+						'ring-2 ring-[var(--cardapio-primary)] border-[var(--cardapio-primary)]':
+							etapasExpandidas.cliente,
+					}"
 				>
 					<button
 						type="button"
@@ -179,17 +190,17 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 								class="flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg transition-colors"
 								:class="
 									checkout.state.value.etapa_atual > 1 || etapasExpandidas.cliente
-										? 'bg-primary text-white'
-										: 'bg-[var(--bg-muted)] text-[var(--text-muted)]'
+										? 'bg-[var(--cardapio-primary)] text-white'
+										: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)]'
 								"
 							>
 								1
 							</div>
 							<div>
-								<h3 class="font-bold text-lg text-[var(--text-primary)]">Seus Dados</h3>
+								<h3 class="font-bold text-lg text-[var(--cardapio-text)]">Seus Dados</h3>
 								<p
 									v-if="!etapasExpandidas.cliente && checkout.state.value.dados.cliente?.nome"
-									class="text-sm text-[var(--text-muted)] text-ellipsis overflow-hidden whitespace-nowrap max-w-[200px] sm:max-w-xs"
+									class="text-sm text-[var(--cardapio-text-muted)] text-ellipsis overflow-hidden whitespace-nowrap max-w-[200px] sm:max-w-xs"
 								>
 									{{ checkout.state.value.dados.cliente?.nome }} •
 									{{ checkout.state.value.dados.cliente?.telefone }}
@@ -198,7 +209,7 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 						</div>
 						<div
 							v-if="!etapasExpandidas.cliente && checkout.state.value.etapa_atual > 1"
-							class="text-primary font-medium text-sm"
+							class="text-[var(--cardapio-primary)] font-medium text-sm"
 						>
 							Editar
 						</div>
@@ -206,7 +217,7 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 					<div
 						v-show="etapasExpandidas.cliente"
-						class="px-6 pb-6 border-t border-[var(--border-color)] pt-6"
+						class="px-6 pb-6 border-t border-[var(--cardapio-border)] pt-6"
 					>
 						<CheckoutDadosCliente
 							:dados-iniciais="checkout.state.value.dados.cliente"
@@ -217,8 +228,11 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 				<!-- Etapa 2: Tipo de Entrega -->
 				<div
-					class="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-color)] overflow-hidden transition-all duration-300"
-					:class="{ 'ring-2 ring-primary border-primary': etapasExpandidas.entrega }"
+					class="bg-[var(--cardapio-secondary)] rounded-2xl border border-[var(--cardapio-border)] overflow-hidden transition-all duration-300"
+					:class="{
+						'ring-2 ring-[var(--cardapio-primary)] border-[var(--cardapio-primary)]':
+							etapasExpandidas.entrega,
+					}"
 				>
 					<button
 						type="button"
@@ -235,17 +249,17 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 								class="flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg transition-colors"
 								:class="
 									checkout.state.value.etapa_atual > 2 || etapasExpandidas.entrega
-										? 'bg-primary text-white'
-										: 'bg-[var(--bg-muted)] text-[var(--text-muted)]'
+										? 'bg-[var(--cardapio-primary)] text-white'
+										: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)]'
 								"
 							>
 								2
 							</div>
 							<div>
-								<h3 class="font-bold text-lg text-[var(--text-primary)]">Entrega</h3>
+								<h3 class="font-bold text-lg text-[var(--cardapio-text)]">Entrega</h3>
 								<div
 									v-if="!etapasExpandidas.entrega && checkout.state.value.etapa_atual > 2"
-									class="text-sm text-[var(--text-muted)] mt-1"
+									class="text-sm text-[var(--cardapio-text-muted)] mt-1"
 								>
 									<p v-if="checkout.state.value.dados.tipo_entrega === 'delivery'" class="truncate">
 										Delivery • {{ checkout.state.value.dados.endereco?.rua }},
@@ -257,7 +271,7 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 						</div>
 						<div
 							v-if="!etapasExpandidas.entrega && checkout.state.value.etapa_atual > 2"
-							class="text-primary font-medium text-sm"
+							class="text-[var(--cardapio-primary)] font-medium text-sm"
 						>
 							Editar
 						</div>
@@ -265,12 +279,12 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 					<div
 						v-show="etapasExpandidas.entrega"
-						class="px-6 pb-6 border-t border-[var(--border-color)] pt-6"
+						class="px-6 pb-6 border-t border-[var(--cardapio-border)] pt-6"
 					>
 						<CheckoutTipoEntrega
 							:tipo-inicial="checkout.state.value.dados.tipo_entrega"
 							:endereco-inicial="checkout.state.value.dados.endereco"
-							:endereco-estabelecimento="estabelecimento.endereco"
+							:endereco-estabelecimento="estabelecimentoRef.endereco"
 							:slug="slug"
 							@submit="checkout.salvarEntrega"
 							@voltar="checkout.etapaAnterior"
@@ -280,8 +294,11 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 				<!-- Etapa 3: Forma de Pagamento -->
 				<div
-					class="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-color)] overflow-hidden transition-all duration-300"
-					:class="{ 'ring-2 ring-primary border-primary': etapasExpandidas.pagamento }"
+					class="bg-[var(--cardapio-secondary)] rounded-2xl border border-[var(--cardapio-border)] overflow-hidden transition-all duration-300"
+					:class="{
+						'ring-2 ring-[var(--cardapio-primary)] border-[var(--cardapio-primary)]':
+							etapasExpandidas.pagamento,
+					}"
 				>
 					<button
 						type="button"
@@ -298,17 +315,17 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 								class="flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg transition-colors"
 								:class="
 									checkout.state.value.etapa_atual > 3 || etapasExpandidas.pagamento
-										? 'bg-primary text-white'
-										: 'bg-[var(--bg-muted)] text-[var(--text-muted)]'
+										? 'bg-[var(--cardapio-primary)] text-white'
+										: 'bg-[var(--cardapio-muted)] text-[var(--cardapio-text-muted)]'
 								"
 							>
 								3
 							</div>
 							<div>
-								<h3 class="font-bold text-lg text-[var(--text-primary)]">Pagamento</h3>
+								<h3 class="font-bold text-lg text-[var(--cardapio-text)]">Pagamento</h3>
 								<p
 									v-if="!etapasExpandidas.pagamento && checkout.state.value.etapa_atual > 3"
-									class="text-sm text-[var(--text-muted)]"
+									class="text-sm text-[var(--cardapio-text-muted)]"
 								>
 									{{ formatarPagamento(checkout.state.value.dados.pagamento?.forma_pagamento) }}
 								</p>
@@ -316,7 +333,7 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 						</div>
 						<div
 							v-if="!etapasExpandidas.pagamento && checkout.state.value.etapa_atual > 3"
-							class="text-primary font-medium text-sm"
+							class="text-[var(--cardapio-primary)] font-medium text-sm"
 						>
 							Editar
 						</div>
@@ -324,11 +341,14 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 					<div
 						v-show="etapasExpandidas.pagamento"
-						class="px-6 pb-6 border-t border-[var(--border-color)] pt-6"
+						class="px-6 pb-6 border-t border-[var(--cardapio-border)] pt-6"
 					>
 						<CheckoutFormaPagamento
 							:dados-iniciais="checkout.state.value.dados.pagamento"
-							:whatsapp-estabelecimento="estabelecimento.whatsapp"
+							:whatsapp-estabelecimento="estabelecimentoRef.whatsapp"
+							:valor-total="
+								carrinho.total + (checkout.state.value.dados.endereco?.taxa_entrega || 0)
+							"
 							@submit="checkout.salvarPagamento"
 							@voltar="checkout.etapaAnterior"
 						/>
@@ -343,11 +363,11 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 				>
 					<div
 						v-if="etapasExpandidas.resumo"
-						class="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-lg mt-8"
+						class="bg-[var(--cardapio-secondary)] rounded-2xl border border-[var(--cardapio-border)] overflow-hidden shadow-lg mt-8"
 					>
-						<div class="p-6 border-b border-[var(--border-color)] bg-[var(--bg-muted)]/30">
-							<h3 class="font-bold text-xl text-[var(--text-primary)] flex items-center gap-2">
-								<Icon name="lucide:receipt" class="w-6 h-6 text-primary" />
+						<div class="p-6 border-b border-[var(--cardapio-border)] bg-[var(--cardapio-muted)]/30">
+							<h3 class="font-bold text-xl text-[var(--cardapio-text)] flex items-center gap-2">
+								<Icon name="lucide:receipt" class="w-6 h-6 text-[var(--cardapio-primary)]" />
 								Confirmação do Pedido
 							</h3>
 						</div>
@@ -366,7 +386,7 @@ const toggleEtapa = (etapa: 1 | 2 | 3 | 4) => {
 
 			<!-- Loading -->
 			<div v-else class="mt-8 flex justify-center">
-				<Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-primary" />
+				<Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-[var(--cardapio-primary)]" />
 			</div>
 
 			<!-- Erro -->

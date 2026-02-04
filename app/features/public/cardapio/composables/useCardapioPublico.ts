@@ -76,7 +76,7 @@ export const useCardapioPublico = (slug: string) => {
 				aberto: estabelecimentoData.aberto,
 				modo_funcionamento:
 					(estabelecimentoData.modo_funcionamento as "automatico" | "manual") ?? "automatico",
-				config_geral: configGeral,
+				config_geral: configGeral, // ✅ config_geral completo com horarios
 				config_tema: configTema,
 			};
 

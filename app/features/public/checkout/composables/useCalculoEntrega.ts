@@ -213,10 +213,9 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 			// Calcular baseado no tipo de taxa
 			switch (config.tipo_taxa_entrega) {
 				case "sem_taxa": {
-					const tempoBase = 20;
 					return {
-						tempoMin: tempoBase,
-						tempoMax: tempoBase + 10,
+						tempoMin: config.tempo_entrega_min,
+						tempoMax: config.tempo_entrega_max,
 						taxa: 0,
 						disponivel: true,
 						cidadeValida: true,
@@ -225,10 +224,9 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 				}
 
 				case "taxa_unica": {
-					const tempoBase = 20;
 					return {
-						tempoMin: tempoBase,
-						tempoMax: tempoBase + 10,
+						tempoMin: config.tempo_entrega_min,
+						tempoMax: config.tempo_entrega_max,
 						taxa: config.taxa_entrega,
 						disponivel: true,
 						cidadeValida: true,
@@ -346,10 +344,10 @@ export const useCalculoEntrega = (): UseCalculoEntregaReturn => {
 		}
 
 		if (config.tipo_taxa_entrega !== "taxa_localizacao") {
-			// Se não é taxa por localização, usar cálculo padrão
+			// Se não é taxa por localização, usar valores globais
 			return {
-				tempoMin: 20,
-				tempoMax: 40,
+				tempoMin: config.tempo_entrega_min,
+				tempoMax: config.tempo_entrega_max,
 				taxa: config.taxa_entrega || 0,
 				disponivel: true,
 				cidadeValida: true,

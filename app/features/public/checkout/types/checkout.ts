@@ -36,6 +36,9 @@ export interface EnderecoEntrega {
 	cidade: string;
 	estado: string;
 	referencia?: string;
+	taxa_entrega?: number;
+	tempo_min?: number;
+	tempo_max?: number;
 }
 
 /**

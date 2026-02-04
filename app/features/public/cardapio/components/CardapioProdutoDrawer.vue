@@ -839,62 +839,65 @@ const toggleDetalhes = (): void => {
 						<!-- Seção Múltiplos Sabores (condicional) -->
 						<div
 							v-if="produto?.permite_divisao_sabores && produtosDisponiveisFiltrados.length > 0"
-							class="space-y-4"
+							class="border-2 rounded-2xl overflow-hidden transition-all duration-200"
+							:class="[
+								multiplosSabores
+									? 'border-[var(--cardapio-primary)] shadow-lg'
+									: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50',
+							]"
 						>
-							<!-- Toggle Switch -->
-							<div
-								class="p-4 rounded-2xl border-2 transition-all duration-200"
+							<!-- Header do Accordion -->
+							<button
+								type="button"
+								class="w-full flex items-center gap-3 p-4 text-left transition-colors"
 								:class="[
 									multiplosSabores
-										? 'border-[var(--cardapio-primary)] bg-gradient-to-br from-[var(--cardapio-primary)]/5 to-transparent'
-										: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]',
+										? 'bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent'
+										: 'bg-[var(--cardapio-secondary)]',
 								]"
+								@click="multiplosSabores = !multiplosSabores"
 							>
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<div
-											class="w-10 h-10 rounded-xl flex items-center justify-center"
-											:class="[
-												multiplosSabores
-													? 'bg-[var(--cardapio-primary)] text-white'
-													: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
-											]"
-										>
-											<Icon name="lucide:git-compare" class="w-5 h-5" />
-										</div>
-										<div>
-											<h3 class="font-semibold text-sm text-[var(--cardapio-text)]">
-												Quer dividir seu sabor?
-											</h3>
-											<p class="text-xs text-[var(--cardapio-text-muted)]">
-												Personalize com até {{ produto.max_sabores_divisao }} sabores
-											</p>
-										</div>
-									</div>
+								<!-- Ícone -->
+								<div
+									class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+									:class="[
+										multiplosSabores
+											? 'bg-[var(--cardapio-primary)] text-white'
+											: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+									]"
+								>
+									<Icon name="lucide:git-compare" class="w-5 h-5" />
+								</div>
 
-									<!-- Toggle Switch -->
-									<button
-										type="button"
-										class="relative w-14 h-7 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--cardapio-primary)] focus:ring-offset-2"
+								<!-- Info -->
+								<div class="flex-1 min-w-0">
+									<h4
+										class="font-semibold text-sm"
 										:class="[
 											multiplosSabores
-												? 'bg-[var(--cardapio-primary)]'
-												: 'bg-[var(--cardapio-border)]',
+												? 'text-[var(--cardapio-primary)]'
+												: 'text-[var(--cardapio-text)]',
 										]"
-										@click="multiplosSabores = !multiplosSabores"
 									>
-										<span
-											class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200"
-											:class="multiplosSabores ? 'translate-x-7' : 'translate-x-0'"
-										/>
-									</button>
+										Quer dividir seu sabor?
+									</h4>
+									<p class="text-xs text-[var(--cardapio-text-muted)] mt-0.5">
+										Personalize com até {{ produto.max_sabores_divisao }} sabores
+									</p>
 								</div>
-							</div>
 
-							<!-- Conteúdo quando ativado -->
+								<!-- Chevron -->
+								<Icon
+									name="lucide:chevron-down"
+									class="w-5 h-5 text-[var(--cardapio-text-muted)] transition-transform duration-200"
+									:class="{ 'rotate-180': multiplosSabores }"
+								/>
+							</button>
+
+							<!-- Conteúdo Expandido -->
 							<div
 								v-if="multiplosSabores"
-								class="space-y-4 animate-in slide-in-from-top-2 duration-300"
+								class="p-4 space-y-4 animate-in slide-in-from-top-2 duration-200"
 							>
 								<!-- Segmented Control de quantidade -->
 								<div>

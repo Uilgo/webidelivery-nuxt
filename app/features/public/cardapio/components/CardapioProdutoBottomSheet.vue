@@ -660,57 +660,64 @@ const toggleDetalhes = () => {
 			<!-- Múltiplos Sabores (condicional) -->
 			<div
 				v-if="produto?.permite_divisao_sabores && produtosDisponiveisFiltrados.length > 0"
-				class="space-y-3"
+				class="border-2 rounded-xl overflow-hidden transition-all duration-200"
+				:class="[
+					multiplosSabores
+						? 'border-[var(--cardapio-primary)] shadow-lg'
+						: 'border-[var(--cardapio-border)] hover:border-[var(--cardapio-primary)]/50',
+				]"
 			>
-				<!-- Toggle Switch -->
-				<div
-					class="p-3 rounded-xl border-2 transition-all duration-200"
+				<!-- Header do Accordion -->
+				<button
+					type="button"
+					class="w-full flex items-center gap-2.5 p-3 text-left transition-colors"
 					:class="[
 						multiplosSabores
-							? 'border-[var(--cardapio-primary)] bg-gradient-to-r from-[var(--cardapio-primary)]/5 to-transparent'
-							: 'border-[var(--cardapio-border)] bg-[var(--cardapio-secondary)]',
+							? 'bg-gradient-to-r from-[var(--cardapio-primary)]/10 to-transparent'
+							: 'bg-[var(--cardapio-secondary)]',
 					]"
+					@click="multiplosSabores = !multiplosSabores"
 				>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2.5">
-							<div
-								class="w-9 h-9 rounded-lg flex items-center justify-center"
-								:class="[
-									multiplosSabores
-										? 'bg-[var(--cardapio-primary)] text-white'
-										: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
-								]"
-							>
-								<Icon name="lucide:git-compare" class="w-4 h-4" />
-							</div>
-							<div>
-								<h3 class="font-semibold text-sm text-[var(--cardapio-text)]">
-									Quer dividir seu sabor?
-								</h3>
-								<p class="text-[10px] text-[var(--cardapio-text-muted)]">
-									Personalize com até {{ produto.max_sabores_divisao }} sabores
-								</p>
-							</div>
-						</div>
-
-						<button
-							type="button"
-							class="relative w-11 h-6 rounded-full transition-colors duration-200"
-							:class="[
-								multiplosSabores ? 'bg-[var(--cardapio-primary)]' : 'bg-[var(--cardapio-border)]',
-							]"
-							@click="multiplosSabores = !multiplosSabores"
-						>
-							<span
-								class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200"
-								:class="multiplosSabores ? 'translate-x-5' : 'translate-x-0'"
-							/>
-						</button>
+					<!-- Ícone -->
+					<div
+						class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+						:class="[
+							multiplosSabores
+								? 'bg-[var(--cardapio-primary)] text-white'
+								: 'bg-[var(--cardapio-background)] text-[var(--cardapio-text-muted)]',
+						]"
+					>
+						<Icon name="lucide:git-compare" class="w-4 h-4" />
 					</div>
-				</div>
 
-				<!-- Conteúdo quando ativado -->
-				<div v-if="multiplosSabores" class="space-y-3 animate-in slide-in-from-top-2 duration-300">
+					<!-- Info -->
+					<div class="flex-1 min-w-0">
+						<h4
+							class="font-semibold text-sm"
+							:class="[
+								multiplosSabores ? 'text-[var(--cardapio-primary)]' : 'text-[var(--cardapio-text)]',
+							]"
+						>
+							Quer dividir seu sabor?
+						</h4>
+						<p class="text-[10px] text-[var(--cardapio-text-muted)]">
+							Personalize com até {{ produto.max_sabores_divisao }} sabores
+						</p>
+					</div>
+
+					<!-- Chevron -->
+					<Icon
+						name="lucide:chevron-down"
+						class="w-4 h-4 text-[var(--cardapio-text-muted)] transition-transform duration-200"
+						:class="{ 'rotate-180': multiplosSabores }"
+					/>
+				</button>
+
+				<!-- Conteúdo Expandido -->
+				<div
+					v-if="multiplosSabores"
+					class="p-3 space-y-3 animate-in slide-in-from-top-2 duration-200"
+				>
 					<!-- Segmented Control -->
 					<div>
 						<label class="text-xs font-medium text-[var(--cardapio-text)] mb-2 block">

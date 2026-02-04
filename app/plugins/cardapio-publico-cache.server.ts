@@ -157,7 +157,7 @@ export default defineNuxtPlugin({
 						tempo_entrega_max: (configGeral?.tempo_entrega_max as number) ?? 40,
 						entrega_gratis_acima: (configGeral?.valor_minimo_pedido as number) ?? null,
 						aberto: data.aberto,
-						config_geral: configGeral, // ✅ Adicionar config_geral completo
+						config_geral: configGeral, // ✅ config_geral completo com horarios
 						config_tema: configTema,
 					};
 				}),
