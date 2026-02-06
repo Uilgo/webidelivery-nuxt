@@ -34,14 +34,24 @@
 		"@nuxt/icon": "2.2.0",
 		"@nuxt/image": "2.0.0",
 		"@nuxtjs/color-mode": "4.0.0",
+		"@nuxtjs/supabase": "1.6.2",
 		"@pinia/nuxt": "0.11.3",
 		"@vee-validate/nuxt": "4.15.1",
 		"@vee-validate/zod": "^4.15.1",
+		"@vueuse/core": "^14.1.0",
+		"browser-image-compression": "^2.0.2",
+		"chart.js": "^4.5.1",
+		"date-fns": "^4.1.0",
 		"eslint": "^9.39.2",
+		"jspdf": "^4.0.0",
+		"jspdf-autotable": "^5.0.7",
 		"nuxt": "^4.2.2",
 		"pinia": "^3.0.4",
 		"vue": "^3.5.26",
+		"vue-advanced-cropper": "^2.8.9",
+		"vue-chartjs": "^5.3.3",
 		"vue-router": "^4.6.4",
+		"xlsx-populate": "^1.21.0",
 		"zod": "^4.3.5"
 	},
 	"devDependencies": {
@@ -49,10 +59,12 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@typescript-eslint/eslint-plugin": "^8.53.0",
 		"@typescript-eslint/parser": "^8.53.0",
+		"@vite-pwa/nuxt": "^1.1.0",
 		"husky": "^8.0.0",
 		"lint-staged": "^16.2.7",
 		"prettier": "^3.7.4",
 		"prettier-plugin-vue": "^1.1.6",
-		"tailwindcss": "^4.1.18"
+		"tailwindcss": "^4.1.18",
+		"workbox-window": "^7.4.0"
 	}
 }

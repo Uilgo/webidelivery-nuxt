@@ -1,0 +1,479 @@
+<script setup lang="ts">
+/**
+ * 📌 UiDatePicker
+ *
+ * Componente de seleção de data customizado com design system próprio.
+ * Suporta seleção de data única, range de datas, e formatação pt-BR.
+ */
+
+interface Props {
+	/** Valor do datepicker (v-model) - formato ISO (YYYY-MM-DD) */
+	modelValue?: string;
+	/** Placeholder do input */
+	placeholder?: string;
+	/** Tamanho do input */
+	size?: "sm" | "md" | "lg";
+	/** Estado desabilitado */
+	disabled?: boolean;
+	/** Campo obrigatório */
+	required?: boolean;
+	/** ID customizado */
+	id?: string;
+	/** Estado de erro */
+	error?: boolean;
+	/** Data mínima permitida (formato ISO) */
+	minDate?: string;
+	/** Data máxima permitida (formato ISO) */
+	maxDate?: string;
+	/** Mostrar botão de limpar no input */
+	showClearButton?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	modelValue: "",
+	placeholder: "Selecione uma data",
+	size: "md",
+	disabled: false,
+	required: false,
+	id: undefined,
+	error: false,
+	minDate: undefined,
+	maxDate: undefined,
+	showClearButton: true,
+});
+
+interface Emits {
+	"update:modelValue": [value: string];
+}
+
+const emit = defineEmits<Emits>();
+
+// Estados
+const isOpen = ref(false);
+const triggerRef = ref<HTMLElement>();
+const calendarRef = ref<HTMLDivElement>();
+const currentMonth = ref(new Date());
+const selectedDate = ref<Date | null>(null);
+
+// Posição do calendário (calculada dinamicamente)
+const calendarPosition = ref<Record<string, string>>({});
+
+// Gerar ID único
+const generatedId = useId();
+
+// Nomes dos meses e dias em pt-BR
+const mesesPtBR = [
+	"Janeiro",
+	"Fevereiro",
+	"Março",
+	"Abril",
+	"Maio",
+	"Junho",
+	"Julho",
+	"Agosto",
+	"Setembro",
+	"Outubro",
+	"Novembro",
+	"Dezembro",
+];
+
+const diasSemanaPtBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// Formatar data para exibição (dd/mm/aaaa)
+const formatarDataExibicao = (date: Date): string => {
+	const dia = String(date.getDate()).padStart(2, "0");
+	const mes = String(date.getMonth() + 1).padStart(2, "0");
+	const ano = date.getFullYear();
+	return `${dia}/${mes}/${ano}`;
+};
+
+// Formatar data para ISO (YYYY-MM-DD)
+const formatarDataISO = (date: Date): string => {
+	const ano = date.getFullYear();
+	const mes = String(date.getMonth() + 1).padStart(2, "0");
+	const dia = String(date.getDate()).padStart(2, "0");
+	return `${ano}-${mes}-${dia}`;
+};
+
+// Parse data ISO para Date
+const parseDataISO = (isoString: string): Date | null => {
+	if (!isoString) return null;
+	const date = new Date(isoString + "T00:00:00");
+	return isNaN(date.getTime()) ? null : date;
+};
+
+// Valor formatado para exibição no input
+const valorExibicao = computed(() => {
+	if (!props.modelValue) return "";
+	const date = parseDataISO(props.modelValue);
+	return date ? formatarDataExibicao(date) : "";
+});
+
+// Mês e ano atual do calendário
+const mesAnoAtual = computed(() => {
+	const mes = mesesPtBR[currentMonth.value.getMonth()];
+	const ano = currentMonth.value.getFullYear();
+	return `${mes} de ${ano}`;
+});
+
+// Gerar dias do calendário
+const diasCalendario = computed(() => {
+	const ano = currentMonth.value.getFullYear();
+	const mes = currentMonth.value.getMonth();
+
+	// Primeiro dia do mês
+	const primeiroDia = new Date(ano, mes, 1);
+	const diaSemana = primeiroDia.getDay();
+
+	// Último dia do mês
+	const ultimoDia = new Date(ano, mes + 1, 0);
+	const totalDias = ultimoDia.getDate();
+
+	// Dias do mês anterior para preencher
+	const diasMesAnterior = diaSemana;
+	const ultimoDiaMesAnterior = new Date(ano, mes, 0).getDate();
+
+	const dias: Array<{
+		dia: number;
+		mes: "anterior" | "atual" | "proximo";
+		data: Date;
+		isHoje: boolean;
+		isSelecionado: boolean;
+		isDesabilitado: boolean;
+	}> = [];
+
+	// Dias do mês anterior
+	for (let i = diasMesAnterior - 1; i >= 0; i--) {
+		const dia = ultimoDiaMesAnterior - i;
+		const data = new Date(ano, mes - 1, dia);
+		dias.push({
+			dia,
+			mes: "anterior",
+			data,
+			isHoje: false,
+			isSelecionado: false,
+			isDesabilitado: isDataDesabilitada(data),
+		});
+	}
+
+	// Dias do mês atual
+	const hoje = new Date();
+	hoje.setHours(0, 0, 0, 0);
+
+	for (let dia = 1; dia <= totalDias; dia++) {
+		const data = new Date(ano, mes, dia);
+		const isHoje = data.getTime() === hoje.getTime();
+		const isSelecionado =
+			selectedDate.value !== null && data.getTime() === selectedDate.value.getTime();
+
+		dias.push({
+			dia,
+			mes: "atual",
+			data,
+			isHoje,
+			isSelecionado,
+			isDesabilitado: isDataDesabilitada(data),
+		});
+	}
+
+	// Dias do próximo mês para completar a grade
+	const diasRestantes = 42 - dias.length; // 6 semanas * 7 dias
+	for (let dia = 1; dia <= diasRestantes; dia++) {
+		const data = new Date(ano, mes + 1, dia);
+		dias.push({
+			dia,
+			mes: "proximo",
+			data,
+			isHoje: false,
+			isSelecionado: false,
+			isDesabilitado: isDataDesabilitada(data),
+		});
+	}
+
+	return dias;
+});
+
+// Verificar se data está desabilitada
+const isDataDesabilitada = (date: Date): boolean => {
+	if (props.disabled) return true;
+
+	const timestamp = date.getTime();
+
+	if (props.minDate) {
+		const minTimestamp = parseDataISO(props.minDate)?.getTime();
+		if (minTimestamp && timestamp < minTimestamp) return true;
+	}
+
+	if (props.maxDate) {
+		const maxTimestamp = parseDataISO(props.maxDate)?.getTime();
+		if (maxTimestamp && timestamp > maxTimestamp) return true;
+	}
+
+	return false;
+};
+
+// Navegar mês anterior
+const mesAnterior = (): void => {
+	currentMonth.value = new Date(
+		currentMonth.value.getFullYear(),
+		currentMonth.value.getMonth() - 1,
+	);
+};
+
+// Navegar próximo mês
+const proximoMes = (): void => {
+	currentMonth.value = new Date(
+		currentMonth.value.getFullYear(),
+		currentMonth.value.getMonth() + 1,
+	);
+};
+
+// Ir para hoje
+const irParaHoje = (): void => {
+	const hoje = new Date();
+	currentMonth.value = new Date(hoje.getFullYear(), hoje.getMonth());
+	selecionarData(hoje);
+};
+
+// Limpar seleção
+const limpar = (): void => {
+	selectedDate.value = null;
+	emit("update:modelValue", "");
+	isOpen.value = false;
+};
+
+// Selecionar data
+const selecionarData = (date: Date): void => {
+	if (isDataDesabilitada(date)) return;
+
+	selectedDate.value = date;
+	emit("update:modelValue", formatarDataISO(date));
+	isOpen.value = false;
+};
+
+// Calcular posição do calendário
+const calcularPosicaoCalendario = (): void => {
+	if (!triggerRef.value) return;
+
+	const rect = triggerRef.value.getBoundingClientRect();
+	const spaceBelow = window.innerHeight - rect.bottom;
+	const spaceAbove = rect.top;
+	const calendarHeight = 360; // Altura reduzida do calendário
+
+	// Decide se abre para baixo ou para cima
+	const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+
+	calendarPosition.value = {
+		left: `${rect.left}px`,
+		top: openUpward ? `${rect.top - calendarHeight - 8}px` : `${rect.bottom + 8}px`,
+		width: "280px", // Largura fixa do calendário
+	};
+};
+
+// Toggle calendário
+const toggleCalendario = (): void => {
+	if (props.disabled) return;
+
+	if (!isOpen.value) {
+		// Abrindo: calcula posição
+		nextTick(() => {
+			calcularPosicaoCalendario();
+		});
+	}
+
+	isOpen.value = !isOpen.value;
+};
+
+// Fechar ao clicar fora
+const handleClickOutside = (event: MouseEvent): void => {
+	const target = event.target as Node;
+	if (
+		calendarRef.value &&
+		!calendarRef.value.contains(target) &&
+		triggerRef.value &&
+		!triggerRef.value.contains(target)
+	) {
+		isOpen.value = false;
+	}
+};
+
+// Inicializar data selecionada
+watch(
+	() => props.modelValue,
+	(newValue) => {
+		if (newValue) {
+			const date = parseDataISO(newValue);
+			if (date) {
+				selectedDate.value = date;
+				currentMonth.value = new Date(date.getFullYear(), date.getMonth());
+			}
+		} else {
+			selectedDate.value = null;
+		}
+	},
+	{ immediate: true },
+);
+
+// Lifecycle
+onMounted(() => {
+	document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+	document.removeEventListener("click", handleClickOutside);
+});
+
+// Classes do container
+const containerClasses = computed(() => {
+	const baseClasses = [
+		"relative",
+		"flex items-center",
+		"bg-[var(--input-bg)]",
+		"border border-[var(--input-border)]",
+		"rounded-lg",
+		"transition-all duration-200",
+		"focus-within:border-[var(--input-border-focus)]",
+		"focus-within:ring-2 focus-within:ring-[var(--input-border-focus)] focus-within:ring-opacity-20",
+		"cursor-pointer",
+	];
+
+	const sizeClasses = {
+		sm: "min-h-[32px] px-3",
+		md: "min-h-[40px] px-3",
+		lg: "min-h-[48px] px-4",
+	};
+
+	const stateClasses = [];
+	if (props.error) {
+		stateClasses.push(
+			"border-[var(--error)]",
+			"focus-within:border-[var(--error)]",
+			"focus-within:ring-[var(--error)]",
+		);
+	}
+	if (props.disabled) {
+		stateClasses.push("opacity-50", "cursor-not-allowed");
+	}
+
+	return [...baseClasses, sizeClasses[props.size], ...stateClasses].join(" ");
+});
+</script>
+
+<template>
+	<div class="relative">
+		<!-- Trigger Area -->
+		<div ref="triggerRef" :class="containerClasses" tabindex="0" @click="toggleCalendario">
+			<!-- Ícone de calendário -->
+			<Icon name="lucide:calendar" class="w-5 h-5 text-[var(--text-muted)] mr-2 flex-shrink-0" />
+
+			<!-- Display Text (substitui Input) -->
+			<span v-if="valorExibicao" class="text-[var(--input-text)] text-sm whitespace-nowrap">
+				{{ valorExibicao }}
+			</span>
+			<span v-else class="text-[var(--input-placeholder)] text-sm whitespace-nowrap">
+				{{ placeholder }}
+			</span>
+
+			<!-- Hidden input for form submission compatibility if needed -->
+			<input type="hidden" :name="id || generatedId" :value="modelValue" />
+		</div>
+
+		<!-- Calendário Dropdown com Teleport para escapar do modal -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-200 ease-out"
+				enter-from-class="opacity-0 scale-95"
+				enter-to-class="opacity-100 scale-100"
+				leave-active-class="transition duration-150 ease-in"
+				leave-from-class="opacity-100 scale-100"
+				leave-to-class="opacity-0 scale-95"
+			>
+				<div
+					v-if="isOpen"
+					ref="calendarRef"
+					:style="calendarPosition"
+					class="fixed z-[9999] p-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg shadow-lg"
+				>
+					<!-- Header: Navegação de mês -->
+					<div class="flex items-center justify-between mb-3">
+						<button
+							type="button"
+							class="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+							@click="mesAnterior"
+						>
+							<Icon name="lucide:chevron-left" class="w-4 h-4" />
+						</button>
+
+						<span class="text-sm font-semibold text-[var(--text-primary)]">{{ mesAnoAtual }}</span>
+
+						<button
+							type="button"
+							class="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+							@click="proximoMes"
+						>
+							<Icon name="lucide:chevron-right" class="w-4 h-4" />
+						</button>
+					</div>
+
+					<!-- Dias da semana -->
+					<div class="grid grid-cols-7 gap-1 mb-2">
+						<div
+							v-for="dia in diasSemanaPtBR"
+							:key="dia"
+							class="text-center text-xs font-medium text-[var(--text-muted)] py-1"
+						>
+							{{ dia }}
+						</div>
+					</div>
+
+					<!-- Grade de dias -->
+					<div class="grid grid-cols-7 gap-1">
+						<button
+							v-for="(item, index) in diasCalendario"
+							:key="index"
+							type="button"
+							:disabled="item.isDesabilitado"
+							:class="[
+								'h-8 w-full flex items-center justify-center rounded-md text-sm transition-colors',
+								item.mes === 'atual'
+									? 'text-[var(--text-primary)]'
+									: 'text-[var(--text-muted)] opacity-50',
+								item.isHoje && !item.isSelecionado
+									? 'border-2 border-[var(--primary)] font-semibold'
+									: '',
+								item.isSelecionado
+									? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
+									: 'hover:bg-[var(--bg-hover)]',
+								item.isDesabilitado ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+							]"
+							@click="selecionarData(item.data)"
+						>
+							{{ item.dia }}
+						</button>
+					</div>
+
+					<!-- Footer: Ações -->
+					<div
+						class="flex items-center justify-between mt-3 pt-2 border-t border-[var(--border-muted)]"
+					>
+						<button
+							type="button"
+							class="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
+							@click="limpar"
+						>
+							Limpar
+						</button>
+
+						<button
+							type="button"
+							class="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)] font-medium transition-colors"
+							@click="irParaHoje"
+						>
+							Hoje
+						</button>
+					</div>
+				</div>
+			</Transition>
+		</Teleport>
+	</div>
+</template>

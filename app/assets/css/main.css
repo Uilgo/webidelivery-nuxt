@@ -109,6 +109,29 @@ DESIGN TOKENS - TAILWIND V4 @theme
 	--color-neutral-800: oklch(0.279 0.041 260.031);
 	--color-neutral-900: oklch(0.208 0.042 265.755);
 	--color-neutral-950: oklch(0.129 0.042 264.695);
+
+	/* ============= CARDÁPIO PÚBLICO (Alias Semânticos) ============= */
+	/* Permite usar: bg-cardapio-primary, text-cardapio-success, etc. */
+	--color-cardapio-primary: var(--cardapio-primary);
+	--color-cardapio-secondary: var(--cardapio-secondary);
+
+	/* Semântica Específica */
+	--color-cardapio-success: var(--cardapio-success);
+	--color-cardapio-success-light: var(--cardapio-success-light);
+	--color-cardapio-success-dark: var(--cardapio-success-dark);
+
+	--color-cardapio-danger: var(--cardapio-danger);
+	--color-cardapio-danger-light: var(--cardapio-danger-light);
+
+	--color-cardapio-warning: var(--cardapio-warning);
+	--color-cardapio-warning-light: var(--cardapio-warning-light);
+
+	/* Gradientes (definidos como cores para uso em from/to) */
+	--color-cardapio-promo-from: var(--cardapio-promo-from);
+	--color-cardapio-promo-to: var(--cardapio-promo-to);
+
+	--color-cardapio-highlight-from: var(--cardapio-highlight-from);
+	--color-cardapio-highlight-to: var(--cardapio-highlight-to);
 }
 
 /* =========================================
@@ -116,7 +139,7 @@ VARIÁVEIS SEMÂNTICAS (Light/Dark Mode)
 ========================================= */
 :root {
 	/* Cores Primárias */
-	--primary: var(--color-brand-600);
+	--primary: var(--color-brand-400);
 	--primary-hover: var(--color-brand-700);
 	--primary-light: var(--color-brand-100);
 	--primary-foreground: var(--color-neutral-50);
@@ -244,6 +267,181 @@ body {
 		color 0.3s ease;
 }
 
+/* =========================================
+TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
+========================================= */
+/* =========================================
+   TEMA PERSONALIZADO DO CARDÁPIO PÚBLICO
+   ========================================= */
+.cardapio-tema-personalizado {
+	/* 
+	 * Cores Base (Herdam do global mas permitem override)
+	 * Padrão: Cores do sistema atual
+	 */
+	/* ============= DEFAULTS DO CARDÁPIO (Neutros para evitar FOUC) ============= */
+	/* Valores neutros que não causam flash visual durante carregamento SSR */
+	--default-cardapio-primary: transparent;
+	--default-cardapio-secondary: transparent;
+	--default-cardapio-bg: transparent;
+	--default-cardapio-text: transparent;
+	--default-cardapio-success: #16a34a; /* Green 600 */
+	--default-cardapio-danger: #dc2626; /* Red 600 */
+	--default-cardapio-warning: #f59e0b; /* Amber 500 */
+
+	/* Gradientes Default */
+	--default-cardapio-promo-from: #dc2626; /* Red 600 */
+	--default-cardapio-promo-to: #991b1b; /* Red 800 */
+	--default-cardapio-highlight-from: #f59e0b; /* Amber 500 */
+	--default-cardapio-highlight-to: #d97706; /* Amber 600 */
+
+	/* ============= CORES CONFIGURÁVEIS PELO USUÁRIO ============= */
+	/* O usuário define apenas 4 cores principais */
+	--cardapio-primary: var(--cardapio-cor-primaria, var(--default-cardapio-primary));
+	--cardapio-secondary: var(--cardapio-cor-secundaria, var(--default-cardapio-secondary));
+	--cardapio-background: var(--cardapio-cor-fundo, var(--bg-page));
+	--cardapio-text: var(--cardapio-cor-texto, var(--text-primary));
+	--cardapio-radius: var(--cardapio-border-radius, 8px);
+
+	/* ============= CORES AUTOMÁTICAS (Geradas via JS) ============= */
+	/* Apenas 3 variáveis derivadas - fallback com color-mix CSS */
+
+	/* 1. Bordas (3.5% contraste da secundária) */
+	--cardapio-border: var(
+		--cardapio-cor-border,
+		color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 4%)
+	);
+
+	/* 2. Hover (8.5% contraste da secundária) */
+	--cardapio-hover: var(
+		--cardapio-cor-hover,
+		color-mix(in srgb, var(--cardapio-secondary), var(--cardapio-text) 9%)
+	);
+
+	/* 3. Texto secundário (60% opacidade visual) */
+	--cardapio-text-muted: var(
+		--cardapio-cor-text-muted,
+		color-mix(in srgb, var(--cardapio-text), transparent 40%)
+	);
+
+	/* 4. Cor primária com transparência */
+	--cardapio-primary-light: color-mix(in srgb, var(--cardapio-primary), transparent 85%);
+
+	/* 5. Shadow adaptativa (calculada via JS baseada na luminosidade) */
+	--cardapio-shadow: var(--cardapio-cor-shadow, 0 4px 16px rgba(0, 0, 0, 0.1));
+
+	/* 6. Ring adaptativo (calculado via JS baseado na luminosidade) */
+	--cardapio-ring: var(--cardapio-cor-ring, rgba(0, 0, 0, 0.05));
+
+	/* ============= TEXTOS ADAPTATIVOS PARA BADGES ============= */
+	/* Calculados via JS para garantir contraste WCAG AA */
+
+	/* Texto para badges de promoção (branco ou preto baseado no gradiente) */
+	--cardapio-promo-text: var(--cardapio-cor-promo-text, #ffffff);
+
+	/* Texto para badges de destaque (branco ou preto baseado no gradiente) */
+	--cardapio-highlight-text: var(--cardapio-cor-highlight-text, #ffffff);
+
+	/* Texto para badge de sucesso (Aberto) */
+	--cardapio-success-text: var(--cardapio-cor-success-text, #ffffff);
+
+	/* Texto para badge de erro (Fechado) */
+	--cardapio-danger-text: var(--cardapio-cor-danger-text, #ffffff);
+
+	/* Texto para badge de aviso (Frete Grátis) */
+	--cardapio-warning-text: var(--cardapio-cor-warning-text, #000000);
+
+	/* ============= SHADOWS ADAPTATIVOS ============= */
+
+	/* Shadow para cards (normal e hover) */
+	--cardapio-card-shadow: var(--cardapio-cor-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+	--cardapio-card-shadow-hover: var(
+		--cardapio-cor-card-shadow-hover,
+		0 4px 12px rgba(0, 0, 0, 0.15)
+	);
+
+	/* Border hover adaptativo (opacidade) */
+	--cardapio-card-hover-border-opacity: var(--cardapio-cor-card-hover-border-opacity, 0.2);
+
+	/* Shadow para botão "Adicionar" */
+	--cardapio-button-shadow: var(--cardapio-cor-button-shadow, 0 4px 12px rgba(251, 146, 60, 0.2));
+	--cardapio-button-shadow-hover: var(
+		--cardapio-cor-button-shadow-hover,
+		0 6px 20px rgba(251, 146, 60, 0.3)
+	);
+
+	/* ============= GLASSMORPHISM ADAPTATIVO ============= */
+
+	/* Opacidade do background glassmorphism */
+	--cardapio-glass-opacity: var(--cardapio-cor-glass-opacity, 0.8);
+
+	/* Border do glassmorphism */
+	--cardapio-glass-border: var(--cardapio-cor-glass-border, rgba(255, 255, 255, 0.1));
+
+	/* ============= OVERLAY ADAPTATIVO ============= */
+
+	/* Opacidade do overlay do header */
+	--cardapio-overlay-opacity: var(--cardapio-cor-overlay-opacity, 0.8);
+
+	/* 
+	 * Cores Semânticas do Cardápio (Tokens Específicos)
+	 * Mapeiam para as cores que definimos no redesign
+	 */
+
+	/* Status Sucesso (Aberto, Preço Promo) */
+	--cardapio-success: var(--cardapio-cor-success, var(--default-cardapio-success));
+	--cardapio-success-light: var(--success-light);
+	--cardapio-success-dark: var(--success-hover);
+
+	/* Status Erro/Promoção (Fechado, Badge Promo) */
+	--cardapio-danger: var(--cardapio-cor-danger, var(--default-cardapio-danger));
+	--cardapio-danger-light: var(--error-light);
+
+	/* Gradiente de Promoção (Rose -> Red) */
+	--cardapio-promo-from: var(--cardapio-promo-from, var(--default-cardapio-promo-from));
+	--cardapio-promo-to: var(--cardapio-promo-to, var(--default-cardapio-promo-to));
+
+	/* Status Aviso/Destaque (Estrelas, Badge Destaque) */
+	--cardapio-warning: var(--cardapio-cor-warning, var(--default-cardapio-warning));
+	--cardapio-warning-light: var(--warning-light);
+
+	/* Gradiente de Destaque (Amber -> Yellow) */
+	--cardapio-highlight-from: #fbbf24; /* amber-400 */
+	--cardapio-highlight-to: #eab308; /* yellow-500 */
+}
+
+/* Classes utilitárias para o cardápio público */
+.cardapio-bg-primary {
+	background-color: var(--cardapio-primary) !important;
+}
+
+.cardapio-text-primary {
+	color: var(--cardapio-primary) !important;
+}
+
+.cardapio-bg-secondary {
+	background-color: var(--cardapio-secondary) !important;
+}
+
+.cardapio-text-secondary {
+	color: var(--cardapio-secondary) !important;
+}
+
+.cardapio-bg-surface {
+	background-color: var(--cardapio-background) !important;
+}
+
+.cardapio-text-content {
+	color: var(--cardapio-text) !important;
+}
+
+.cardapio-border-primary {
+	border-color: var(--cardapio-primary) !important;
+}
+
+.cardapio-rounded {
+	border-radius: var(--cardapio-radius) !important;
+}
+
 /* Cursor pointer para elementos clicáveis */
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),
@@ -316,4 +514,92 @@ SCROLLBAR PERSONALIZADO
 * {
 	scrollbar-width: thin;
 	scrollbar-color: var(--border-strong) transparent;
+}
+
+/* =========================================
+   PONTE DE TEMA (BRIDGE) PARA O CARDÁPIO
+   ========================================= 
+   Utilizada para mapear variáveis globais de UI 
+   para os tokens isolados do cardápio público.
+*/
+.cardapio-theme-bridge {
+	/* Superfícies e Fundos */
+	--bg-surface: var(--cardapio-background, var(--color-neutral-50));
+	--bg-page: var(--cardapio-background, var(--color-neutral-50));
+	--bg-muted: var(--cardapio-hover, var(--color-neutral-100));
+	--bg-hover: var(--cardapio-hover, var(--color-neutral-100));
+
+	/* Textos */
+	--text-primary: var(--cardapio-text, var(--color-neutral-900));
+	--text-secondary: var(--cardapio-text-muted, var(--color-neutral-600));
+	--text-muted: var(--cardapio-text-muted, var(--color-neutral-400));
+
+	/* Bordas */
+	--border-default: var(--cardapio-border, var(--color-neutral-200));
+	--border-muted: var(--cardapio-border, var(--color-neutral-100));
+	--border-hover: var(--cardapio-hover, var(--color-neutral-200));
+	--border-strong: var(--cardapio-border, var(--color-neutral-300));
+
+	/* Cores de Ação */
+	--primary: var(--cardapio-primary, var(--color-brand-500));
+	--primary-light: var(--cardapio-primary-light, var(--color-brand-100));
+	--primary-hover: color-mix(in srgb, var(--cardapio-primary, var(--color-brand-500)), black 10%);
+
+	/* Mapeamento de Inputs */
+	--input-bg: var(--cardapio-secondary, var(--color-neutral-50));
+	--input-border: var(--cardapio-border, var(--color-neutral-200));
+	--input-text: var(--cardapio-text, var(--color-neutral-900));
+	--input-placeholder: var(--cardapio-text-muted, var(--color-neutral-400));
+	--input-border-focus: var(--cardapio-primary, var(--color-brand-500));
+
+	/* Cards e Outros */
+	--card-bg: var(--cardapio-secondary, var(--color-neutral-50));
+	--bg-active: var(--cardapio-hover, var(--color-neutral-100));
+
+	/* Cores Semânticas */
+	--success: var(--cardapio-success, var(--color-success-600));
+	--error: var(--cardapio-danger, var(--color-error-600));
+	--warning: var(--cardapio-warning, var(--color-warning-500));
+}
+
+/* =========================================
+   REMOVER SPINNERS DE INPUT NUMBER
+   ========================================= */
+/* Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* =========================================
+   REMOVER TOOLTIPS NATIVOS GLOBALMENTE
+   ========================================= */
+/* ✅ CRÍTICO: Forçar remoção de tooltips em elementos com classe no-tooltips */
+.no-tooltips *,
+.no-tooltips *::before,
+.no-tooltips *::after,
+.combobox-dropdown *,
+.combobox-dropdown *::before,
+.combobox-dropdown *::after {
+	/* Remove tooltip nativo do navegador */
+	pointer-events: auto !important;
+}
+
+/* ✅ CRÍTICO: Esconder elementos <title> dentro de SVGs */
+.no-tooltips svg title,
+.combobox-dropdown svg title {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	position: absolute !important;
+	width: 0 !important;
+	height: 0 !important;
+	overflow: hidden !important;
 }
