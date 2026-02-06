@@ -54,6 +54,13 @@ export interface Pedido {
 	concluido_em: string | null;
 	cancelado_em: string | null;
 	motivo_cancelamento: string | null;
+	// Comprovante PIX
+	comprovante_pix: string | null;
+	comprovante_pix_tipo: string | null;
+	comprovante_pix_enviado_em: string | null;
+	comprovante_validado: boolean;
+	comprovante_validado_em: string | null;
+	comprovante_validado_por: string | null;
 }
 
 /**
@@ -93,6 +100,20 @@ export interface PedidoItemAdicional {
  */
 export interface PedidoCompleto extends Pedido {
 	itens: PedidoItem[];
+	avaliacao?: PedidoAvaliacao | null;
+}
+
+/**
+ * Avaliação do pedido
+ */
+export interface PedidoAvaliacao {
+	id: string;
+	pedido_id: string;
+	estabelecimento_id: string;
+	cliente_id: string | null;
+	nota: number;
+	comentario: string | null;
+	created_at: string;
 }
 
 /**

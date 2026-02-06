@@ -2,7 +2,7 @@
 /**
  * 📌 PedidoConfirmacaoPage
  *
- * Página de confirmação e acompanhamento do pedido.
+ * Página de confirmação e acompanhamento do pedido com nova estrutura visual.
  */
 
 import { usePedido } from "~/features/public/pedido/composables/usePedido";
@@ -10,7 +10,6 @@ import { useCancelarPedido } from "~/features/public/pedido/composables/useCance
 import { useAvaliacaoPedido } from "~/composables/ui/useAvaliacaoPedido";
 import { useToast } from "~/composables/ui/useToast";
 import { useTemaPublico } from "~/features/public/cardapio/composables/useTemaPublico";
-import { formatarCodigoRastreamento } from "~/lib/formatters/codigo-rastreamento";
 import {
 	clientePodeCancelar,
 	getAvisoCancelamento,
@@ -20,17 +19,29 @@ import {
 	type MotivoCancelamentoCliente,
 } from "~/features/admin/pedidos/types/pedidos-admin";
 import { STATUS_PEDIDO } from "#shared/constants/pedidos";
-import PedidoStatus from "~/features/public/pedido/components/PedidoStatus.vue";
-import PedidoDetalhes from "~/features/public/pedido/components/PedidoDetalhes.vue";
-import AvaliacaoPedidoModal from "~/components/shared/AvaliacaoPedidoModal.vue";
+import PedidoAvaliacao from "~/features/public/pedido/components/PedidoAvaliacao.vue";
+import PedidoAvaliacaoEstrelas from "~/features/public/pedido/components/PedidoAvaliacaoEstrelas.vue";
 import type { PedidoCompleto } from "~/features/public/pedido/types/pedido";
+
+// Novos componentes
+import PedidoHeader from "~/features/public/pedido/components/PedidoHeader.vue";
+import PedidoBannerSucesso from "~/features/public/pedido/components/PedidoBannerSucesso.vue";
+import PedidoCodigoRastreamento from "~/features/public/pedido/components/PedidoCodigoRastreamento.vue";
+import PedidoTimeline from "~/features/public/pedido/components/PedidoTimeline.vue";
+import PedidoSectionTitle from "~/features/public/pedido/components/PedidoSectionTitle.vue";
+import PedidoInfoCard from "~/features/public/pedido/components/PedidoInfoCard.vue";
+import PedidoClienteCard from "~/features/public/pedido/components/PedidoClienteCard.vue";
+import PedidoEnderecoCard from "~/features/public/pedido/components/PedidoEnderecoCard.vue";
+import PedidoItensCard from "~/features/public/pedido/components/PedidoItensCard.vue";
+import PedidoAlertaPix from "~/features/public/pedido/components/PedidoAlertaPix.vue";
+import PedidoAcoes from "~/features/public/pedido/components/PedidoAcoes.vue";
 
 /**
  * Props da rota
  */
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
-const codigo = computed(() => route.params.codigo as string); // ✅ MUDANÇA: usa código em vez de ID
+const codigo = computed(() => route.params.codigo as string);
 const supabase = useSupabaseClient();
 
 /**
@@ -38,6 +49,7 @@ const supabase = useSupabaseClient();
  */
 const estabelecimentoRef = ref<{
 	id: string;
+	nome: string;
 	endereco: string;
 	whatsapp: string;
 	config_tema?: unknown;
@@ -55,7 +67,7 @@ const buscarEstabelecimento = async () => {
 	const { data, error } = await supabase
 		.from("estabelecimentos")
 		.select(
-			"id, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, whatsapp, config_tema",
+			"id, nome, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, whatsapp, config_tema",
 		)
 		.eq("slug", slug.value)
 		.single();
@@ -66,6 +78,7 @@ const buscarEstabelecimento = async () => {
 
 	estabelecimentoRef.value = {
 		id: data.id,
+		nome: data.nome || "",
 		endereco: `${data.endereco_rua}, ${data.endereco_numero} - ${data.endereco_bairro} - ${data.endereco_cidade}/${data.endereco_estado}`,
 		whatsapp: data.whatsapp || "",
 		config_tema: data.config_tema,
@@ -94,7 +107,7 @@ const carregarPedido = async () => {
 	loading.value = true;
 	erro.value = false;
 
-	const resultado = await buscarPedido(codigo.value); // ✅ USA CÓDIGO
+	const resultado = await buscarPedido(codigo.value);
 
 	if (!resultado) {
 		erro.value = true;
@@ -206,63 +219,29 @@ const avaliarPedido = () => {
 /**
  * Callback quando avaliação é enviada
  */
-const handleAvaliacaoEnviada = () => {
+const handleAvaliacaoEnviada = async () => {
 	toast.add({
 		title: "Avaliação enviada!",
 		description: "Obrigado pelo seu feedback",
 		color: "success",
 	});
 
+	// Recarregar pedido para atualizar avaliação
+	await carregarPedido();
+
 	onAvaliacaoEnviada();
-};
-
-/**
- * Copiar código de rastreamento
- */
-const copiarCodigo = async () => {
-	if (!pedido.value) return;
-
-	try {
-		await navigator.clipboard.writeText(
-			formatarCodigoRastreamento(pedido.value.codigo_rastreamento),
-		);
-		toast.add({
-			title: "Código copiado!",
-			description: "O código de rastreamento foi copiado para a área de transferência",
-			color: "success",
-			duration: 3000,
-		});
-	} catch (error) {
-		toast.add({
-			title: "Erro ao copiar",
-			description: "Não foi possível copiar o código",
-			color: "error",
-		});
-	}
 };
 </script>
 
 <template>
-	<div class="min-h-screen bg-[var(--cardapio-background)] py-8">
-		<div class="container mx-auto px-4 max-w-3xl">
-			<!-- Header -->
-			<div class="mb-8">
-				<button
-					type="button"
-					@click="navigateTo(`/${slug}`)"
-					class="flex items-center gap-2 text-[var(--cardapio-text-muted)] hover:text-[var(--cardapio-primary)] transition-colors mb-4"
-				>
-					<Icon name="lucide:arrow-left" class="w-5 h-5" />
-					<span class="text-sm">Voltar ao cardápio</span>
-				</button>
-				<h1 class="text-2xl md:text-3xl font-bold text-[var(--cardapio-text)]">
-					Acompanhar Pedido
-				</h1>
-			</div>
-
+	<div class="min-h-screen bg-[var(--cardapio-background)] py-6 md:py-10">
+		<div class="container mx-auto px-4 max-w-4xl">
 			<!-- Loading -->
-			<div v-if="loading && !pedido" class="flex justify-center py-12">
-				<Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-[var(--cardapio-primary)]" />
+			<div v-if="loading && !pedido" class="flex justify-center py-20">
+				<Icon
+					name="lucide:loader-2"
+					class="w-10 h-10 animate-spin text-[var(--cardapio-primary)]"
+				/>
 			</div>
 
 			<!-- Erro -->
@@ -282,114 +261,66 @@ const copiarCodigo = async () => {
 				</div>
 			</div>
 
-			<!-- Conteúdo -->
+			<!-- Conteúdo Principal -->
 			<div v-else-if="pedido" class="space-y-6">
-				<!-- Mensagem de Sucesso com Código de Rastreamento -->
-				<div
-					class="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 shadow-[var(--cardapio-card-shadow)]"
-				>
-					<div class="flex items-start gap-3">
-						<Icon name="lucide:check-circle-2" class="w-6 h-6 flex-shrink-0" />
-						<div class="flex-1">
-							<h3 class="font-bold mb-1">Pedido realizado com sucesso!</h3>
-							<p class="text-sm mb-3">
-								Seu pedido <strong>#{{ pedido.numero }}</strong> foi recebido e está sendo
-								processado.
-							</p>
+				<!-- Header com Logo e Status -->
+				<PedidoHeader
+					:status="pedido.status"
+					:slug="slug"
+					:nome-estabelecimento="estabelecimentoRef?.nome"
+				/>
 
-							<!-- ✅ CÓDIGO DE RASTREAMENTO -->
-							<div
-								class="mt-4 p-4 bg-[var(--cardapio-secondary)] rounded-xl border border-green-500/30 shadow-[var(--cardapio-card-shadow)]"
-							>
-								<p class="text-xs font-medium mb-2 text-green-600 dark:text-green-400">
-									Código de Rastreamento:
-								</p>
-								<div class="flex items-center gap-3">
-									<code
-										class="text-2xl font-bold tracking-wider text-green-700 dark:text-green-300"
-									>
-										{{ formatarCodigoRastreamento(pedido.codigo_rastreamento) }}
-									</code>
-									<button
-										type="button"
-										@click="copiarCodigo"
-										class="p-2 rounded-lg hover:bg-green-500/20 transition-colors"
-										title="Copiar código"
-									>
-										<Icon name="lucide:copy" class="w-4 h-4" />
-									</button>
-								</div>
-								<p class="text-xs mt-2 text-green-600/80 dark:text-green-400/80">
-									Guarde este código para acompanhar seu pedido
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
+				<!-- Banner de Sucesso -->
+				<PedidoBannerSucesso :numero-pedido="pedido.numero" />
 
-				<!-- Status do Pedido -->
-				<PedidoStatus :status="pedido.status" />
+				<!-- Código de Rastreamento -->
+				<PedidoCodigoRastreamento :codigo-rastreamento="pedido.codigo_rastreamento" />
 
 				<!-- Alerta PIX -->
-				<div
+				<PedidoAlertaPix
 					v-if="pedido.forma_pagamento === 'pix' && pedido.status === STATUS_PEDIDO.PENDENTE"
-					class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-[var(--cardapio-card-shadow)]"
-				>
-					<div class="flex items-start gap-3">
-						<Icon name="lucide:info" class="w-5 h-5 flex-shrink-0" />
-						<div class="text-sm">
-							<p class="font-medium mb-1">Atenção: Pagamento via PIX</p>
-							<p>
-								Para confirmar seu pedido, envie o comprovante do PIX para o WhatsApp do
-								estabelecimento. Seu pedido só será processado após a confirmação do pagamento.
-							</p>
-						</div>
-					</div>
+					:codigo-rastreamento="pedido.codigo_rastreamento"
+					:comprovante-enviado="!!pedido.comprovante_pix"
+					@atualizar="carregarPedido"
+				/>
+
+				<!-- Timeline do Status -->
+				<div>
+					<PedidoSectionTitle icon="lucide:clock" title="Status do Pedido" />
+					<PedidoTimeline
+						:status="pedido.status"
+						:created-at="pedido.created_at"
+						:aceito-em="pedido.aceito_em"
+						:preparo-em="pedido.preparo_em"
+						:pronto-em="pedido.pronto_em"
+						:entrega-em="pedido.entrega_em"
+						:concluido-em="pedido.concluido_em"
+						:cancelado-em="pedido.cancelado_em"
+					/>
 				</div>
 
-				<!-- Detalhes do Pedido -->
-				<PedidoDetalhes :pedido="pedido" />
-
-				<!-- Aviso sobre Cancelamento -->
-				<div
-					v-if="avisoCancelamento"
-					class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 shadow-[var(--cardapio-card-shadow)]"
-				>
-					<div class="flex items-start gap-3">
-						<Icon name="lucide:info" class="w-5 h-5 flex-shrink-0 text-blue-600" />
-						<p class="text-sm text-blue-700 dark:text-blue-400">{{ avisoCancelamento }}</p>
-					</div>
+				<!-- Informações do Pedido -->
+				<div>
+					<PedidoSectionTitle icon="lucide:file-text" title="Informações do Pedido" />
+					<PedidoInfoCard :pedido="pedido" />
 				</div>
 
-				<!-- Aviso quando NÃO pode cancelar -->
-				<div
-					v-if="!podeCancelar && pedido.status !== 'concluido' && pedido.status !== 'cancelado'"
-					class="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/20 shadow-[var(--cardapio-card-shadow)]"
-				>
-					<div class="flex items-start gap-3">
-						<Icon name="lucide:alert-triangle" class="w-5 h-5 flex-shrink-0 text-orange-600" />
-						<div class="text-sm text-orange-700 dark:text-orange-400">
-							<p class="font-medium mb-1">Não é possível cancelar</p>
-							<p>
-								Seu pedido já está sendo preparado e não pode mais ser cancelado. Em caso de
-								dúvidas, entre em contato pelo WhatsApp.
-							</p>
-						</div>
-					</div>
+				<!-- Dados do Cliente -->
+				<div>
+					<PedidoSectionTitle icon="lucide:user" title="Dados do Cliente" />
+					<PedidoClienteCard :pedido="pedido" />
 				</div>
 
-				<!-- Botão de Cancelar -->
-				<div v-if="podeCancelar" class="flex justify-center">
-					<UiButton
-						color="error"
-						variant="outline"
-						size="md"
-						:loading="cancelando"
-						@click="mostrarModalCancelar = true"
-					>
-						<Icon name="lucide:x-circle" class="w-4 h-4" />
-						Cancelar Pedido
-					</UiButton>
+				<!-- Endereço de Entrega -->
+				<div v-if="pedido.tipo_entrega === 'delivery' && pedido.endereco_rua">
+					<PedidoSectionTitle icon="lucide:map-pin" title="Endereço de Entrega" />
+					<PedidoEnderecoCard :pedido="pedido" />
+				</div>
+
+				<!-- Itens do Pedido -->
+				<div>
+					<PedidoSectionTitle icon="lucide:shopping-bag" title="Itens do Pedido" />
+					<PedidoItensCard :pedido="pedido" />
 				</div>
 
 				<!-- Botão de Avaliar (quando concluído) -->
@@ -397,7 +328,35 @@ const copiarCodigo = async () => {
 					v-if="pedido.status === STATUS_PEDIDO.CONCLUIDO"
 					class="p-6 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 shadow-[var(--cardapio-card-shadow)]"
 				>
-					<div class="text-center space-y-4">
+					<!-- Já avaliado - mostrar avaliação existente -->
+					<div v-if="pedido.avaliacao" class="text-center space-y-4">
+						<div>
+							<h3 class="font-bold text-lg text-[var(--cardapio-text)] mb-1">Sua Avaliação</h3>
+
+							<!-- Estrelas usando componente -->
+							<div class="mb-2">
+								<PedidoAvaliacaoEstrelas :nota="pedido.avaliacao.nota" :tamanho="24" :gap="4" />
+							</div>
+
+							<p
+								v-if="pedido.avaliacao.comentario"
+								class="text-sm text-[var(--cardapio-text-muted)] italic"
+							>
+								"{{ pedido.avaliacao.comentario }}"
+							</p>
+						</div>
+						<button
+							type="button"
+							@click="avaliarPedido"
+							class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white rounded-2xl font-bold text-base transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+						>
+							<Icon name="lucide:edit" class="w-5 h-5" />
+							<span>Editar Avaliação</span>
+						</button>
+					</div>
+
+					<!-- Ainda não avaliado -->
+					<div v-else class="text-center space-y-4">
 						<div>
 							<Icon name="lucide:star" class="w-12 h-12 mx-auto text-yellow-500 mb-2" />
 							<h3 class="font-bold text-lg text-[var(--cardapio-text)] mb-1">Pedido Concluído!</h3>
@@ -405,31 +364,49 @@ const copiarCodigo = async () => {
 								Como foi sua experiência? Sua opinião é muito importante para nós!
 							</p>
 						</div>
-						<UiButton color="warning" variant="solid" size="lg" @click="avaliarPedido">
+						<button
+							type="button"
+							@click="avaliarPedido"
+							class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white rounded-2xl font-bold text-base transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+						>
 							<Icon name="lucide:star" class="w-5 h-5" />
-							Avaliar Pedido
-						</UiButton>
+							<span>Avaliar Pedido</span>
+						</button>
 					</div>
 				</div>
 
-				<!-- Botão WhatsApp -->
-				<div class="flex gap-4">
+				<!-- Ações (Cancelar/Voltar) -->
+				<PedidoAcoes
+					v-if="pedido.status !== 'concluido' && pedido.status !== 'cancelado'"
+					:pode-cancelar="podeCancelar"
+					:aviso-cancelamento="avisoCancelamento"
+					:cancelando="cancelando"
+					:slug="slug"
+					@cancelar="mostrarModalCancelar = true"
+				/>
+
+				<!-- Botão WhatsApp (quando concluído/cancelado) -->
+				<div
+					v-if="pedido.status === 'concluido' || pedido.status === 'cancelado'"
+					class="flex flex-col sm:flex-row gap-3"
+				>
 					<button
 						type="button"
 						@click="navigateTo(`/${slug}`)"
-						class="flex-1 py-3 px-6 rounded-2xl font-bold text-[var(--cardapio-text)] bg-[var(--cardapio-secondary)] hover:bg-[var(--cardapio-hover)] transition-colors shadow-[var(--cardapio-card-shadow)]"
+						class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white rounded-2xl font-bold text-base transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
 					>
-						Voltar ao Cardápio
+						<Icon name="lucide:utensils" class="w-5 h-5" />
+						<span>Voltar ao Cardápio</span>
 					</button>
 					<button
 						type="button"
 						@click="
-							navigateTo(`https://wa.me/${pedido.cliente_telefone.replace(/\D/g, '')}`, {
+							navigateTo(`https://wa.me/${estabelecimentoRef?.whatsapp.replace(/\D/g, '')}`, {
 								external: true,
 								open: { target: '_blank' },
 							})
 						"
-						class="flex-1 py-3 px-6 rounded-2xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-[var(--cardapio-card-shadow)]"
+						class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-[#25d366] text-white rounded-2xl font-bold text-base transition-all duration-300 hover:bg-[#128c7e] hover:-translate-y-0.5 hover:shadow-lg"
 					>
 						<Icon name="lucide:message-circle" class="w-5 h-5" />
 						<span>Falar no WhatsApp</span>
@@ -437,7 +414,7 @@ const copiarCodigo = async () => {
 				</div>
 
 				<!-- Atualização Automática -->
-				<p class="text-xs text-center text-[var(--cardapio-text-muted)]">
+				<p class="text-xs text-center text-[var(--cardapio-text-muted)] pt-4">
 					Esta página atualiza automaticamente a cada 10 segundos
 				</p>
 			</div>
@@ -505,11 +482,12 @@ const copiarCodigo = async () => {
 	</UiModal>
 
 	<!-- Modal de Avaliação -->
-	<AvaliacaoPedidoModal
+	<PedidoAvaliacao
 		v-if="pedidoAtual"
 		v-model="modalAberto"
 		:pedido-id="pedidoAtual.id"
 		:pedido-numero="pedidoAtual.numero"
+		:avaliacao-existente="pedido?.avaliacao"
 		@avaliado="handleAvaliacaoEnviada"
 	/>
 </template>

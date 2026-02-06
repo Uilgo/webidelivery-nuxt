@@ -208,6 +208,10 @@ const motivoCancelamento = ref("");
 const mostrarModalMudarStatus = ref(false);
 const statusParaMudar = ref<StatusPedido | null>(null);
 const observacaoMudanca = ref("");
+const mostrarModalComprovante = ref(false);
+const mostrarModalRejeitarComprovante = ref(false);
+const motivoRejeicao = ref("");
+const validandoComprovante = ref(false);
 
 /**
  * Emitir ação
@@ -283,6 +287,184 @@ const cancelarModalMudanca = () => {
 	mostrarModalMudarStatus.value = false;
 	statusParaMudar.value = null;
 	observacaoMudanca.value = "";
+};
+
+/**
+ * Abrir modal de comprovante
+ */
+const abrirComprovante = () => {
+	mostrarModalComprovante.value = true;
+};
+
+/**
+ * Baixar comprovante
+ */
+const baixarComprovante = (event?: Event) => {
+	event?.preventDefault();
+	event?.stopPropagation();
+
+	if (!props.pedido?.comprovante_pix) {
+		console.error("Comprovante não encontrado");
+		toast.add({
+			title: "Erro",
+			description: "Comprovante não encontrado",
+			color: "error",
+		});
+		return;
+	}
+
+	try {
+		// Converter Base64 para Blob
+		const base64 = props.pedido.comprovante_pix;
+		const parts = base64.split(",");
+
+		if (parts.length !== 2) {
+			throw new Error("Formato de Base64 inválido");
+		}
+
+		const [metadata, data] = parts;
+
+		if (!data) {
+			throw new Error("Dados do Base64 não encontrados");
+		}
+
+		const mimeTypeMatch = metadata?.match(/:(.*?);/);
+		const mimeType = mimeTypeMatch?.[1] || "application/octet-stream";
+		const extension = mimeType.split("/")[1] || "bin";
+
+		const byteCharacters = atob(data);
+		const byteNumbers = new Array(byteCharacters.length);
+		for (let i = 0; i < byteCharacters.length; i++) {
+			byteNumbers[i] = byteCharacters.charCodeAt(i);
+		}
+		const byteArray = new Uint8Array(byteNumbers);
+		const blob = new Blob([byteArray], { type: mimeType });
+
+		// Criar link de download
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `comprovante-pedido-${props.pedido.numero}.${extension}`;
+		link.style.display = "none";
+		document.body.appendChild(link);
+
+		link.click();
+
+		// Aguardar um pouco antes de limpar
+		setTimeout(() => {
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		}, 100);
+
+		toast.add({
+			title: "Download iniciado",
+			description: "O comprovante está sendo baixado",
+			color: "success",
+		});
+	} catch (error) {
+		console.error("Erro ao baixar comprovante:", error);
+		toast.add({
+			title: "Erro ao baixar",
+			description: error instanceof Error ? error.message : "Não foi possível baixar o comprovante",
+			color: "error",
+		});
+	}
+};
+
+/**
+ * Validar comprovante PIX
+ */
+const validarComprovante = async () => {
+	if (!props.pedido) return;
+
+	validandoComprovante.value = true;
+
+	try {
+		const supabase = useSupabaseClient();
+		const { data, error } = await supabase.rpc("validar_comprovante_pix", {
+			pedido_id: props.pedido.id,
+			validado: true,
+		});
+
+		if (error) throw error;
+
+		const resultado = data as { success: boolean; error?: string; message?: string };
+
+		if (!resultado.success) {
+			toast.add({
+				title: "Erro ao validar",
+				description: resultado.error || "Não foi possível validar o comprovante",
+				color: "error",
+			});
+			return;
+		}
+
+		toast.add({
+			title: "Comprovante validado!",
+			description: "O pedido foi aceito e está pronto para preparo",
+			color: "success",
+		});
+
+		// Emitir evento para atualizar lista
+		emit("acao", props.pedido, "atualizar");
+	} catch (error) {
+		console.error("Erro ao validar comprovante:", error);
+		toast.add({
+			title: "Erro ao validar",
+			description: "Ocorreu um erro ao validar o comprovante",
+			color: "error",
+		});
+	} finally {
+		validandoComprovante.value = false;
+	}
+};
+
+/**
+ * Rejeitar comprovante PIX
+ */
+const rejeitarComprovante = async () => {
+	if (!props.pedido) return;
+
+	try {
+		const supabase = useSupabaseClient();
+		const { data, error } = await supabase.rpc("rejeitar_comprovante_pix", {
+			pedido_id: props.pedido.id,
+			motivo: motivoRejeicao.value || null,
+		});
+
+		if (error) throw error;
+
+		const resultado = data as { success: boolean; error?: string; message?: string };
+
+		if (!resultado.success) {
+			toast.add({
+				title: "Erro ao rejeitar",
+				description: resultado.error || "Não foi possível rejeitar o comprovante",
+				color: "error",
+			});
+			return;
+		}
+
+		toast.add({
+			title: "Comprovante rejeitado",
+			description: "O cliente pode enviar um novo comprovante",
+			color: "success",
+		});
+
+		// Fechar modal e limpar
+		mostrarModalRejeitarComprovante.value = false;
+		motivoRejeicao.value = "";
+
+		// Emitir evento para atualizar lista
+		emit("acao", props.pedido, "atualizar");
+	} catch (error) {
+		console.error("Erro ao rejeitar comprovante:", error);
+		toast.add({
+			title: "Erro ao rejeitar",
+			description: "Ocorreu um erro ao rejeitar o comprovante",
+			color: "error",
+		});
+	}
 };
 
 /**
@@ -508,6 +690,88 @@ const getStatusIcon = (status: StatusPedido): string => {
 				</div>
 			</UiCard>
 
+			<!-- Comprovante PIX -->
+			<UiCard v-if="pedido.forma_pagamento === 'pix'" variant="outlined" size="sm">
+				<div class="space-y-2">
+					<div class="flex items-center gap-2 text-[var(--text-primary)]">
+						<Icon name="lucide:receipt" class="w-4 h-4" />
+						<span class="text-sm font-semibold">Comprovante PIX</span>
+					</div>
+
+					<!-- Aguardando comprovante -->
+					<div v-if="!pedido.comprovante_pix" class="pl-6">
+						<div class="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+							<Icon name="lucide:clock" class="w-4 h-4" />
+							<span>Aguardando cliente enviar comprovante</span>
+						</div>
+					</div>
+
+					<!-- Comprovante enviado, aguardando validação -->
+					<div v-else-if="!pedido.comprovante_validado" class="pl-6 space-y-3">
+						<div class="flex items-center gap-2 text-xs">
+							<Icon name="lucide:alert-circle" class="w-4 h-4 text-[var(--warning)]" />
+							<span class="font-medium text-[var(--warning)]"
+								>Comprovante recebido - Validação pendente</span
+							>
+						</div>
+
+						<!-- Botões de ação -->
+						<div class="flex items-center gap-2">
+							<UiButton color="primary" variant="outline" size="sm" @click="abrirComprovante">
+								<template #iconLeft>
+									<Icon name="lucide:eye" />
+								</template>
+								Ver Comprovante
+							</UiButton>
+						</div>
+
+						<div class="flex items-center gap-2">
+							<UiButton
+								color="success"
+								variant="solid"
+								size="sm"
+								class="flex-1"
+								@click="validarComprovante"
+							>
+								<template #iconLeft>
+									<Icon name="lucide:check" />
+								</template>
+								Confirmar
+							</UiButton>
+							<UiButton
+								color="error"
+								variant="outline"
+								size="sm"
+								class="flex-1"
+								@click="mostrarModalRejeitarComprovante = true"
+							>
+								<template #iconLeft>
+									<Icon name="lucide:x" />
+								</template>
+								Rejeitar
+							</UiButton>
+						</div>
+					</div>
+
+					<!-- Comprovante validado -->
+					<div v-else class="pl-6 space-y-2">
+						<div class="flex items-center gap-2 text-xs">
+							<Icon name="lucide:check-circle" class="w-4 h-4 text-[var(--success)]" />
+							<span class="font-medium text-[var(--success)]">Pagamento PIX confirmado</span>
+						</div>
+						<p v-if="pedido.comprovante_validado_em" class="text-xs text-[var(--text-muted)]">
+							Validado em {{ formatarDataHora(pedido.comprovante_validado_em) }}
+						</p>
+						<UiButton color="neutral" variant="ghost" size="sm" @click="abrirComprovante">
+							<template #iconLeft>
+								<Icon name="lucide:eye" />
+							</template>
+							Ver comprovante
+						</UiButton>
+					</div>
+				</div>
+			</UiCard>
+
 			<!-- Observações Gerais -->
 			<UiCard v-if="pedido.observacoes" variant="outlined" size="sm">
 				<div class="space-y-1.5">
@@ -727,6 +991,88 @@ const getStatusIcon = (status: StatusPedido): string => {
 					@click="confirmarMudancaStatus"
 				>
 					Confirmar Mudança
+				</UiButton>
+			</div>
+		</template>
+	</UiModal>
+
+	<!-- Modal de Visualização de Comprovante -->
+	<UiModal v-model="mostrarModalComprovante" title="Comprovante PIX" size="md">
+		<div v-if="pedido" class="space-y-4">
+			<!-- Imagem -->
+			<img
+				v-if="pedido.comprovante_pix_tipo?.startsWith('image')"
+				:src="pedido.comprovante_pix || ''"
+				alt="Comprovante PIX"
+				class="w-full h-auto max-h-96 object-contain rounded-lg border border-[var(--border-muted)]"
+			/>
+
+			<!-- PDF -->
+			<embed
+				v-else
+				:src="pedido.comprovante_pix || ''"
+				type="application/pdf"
+				class="w-full h-96 rounded-lg border border-[var(--border-muted)]"
+			/>
+		</div>
+
+		<template #footer>
+			<div class="flex items-center gap-3">
+				<UiButton variant="outline" color="neutral" size="md" @click="baixarComprovante">
+					<template #iconLeft>
+						<Icon name="lucide:download" />
+					</template>
+					Baixar
+				</UiButton>
+				<UiButton
+					variant="ghost"
+					color="neutral"
+					size="md"
+					@click="mostrarModalComprovante = false"
+				>
+					Fechar
+				</UiButton>
+			</div>
+		</template>
+	</UiModal>
+
+	<!-- Modal de Rejeição de Comprovante -->
+	<UiModal v-model="mostrarModalRejeitarComprovante" title="Rejeitar Comprovante" size="sm">
+		<div class="space-y-4">
+			<p class="text-sm text-[var(--text-muted)]">
+				O comprovante será rejeitado e o cliente poderá enviar um novo.
+			</p>
+
+			<div>
+				<label class="block text-sm font-medium mb-2"> Motivo da rejeição (opcional) </label>
+				<textarea
+					v-model="motivoRejeicao"
+					placeholder="Ex: Comprovante ilegível, valor incorreto..."
+					rows="3"
+					class="w-full px-3 py-2 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg focus:outline-none focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-border-focus)] focus:ring-opacity-20 resize-none"
+				></textarea>
+			</div>
+		</div>
+
+		<template #footer>
+			<div class="flex items-center gap-3">
+				<UiButton
+					variant="ghost"
+					color="neutral"
+					size="md"
+					class="flex-1"
+					@click="mostrarModalRejeitarComprovante = false"
+				>
+					Cancelar
+				</UiButton>
+				<UiButton
+					variant="solid"
+					color="error"
+					size="md"
+					class="flex-[2]"
+					@click="rejeitarComprovante"
+				>
+					Confirmar Rejeição
 				</UiButton>
 			</div>
 		</template>

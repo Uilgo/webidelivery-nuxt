@@ -84,9 +84,19 @@ export const usePedido = () => {
 			}),
 		);
 
+		/**
+		 * Buscar avaliação do pedido (se existir)
+		 */
+		const { data: avaliacao } = await supabase
+			.from("avaliacoes")
+			.select("*")
+			.eq("pedido_id", pedido.id)
+			.single();
+
 		return {
 			...pedido,
 			itens: itensComAdicionais,
+			avaliacao: avaliacao || null,
 		} as PedidoCompleto;
 	};
 

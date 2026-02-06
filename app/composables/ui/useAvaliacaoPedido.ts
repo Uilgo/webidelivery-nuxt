@@ -46,8 +46,8 @@ export const useAvaliacaoPedido = () => {
 	};
 
 	return {
-		modalAberto: readonly(modalAberto),
-		pedidoAtual: readonly(pedidoAtual),
+		modalAberto,
+		pedidoAtual,
 		abrirModalAvaliacao,
 		fecharModalAvaliacao,
 		onAvaliacaoEnviada,
