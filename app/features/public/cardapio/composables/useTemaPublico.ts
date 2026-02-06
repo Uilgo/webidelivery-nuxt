@@ -29,14 +29,19 @@ export interface UseTemaPublicoReturn {
 	removerTema: () => void;
 }
 
-export const useTemaPublico = (
-	estabelecimento: Ref<Estabelecimento | null>,
-): UseTemaPublicoReturn => {
+/**
+ * Aceita qualquer tipo de ref (Ref, ShallowRef, Readonly)
+ * Usa toValue para extrair o valor independente do tipo de ref
+ */
+export const useTemaPublico = (estabelecimento: unknown): UseTemaPublicoReturn => {
 	/**
 	 * Configurações de tema com valores padrão
+	 * Usa toValue para extrair valor de qualquer tipo de ref
+	 * Type assertion necessária pois o composable retorna tipos readonly profundos
 	 */
 	const tema = computed<ConfigTema>(() => {
-		const configTema = estabelecimento.value?.config_tema as ConfigTema | null;
+		const est = toValue(estabelecimento as Ref<Estabelecimento | null>);
+		const configTema = est?.config_tema as ConfigTema | null;
 
 		return {
 			cor_primaria: configTema?.cor_primaria,
@@ -327,8 +332,9 @@ export const useTemaPublico = (
 
 	// 🎨 Aplica tema quando estabelecimento muda (navegação SPA)
 	// Plugin SSR já injeta CSS no HTML inicial, então não precisa de immediate
+	// Type assertion necessária pois o composable retorna tipos readonly profundos
 	watch(
-		estabelecimento,
+		() => toValue(estabelecimento as Ref<Estabelecimento | null>),
 		(novoEstabelecimento) => {
 			if (novoEstabelecimento?.config_tema) {
 				aplicarTema();

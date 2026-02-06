@@ -23,7 +23,23 @@ export interface EstabelecimentoPublico {
 	config_geral: ConfiguracoesEstabelecimento | null;
 }
 
-// Tipo simplificado para o Hero Section
+/**
+ * Tipo de horário que aceita tanto readonly quanto mutable
+ * Necessário para compatibilidade com dados do Supabase (readonly) e componentes (mutable)
+ */
+export type HorarioItem = {
+	readonly dia_semana: string;
+	readonly aberto: boolean;
+	readonly periodos: ReadonlyArray<{
+		readonly horario_abertura: string;
+		readonly horario_fechamento: string;
+	}>;
+};
+
+/**
+ * Tipo simplificado para o Hero Section
+ * Aceita tanto tipos readonly (do composable) quanto mutable (de componentes)
+ */
 export interface Estabelecimento {
 	id: string;
 	nome: string;
@@ -37,14 +53,18 @@ export interface Estabelecimento {
 	entrega_gratis_acima: number | null;
 	aberto: boolean;
 	modo_funcionamento?: "automatico" | "manual";
+	endereco_cidade?: string | null;
+	endereco_estado?: string | null;
 	config_geral?: {
-		horarios?: Array<{
-			dia_semana: string; // "domingo" | "segunda" | ... (DiaSemana)
-			aberto: boolean;
-			periodos: Array<{
-				horario_abertura: string;
-				horario_fechamento: string;
-			}>;
+		horarios?: ReadonlyArray<HorarioItem> | Array<HorarioItem>;
+		cidades_atendidas?: string[];
+		bairros_atendidos?: string[];
+		tipo_taxa_entrega?: string;
+		taxas_por_localizacao?: Array<{
+			id: string;
+			nome: string;
+			cidade: string;
+			status: "ativado" | "desativado";
 		}>;
 		[key: string]: unknown;
 	} | null;

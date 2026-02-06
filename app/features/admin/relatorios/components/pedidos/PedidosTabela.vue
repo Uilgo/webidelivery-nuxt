@@ -16,7 +16,7 @@ import { formatCurrency } from "~/lib/formatters/currency";
 import { formatDateTime, formatDuration } from "~/lib/formatters/date";
 
 interface Props {
-	dados: RelatorioPedidos["tabela"] | undefined;
+	dados: RelatorioPedidos["tabela"] | readonly RelatorioPedidos["tabela"][number][] | undefined;
 	loading?: boolean;
 }
 

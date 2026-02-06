@@ -57,6 +57,8 @@ export const useProdutosSabores = () => {
 				destaque: produto.destaque,
 				em_promocao: produto.em_promocao,
 				categoria_id: produto.categoria_id,
+				permite_divisao_sabores: false,
+				max_sabores_divisao: 0,
 				variacoes: ((produto.produto_variacoes as unknown[]) ?? []).map((v) => {
 					const variacao = v as Record<string, unknown>;
 					return {

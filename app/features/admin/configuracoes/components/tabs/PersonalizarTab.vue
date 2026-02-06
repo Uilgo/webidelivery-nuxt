@@ -782,8 +782,6 @@ const aplicarPaleta = (paleta: PaletaCores) => {
 					</template>
 
 					<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-						
-
 						<!-- 🎨 Paletas Predefinidas -->
 						<section class="space-y-4">
 							<div class="flex items-center gap-2 mb-2">

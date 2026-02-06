@@ -64,7 +64,9 @@ const privacy = useField<boolean>("privacy");
 // Campo email com validação assíncrona
 const email = useField<string>("email", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = registerSchema.shape.email.safeParse(value);
+	// Nota: registerSchema usa .refine(), então precisamos acessar o schema interno
+	const baseSchema = registerSchema._def.schema;
+	const schemaResult = baseSchema.shape.email.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "E-mail inválido";
 	}

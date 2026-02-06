@@ -13,19 +13,29 @@ import { useSobreDrawer } from "../composables/useSobreDrawer";
 import { useStatusEstabelecimento } from "~/composables/core/useStatusEstabelecimento";
 import CardapioSobreBottomSheet from "./CardapioSobreBottomSheet.vue";
 
+/**
+ * Props aceita qualquer objeto com as propriedades necessárias
+ * Usa unknown para aceitar tanto tipos readonly quanto mutable
+ */
 interface Props {
-	estabelecimento: Estabelecimento;
+	estabelecimento: unknown;
 }
 
 const props = defineProps<Props>();
 
 /**
+ * Type assertion necessária pois o composable retorna tipos readonly profundos
+ * que não são compatíveis com o tipo Estabelecimento
+ */
+const est = computed(() => props.estabelecimento as Estabelecimento);
+
+/**
  * Extrair dados necessários para o composable de status
  * O banco já armazena no formato correto: HorarioFuncionamento[]
  */
-const modoFuncionamento = computed(() => props.estabelecimento.modo_funcionamento || "automatico");
+const modoFuncionamento = computed(() => est.value.modo_funcionamento || "automatico");
 const horarios = computed(() => {
-	const configGeral = props.estabelecimento.config_geral;
+	const configGeral = est.value.config_geral;
 	return (configGeral?.horarios as HorarioFuncionamento[]) || [];
 });
 
@@ -48,7 +58,7 @@ const enderecoCompleto = computed(() => {
  * Formata tempo de entrega
  */
 const tempoEntrega = computed(() => {
-	const { tempo_entrega_min, tempo_entrega_max } = props.estabelecimento;
+	const { tempo_entrega_min, tempo_entrega_max } = est.value;
 	return `${tempo_entrega_min}-${tempo_entrega_max} min`;
 });
 
@@ -56,7 +66,7 @@ const tempoEntrega = computed(() => {
  * Valor de entrega grátis formatado
  */
 const valorEntregaGratis = computed(() => {
-	const valor = props.estabelecimento.entrega_gratis_acima;
+	const valor = est.value.entrega_gratis_acima;
 	return valor ? `+R$${valor.toFixed(0)}` : null;
 });
 
@@ -64,7 +74,7 @@ const valorEntregaGratis = computed(() => {
  * Texto completo de entrega grátis para o modal
  */
 const entregaGratisTexto = computed(() => {
-	const valor = props.estabelecimento.entrega_gratis_acima;
+	const valor = est.value.entrega_gratis_acima;
 	return valor ? `Entrega grátis acima de R$ ${valor.toFixed(2)}` : null;
 });
 
@@ -73,11 +83,11 @@ const entregaGratisTexto = computed(() => {
  */
 const compartilhar = async (): Promise<void> => {
 	const url = window.location.href;
-	const text = `Confira o cardápio de ${props.estabelecimento.nome}!`;
+	const text = `Confira o cardápio de ${est.value.nome}!`;
 
 	if (navigator.share) {
 		try {
-			await navigator.share({ title: props.estabelecimento.nome, text, url });
+			await navigator.share({ title: est.value.nome, text, url });
 		} catch {
 			// Usuário cancelou ou erro silencioso
 		}
@@ -91,8 +101,8 @@ const compartilhar = async (): Promise<void> => {
  * Abre WhatsApp
  */
 const abrirWhatsApp = (): void => {
-	if (props.estabelecimento.whatsapp) {
-		const numero = props.estabelecimento.whatsapp.replace(/\D/g, "");
+	if (est.value.whatsapp) {
+		const numero = est.value.whatsapp.replace(/\D/g, "");
 		window.open(`https://wa.me/${numero}`, "_blank");
 	}
 };
@@ -106,9 +116,9 @@ const abrirWhatsApp = (): void => {
 			<div class="absolute inset-0 z-0">
 				<!-- Imagem de capa do estabelecimento -->
 				<img
-					v-if="estabelecimento.capa"
-					:src="estabelecimento.capa"
-					:alt="`Capa de ${estabelecimento.nome}`"
+					v-if="est.capa"
+					:src="est.capa"
+					:alt="`Capa de ${est.nome}`"
 					class="w-full h-full object-cover"
 					loading="eager"
 				/>
@@ -138,9 +148,9 @@ const abrirWhatsApp = (): void => {
 							class="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 xl:w-36 xl:h-36 rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-2xl ring-2 ring-white/50"
 						>
 							<img
-								v-if="estabelecimento.logo"
-								:src="estabelecimento.logo"
-								:alt="`Logo de ${estabelecimento.nome}`"
+								v-if="est.logo"
+								:src="est.logo"
+								:alt="`Logo de ${est.nome}`"
 								class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
 								loading="eager"
 							/>
@@ -162,15 +172,15 @@ const abrirWhatsApp = (): void => {
 						<h1
 							class="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight drop-shadow-lg"
 						>
-							{{ estabelecimento.nome ?? "Estabelecimento" }}
+							{{ est.nome ?? "Estabelecimento" }}
 						</h1>
 
 						<!-- Descrição -->
 						<p
-							v-if="estabelecimento.descricao"
+							v-if="est.descricao"
 							class="mt-1 sm:mt-1.5 md:mt-2 text-sm sm:text-base md:text-lg text-white/80 line-clamp-2 drop-shadow"
 						>
-							{{ estabelecimento.descricao }}
+							{{ est.descricao }}
 						</p>
 
 						<!-- Chips Informativos + Botão Ver Mais -->
@@ -232,19 +242,14 @@ const abrirWhatsApp = (): void => {
 			<!-- Header do Modal com Logo -->
 			<div class="flex items-center gap-4 pb-4 border-b border-[var(--cardapio-border)]">
 				<div class="size-16 rounded-xl overflow-hidden bg-[var(--cardapio-secondary)] shadow-md">
-					<img
-						v-if="estabelecimento.logo"
-						:src="estabelecimento.logo"
-						:alt="estabelecimento.nome"
-						class="w-full h-full object-cover"
-					/>
+					<img v-if="est.logo" :src="est.logo" :alt="est.nome" class="w-full h-full object-cover" />
 					<div v-else class="w-full h-full flex items-center justify-center">
 						<Icon name="lucide:store" class="w-8 h-8 text-[var(--cardapio-text-muted)]" />
 					</div>
 				</div>
 				<div>
 					<h3 class="text-lg font-bold text-[var(--cardapio-text)]">
-						{{ estabelecimento.nome }}
+						{{ est.nome }}
 					</h3>
 					<UiBadge :variant="estaAberto ? 'success' : 'error'" size="sm" class="mt-1">
 						{{ estaAberto ? "Aberto agora" : "Fechado no momento" }}
@@ -253,13 +258,13 @@ const abrirWhatsApp = (): void => {
 			</div>
 
 			<!-- Descrição -->
-			<div v-if="estabelecimento.descricao">
+			<div v-if="est.descricao">
 				<h4 class="text-sm font-semibold text-[var(--cardapio-text)] mb-2 flex items-center gap-2">
 					<Icon name="lucide:file-text" class="w-4 h-4 text-[var(--cardapio-primary)]" />
 					Sobre
 				</h4>
 				<p class="text-sm text-[var(--cardapio-text-muted)] leading-relaxed">
-					{{ estabelecimento.descricao }}
+					{{ est.descricao }}
 				</p>
 			</div>
 
@@ -311,7 +316,7 @@ const abrirWhatsApp = (): void => {
 				<div class="grid grid-cols-2 gap-2">
 					<!-- WhatsApp -->
 					<UiButton
-						v-if="estabelecimento.whatsapp"
+						v-if="est.whatsapp"
 						variant="outline"
 						size="md"
 						class="!border-[var(--cardapio-success)] !text-[var(--cardapio-success)] hover:!bg-[var(--cardapio-success-light)] dark:hover:!bg-[var(--cardapio-success-dark)] dark:hover:!bg-opacity-20"
@@ -347,5 +352,5 @@ const abrirWhatsApp = (): void => {
 	</UiModal>
 
 	<!-- Bottom Sheet de Informações (Mobile) -->
-	<CardapioSobreBottomSheet v-model="bottomSheetAberto" :estabelecimento="estabelecimento" />
+	<CardapioSobreBottomSheet v-model="bottomSheetAberto" :estabelecimento="est" />
 </template>

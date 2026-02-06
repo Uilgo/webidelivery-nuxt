@@ -21,16 +21,18 @@ import type { SlugValidation } from "../types/onboarding";
 /**
  * Wrapper tipado para chamadas RPC do Supabase
  * Evita o uso de 'any' mantendo type safety
+ * Type assertion necessária pois o Supabase client tem tipos genéricos complexos
  */
 const callSupabaseRpc = async <T = void>(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	supabase: any,
+	supabase: unknown,
 	functionName: string,
 	params?: Record<string, unknown>,
 ): Promise<{ data: T | null; error: unknown | null }> => {
 	try {
-		const result = await supabase.rpc(functionName, params);
-		return result;
+		// Type assertion necessária para compatibilidade com tipos do Supabase
+		const client = supabase as ReturnType<typeof useSupabaseClient>;
+		const result = await client.rpc(functionName as never, params as never);
+		return result as { data: T | null; error: unknown | null };
 	} catch (error) {
 		return { data: null, error };
 	}
