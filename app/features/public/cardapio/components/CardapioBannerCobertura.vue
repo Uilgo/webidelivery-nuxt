@@ -6,13 +6,20 @@
  * Exibe cidades atendidas e bairros (se configurado).
  */
 
-import type { Estabelecimento } from "#shared/types/estabelecimentos";
-
+/**
+ * Props aceita qualquer objeto com as propriedades necessárias
+ * Usa unknown para aceitar tanto tipos readonly quanto mutable
+ */
 interface Props {
-	estabelecimento: Estabelecimento;
+	estabelecimento: unknown;
 }
 
 const props = defineProps<Props>();
+
+/**
+ * Type assertion necessária pois o composable retorna tipos readonly profundos
+ */
+const est = computed(() => props.estabelecimento as Estabelecimento);
 
 /**
  * Extrair configurações de cobertura
@@ -20,7 +27,7 @@ const props = defineProps<Props>();
  */
 const configCobertura = computed(() => {
 	// Validar se estabelecimento e config_geral existem
-	if (!props.estabelecimento?.config_geral) {
+	if (!est.value?.config_geral) {
 		return {
 			cidades: [],
 			tipoTaxa: "taxa_unica",
@@ -28,7 +35,7 @@ const configCobertura = computed(() => {
 		};
 	}
 
-	const configGeral = props.estabelecimento.config_geral as Record<string, unknown>;
+	const configGeral = est.value.config_geral as Record<string, unknown>;
 
 	const cidades = (configGeral.cidades_atendidas as string[]) || [];
 	const tipoTaxa = (configGeral.tipo_taxa_entrega as string) || "taxa_unica";

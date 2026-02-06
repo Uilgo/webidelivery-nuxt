@@ -50,6 +50,7 @@ const {
 } = useCardapioPublico(props.slug);
 
 // Aplica tema personalizado do estabelecimento
+// Passa diretamente o shallowRef - useTemaPublico agora aceita readonly refs
 useTemaPublico(estabelecimento);
 
 // Estado da busca
@@ -149,6 +150,32 @@ const temFiltrosAtivos = computed(() => {
 });
 
 /**
+ * Categorias para o menu horizontal
+ * Remove categorias pai que possuem subcategorias
+ */
+const categoriasMenu = computed(() => {
+	// Identifica quais categorias são pais (têm subcategorias)
+	const categoriasComFilhas = new Set<string>();
+
+	categorias.value.forEach((cat) => {
+		if (cat.categoria_pai_id) {
+			categoriasComFilhas.add(cat.categoria_pai_id);
+		}
+	});
+
+	// Filtra: exibe apenas categorias filhas OU categorias pai sem filhas
+	return categorias.value.filter((cat) => {
+		// Se é categoria filha (tem pai), sempre exibe
+		if (cat.categoria_pai_id) {
+			return true;
+		}
+
+		// Se é categoria pai, só exibe se NÃO tiver filhas
+		return !categoriasComFilhas.has(cat.id);
+	});
+});
+
+/**
  * Categorias visíveis (filtra se há categoria selecionada)
  */
 const categoriasVisiveis = computed(() => {
@@ -231,7 +258,7 @@ const handleLoadMore = async () => {
 
 						<!-- Menu de Categorias (Sticky) -->
 						<CardapioCategorias
-							:categorias="categorias"
+							:categorias="categoriasMenu"
 							:categoria-selecionada="categoriaSelecionada"
 							@selecionar="handleSelecionarCategoria"
 						/>

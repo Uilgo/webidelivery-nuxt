@@ -102,8 +102,12 @@ const enviarAvaliacao = async () => {
 		// Sucesso
 		emit("avaliado");
 		fechar();
-	} catch (err: any) {
-		erro.value = err.message || "Não foi possível enviar sua avaliação. Tente novamente.";
+	} catch (err: unknown) {
+		const errorMessage =
+			err instanceof Error
+				? err.message
+				: "Não foi possível enviar sua avaliação. Tente novamente.";
+		erro.value = errorMessage;
 	} finally {
 		loading.value = false;
 	}

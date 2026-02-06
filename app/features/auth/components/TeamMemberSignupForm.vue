@@ -65,7 +65,9 @@ const privacy = useField<boolean>("privacy");
 // Campo email com validação assíncrona
 const email = useField<string>("email", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = teamMemberRegisterSchema.shape.email.safeParse(value);
+	// Nota: teamMemberRegisterSchema usa .refine(), então precisamos acessar o schema interno
+	const baseSchema = teamMemberRegisterSchema._def.schema;
+	const schemaResult = baseSchema.shape.email.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "E-mail inválido";
 	}
@@ -78,7 +80,9 @@ const email = useField<string>("email", async (value: string) => {
 // Campo código EQUIPE com validação assíncrona
 const codigoEquipe = useField<string>("codigo_equipe", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = teamMemberRegisterSchema.shape.codigo_equipe.safeParse(value);
+	// Nota: teamMemberRegisterSchema usa .refine(), então precisamos acessar o schema interno
+	const baseSchema = teamMemberRegisterSchema._def.schema;
+	const schemaResult = baseSchema.shape.codigo_equipe.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "Código da equipe inválido";
 	}

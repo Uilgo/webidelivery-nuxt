@@ -15,7 +15,13 @@ export interface UseHorarioFuncionamentoReturn {
 	// Estados calculados
 	estaAberto: Ref<boolean>;
 	proximoHorario: Ref<string>;
-	horariosFuncionamento: ComputedRef<Record<string, any> | null>;
+	horariosFuncionamento: ComputedRef<Record<
+		string,
+		{
+			ativo: boolean;
+			periodos: Array<{ inicio: string; fim: string }>;
+		}
+	> | null>;
 
 	// Métodos
 	calcularProximaEntrega: (tempoEntregaMin: number, tempoEntregaMax: number) => string;
@@ -23,13 +29,18 @@ export interface UseHorarioFuncionamentoReturn {
 		data: Date,
 		tempoEntregaMin: number,
 		tempoEntregaMax: number,
-	) => Array<{
-		value: string;
-		display: string;
-		isProximoDisponivel?: boolean;
-		tempoRestante?: string;
-		diaSemana?: string;
-	}>;
+	) => Array<HorarioDisponivel>;
+}
+
+/**
+ * Tipo para horários disponíveis retornados pelo composable
+ */
+export interface HorarioDisponivel {
+	value: string;
+	display: string;
+	isProximoDisponivel?: boolean;
+	tempoRestante?: string;
+	diaSemana?: string;
 }
 
 export const useHorarioFuncionamento = (): UseHorarioFuncionamentoReturn => {
@@ -83,7 +94,13 @@ export const useHorarioFuncionamento = (): UseHorarioFuncionamentoReturn => {
 		if (!horarios || horarios.length === 0) return null;
 
 		// Converter array para objeto indexado por dia da semana
-		const horariosMap: Record<string, any> = {};
+		const horariosMap: Record<
+			string,
+			{
+				ativo: boolean;
+				periodos: Array<{ inicio: string; fim: string }>;
+			}
+		> = {};
 		horarios.forEach((h) => {
 			horariosMap[h.dia_semana] = {
 				ativo: h.aberto,
@@ -392,7 +409,7 @@ export const useHorarioFuncionamento = (): UseHorarioFuncionamentoReturn => {
 					const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 					const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-					const item: any = {
+					const item: HorarioDisponivel = {
 						value: horarioStr,
 						display: horarioStr,
 					};

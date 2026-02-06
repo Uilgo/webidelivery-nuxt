@@ -86,6 +86,7 @@ export const useOnboarding = (): UseOnboardingReturn => {
 			endereco_cidade: "",
 			endereco_estado: "", // Vazio inicialmente, será preenchido pelo usuário ou API do CEP
 			endereco_cep: "",
+			cidades_atendidas: [],
 			endereco_complemento: "",
 			endereco_referencia: "",
 		},

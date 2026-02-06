@@ -65,7 +65,9 @@ const privacy = useField<boolean>("privacy");
 // Campo email com validação assíncrona
 const email = useField<string>("email", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = superAdminRegisterSchema.shape.email.safeParse(value);
+	// Nota: superAdminRegisterSchema usa .refine(), então precisamos acessar o schema interno
+	const baseSchema = superAdminRegisterSchema._def.schema;
+	const schemaResult = baseSchema.shape.email.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "E-mail inválido";
 	}
@@ -78,7 +80,9 @@ const email = useField<string>("email", async (value: string) => {
 // Campo código WEBI com validação assíncrona
 const codigoWebi = useField<string>("codigo_webi", async (value: string) => {
 	// Primeiro aplica validação do schema (formato, required, etc.)
-	const schemaResult = superAdminRegisterSchema.shape.codigo_webi.safeParse(value);
+	// Nota: superAdminRegisterSchema usa .refine(), então precisamos acessar o schema interno
+	const baseSchema = superAdminRegisterSchema._def.schema;
+	const schemaResult = baseSchema.shape.codigo_webi.safeParse(value);
 	if (!schemaResult.success) {
 		return schemaResult.error.issues[0]?.message || "Código WEBI inválido";
 	}
